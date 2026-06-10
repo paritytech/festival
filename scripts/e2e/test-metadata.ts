@@ -10,6 +10,7 @@
 import type {
   FestivalMetadata,
   SubEventMetadata,
+  ChannelMetadata,
 } from '../../packages/shared/metadata/schemas'
 
 const SECONDS_PER_DAY = 86400n
@@ -137,6 +138,31 @@ export function buildSessionMetadata(): SessionMetadataFixture {
     location: 'e2e-stage',
     speakers: ['Alice'],
     category: 'workshop',
+  }
+  const bytes = new TextEncoder().encode(JSON.stringify(metadata))
+  return { metadata, bytes }
+}
+
+export interface ChannelMetadataFixture {
+  metadata: ChannelMetadata
+  /** Canonical UTF-8 JSON encoding of `metadata`. */
+  bytes: Uint8Array
+}
+
+/**
+ * Build the empty announcement channel blob the seed uploads with the festival.
+ *
+ * `createdAt` follows the same window as the festival rather than `Date.now()`,
+ * so the CID stays stable across runs. That lets the seed skip a duplicate
+ * upload, and lets the e2e harness rebuild the exact bytes to seed the test host.
+ */
+export function buildChannelMetadata(
+  nowSec: bigint = nowUnixSec(),
+): ChannelMetadataFixture {
+  const startSec = floorToWindow(nowSec)
+  const metadata: ChannelMetadata = {
+    createdAt: Number(startSec) * 1000,
+    announcements: [],
   }
   const bytes = new TextEncoder().encode(JSON.stringify(metadata))
   return { metadata, bytes }

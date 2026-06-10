@@ -23,6 +23,10 @@ test.describe('Admin boot', () => {
     await testHost.waitForConnection()
     const frame = testHost.productFrame()
 
+    // The recreated container starts with an empty preimage store, but this
+    // test only checks nav visibility, which comes from chain roles not
+    // metadata, so seeding again isn't needed.
+
     // Both Alice and Bob are granted the full role set by the seed step,
     // so the role-bearing layout is what we expect after either switch.
     await expect(

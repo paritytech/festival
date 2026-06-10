@@ -17,9 +17,7 @@ export interface SubEventListItem {
   startTime: number
   endTime: number
   cancelled: boolean
-  /** Moderation: per-session flag count. TODO: surface via bootLoad R2. */
   flagCount: number
-  /** Moderation: cancellation threshold. TODO: surface from contract once. */
   flagThreshold: number
 }
 
@@ -34,11 +32,6 @@ const DEFAULT_METADATA: SubEventMetadata = {
 
 const FLAG_THRESHOLD_FALLBACK = 5
 
-/**
- * Sub-events composable for admin. Derives `SubEventListItem[]` from
- * `festivalState.sessions`. Flag-count moderation fields are stubbed for
- * now; they need a follow-up to wire through bootLoadAdmin R2.
- */
 export function useSubEvents(_festivalAddress: string) {
   const txStatus = ref<TxStatus>('idle')
 
@@ -50,8 +43,8 @@ export function useSubEvents(_festivalAddress: string) {
       startTime: Number(s.details.startTime),
       endTime: Number(s.details.endTime),
       cancelled: s.details.cancelled,
-      flagCount: 0,
-      flagThreshold: FLAG_THRESHOLD_FALLBACK,
+      flagCount: Number(s.details.flagCount),
+      flagThreshold: Number(s.details.flagThreshold) || FLAG_THRESHOLD_FALLBACK,
     })),
   )
 

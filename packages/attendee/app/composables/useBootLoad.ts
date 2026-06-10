@@ -179,6 +179,8 @@ async function runRound2(
     { address: addr, abi: FestivalSessionABI, functionName: 'getEventDetails' },
     { address: addr, abi: FestivalSessionABI, functionName: 'getAttendees' },
     { address: SUB_EVENT_POAP_ADDRESS, abi: AttendancePOAPABI, functionName: 'getTokensBySource', args: [addr] },
+    { address: addr, abi: FestivalSessionABI, functionName: 'flagCount' },
+    { address: addr, abi: FestivalSessionABI, functionName: 'FLAG_THRESHOLD' },
   ])
   const festPoapCalls = festPoapTokenIds.map((id) => ({
     address: FESTIVAL_POAP_ADDRESS,
@@ -190,8 +192,8 @@ async function runRound2(
   const calls = [...sessionCalls, ...festPoapCalls]
   const results = await batchRead(calls, { at })
 
-  // 3 calls per session.
-  const STRIDE = 3
+  // 5 calls per session.
+  const STRIDE = 5
   const sessionEntries: SessionEntry[] = sessionAddrs.map((address, i) => {
     const off = i * STRIDE
     const detailsRaw = results[off] as readonly [
@@ -211,6 +213,8 @@ async function runRound2(
       endTime: detailsRaw[5],
       cancelled: detailsRaw[6],
       registeredCount: detailsRaw[7],
+      flagCount: results[off + 3] as bigint,
+      flagThreshold: results[off + 4] as bigint,
     }
 
     return {

@@ -5,9 +5,9 @@ test.describe('Review & Publish Changes', () => {
   test('changes page renders heading after a draft metadata edit', async ({ testHost }) => {
     const frame = await waitForAdminReady(testHost)
 
-    // If the SPA shows the "Metadata is being indexed" placeholder (the IPFS
-    // gateway hasn't mirrored this run's CID yet), click Retry until the
-    // overview renders. Up to 6 × 5s = 30s grace for gateway propagation.
+    // Metadata resolves via the preimage manager (seeded in waitForAdminReady),
+    // so the indexing placeholder shouldn't show. Keep a short Retry safety net
+    // in case the first lookup races boot.
     const indexingRetry = frame.getByRole('button', { name: 'Retry' })
     for (let i = 0; i < 6; i++) {
       if (await indexingRetry.isVisible({ timeout: 1_000 }).catch(() => false)) {

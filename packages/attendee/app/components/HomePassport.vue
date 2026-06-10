@@ -7,9 +7,15 @@ import { useRegistration } from "~/composables/useRegistration";
 import { generateQRDataUrl } from "@festival/shared/scanner/useQRImage";
 import QrSpoiler from "~/components/QrSpoiler.vue";
 
+const props = defineProps<{
+  forceShowQr?: boolean;
+}>();
+
 const wallet = useWalletStore();
 const { metadata } = useFestival();
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
+
+const showQr = computed(() => !isCheckedIn.value || props.forceShowQr);
 
 const BAND_SIDE = "PRIVACY IS DIGNITY · USABILITY MAKES IDEALS REAL · ";
 const BAND_CENTER = "SOVEREIGNTY IS AGENCY";
@@ -139,9 +145,9 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- QR code (hidden once checked in, no longer needed) -->
+    <!-- QR code (hidden once checked in unless forced, e.g. session check-in) -->
     <div
-      v-if="!isCheckedIn"
+      v-if="showQr"
       class="pl-4 pr-6 pt-12 pb-4"
       data-testid="passport-reveal-area"
       @click="reveal"
