@@ -15,7 +15,7 @@ dotenv.config({ quiet: true })
 dotenv.config({ path: 'contracts/.env', quiet: true })
 
 import { spawnSync } from 'node:child_process'
-import { writeFileSync } from 'node:fs'
+import { existsSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from 'polkadot-api'
@@ -335,6 +335,23 @@ function phaseBuildContracts(state: ReturnType<typeof loadState>, flags: Flags):
   if (isDone(state, 'contractsBuilt')) {
     ui.success('contracts already built (state) — skipping')
     return
+  }
+  // Bootstrap contract libs (forge-std + OpenZeppelin) on a fresh clone. They're
+  // gitignored, so a clone has no contracts/lib/ until `make install` runs —
+  // without this the forge build below fails on a fresh fork.
+  if (
+    !existsSync(resolve(REPO_ROOT, 'contracts/lib/forge-std')) ||
+    !existsSync(resolve(REPO_ROOT, 'contracts/lib/openzeppelin-contracts'))
+  ) {
+    const isp = ui.spinner('installing contract libraries (forge-std + OpenZeppelin)…')
+    const ins = spawnSync('make', ['install'], { cwd: 'contracts', encoding: 'utf8' })
+    if (ins.status !== 0) {
+      isp.fail('contract library install failed')
+      if (ins.stdout) process.stdout.write(ins.stdout)
+      if (ins.stderr) process.stdout.write(ins.stderr)
+      throw new BlockedError('`make install` failed — see output above (needs network access for `forge install`).')
+    }
+    isp.succeed('contract libraries installed')
   }
   const sp = ui.spinner('forge build + copy ABIs…')
   const r = spawnSync('make', ['copy-abis'], { cwd: 'contracts', encoding: 'utf8' })

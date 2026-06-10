@@ -5,6 +5,7 @@
  */
 
 import { spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { formatUnits } from 'viem'
 
 export type CheckStatus = 'ok' | 'warn' | 'block'
@@ -91,6 +92,17 @@ export function checkTooling(): CheckResult[] {
     status: gh ? 'ok' : 'warn',
     detail: gh ?? 'not found',
     fix: gh ? undefined : 'Optional — without it the publish step prints manual steps instead of triggering CI.',
+  })
+
+  // Contract libs (forge-std + OpenZeppelin). Gitignored, so a fresh clone lacks
+  // them; the build phase auto-installs via `make install`. Advisory only.
+  const libsPresent =
+    existsSync('contracts/lib/forge-std') && existsSync('contracts/lib/openzeppelin-contracts')
+  results.push({
+    id: 'contract-libs',
+    label: 'contract libs',
+    status: 'ok',
+    detail: libsPresent ? 'present' : 'will auto-install on build',
   })
 
   return results

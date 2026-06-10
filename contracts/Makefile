@@ -4,8 +4,8 @@
 .PHONY: install build test test-revive deploy-festival deploy-substrate deploy-multicall copy-abis clean
 
 install :
-	forge install foundry-rs/forge-std --no-commit
-	forge install OpenZeppelin/openzeppelin-contracts --no-commit
+	forge install foundry-rs/forge-std
+	forge install OpenZeppelin/openzeppelin-contracts
 
 build :
 	forge build
