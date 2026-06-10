@@ -88,10 +88,10 @@ jobs:
           message: |
             ## Preview Deployment Ready!
 
-            | App | Domain | Preview |
-            |:---:|:------:|:-------:|
-            | **Admin** | `${{ needs.deploy-admin.outputs.domain }}` | [**${{ needs.deploy-admin.outputs.domain }}.li**](https://${{ needs.deploy-admin.outputs.domain }}.li) |
-            | **Festival** | `${{ needs.deploy-attendee.outputs.domain }}` | [**${{ needs.deploy-attendee.outputs.domain }}.li**](https://${{ needs.deploy-attendee.outputs.domain }}.li) |
+            | App | Domain |
+            |:---:|:------:|
+            | **Admin** | `${{ needs.deploy-admin.outputs.domain }}` |
+            | **Festival** | `${{ needs.deploy-attendee.outputs.domain }}` |
 
             <details>
             <summary>Deployment Details</summary>

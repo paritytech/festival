@@ -99,10 +99,10 @@ jobs:
 
           ### Deployment — paseo-next-v2 (${VITE_NETWORK})
 
-          | App | Domain | CID | URL |
-          |-----|--------|-----|-----|
-          | **Admin** | \`${ADMIN_DOMAIN}\` | \`${ADMIN_CID}\` | https://${ADMIN_DOMAIN}.li |
-          | **Festival** | \`${ATTENDEE_DOMAIN}\` | \`${ATTENDEE_CID}\` | https://${ATTENDEE_DOMAIN}.li |
+          | App | Domain | CID |
+          |-----|--------|-----|
+          | **Admin** | \`${ADMIN_DOMAIN}\` | \`${ADMIN_CID}\` |
+          | **Festival** | \`${ATTENDEE_DOMAIN}\` | \`${ATTENDEE_CID}\` |
 
           ### Contracts
 
