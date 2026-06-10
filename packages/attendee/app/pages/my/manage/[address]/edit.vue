@@ -26,6 +26,7 @@ import {
   type SessionTimeValidationFailReason,
 } from "@festival/shared";
 import VenueMap from "~/components/VenueMap.vue";
+import InputField from "~/components/ui/InputField.vue";
 
 definePageMeta({
   validate: (route) => isValidEvmAddress(route.params.address as string),
@@ -493,16 +494,16 @@ async function submit() {
     <!-- Form -->
     <div class="flex-1 px-4 pt-6 space-y-6 border-t border-white/12">
       <!-- Session Name -->
-      <div>
-        <label class="block text-sm text-white/70 mb-2">
-          Session Name <span class="text-red-400">*</span>
-        </label>
+      <InputField v-slot="{ inputId }" label="Session Name" required>
         <input
+          :id="inputId"
           v-model="form.name"
           type="text"
-          class="w-full px-4 py-3 rounded-full border border-white/12 bg-transparent text-white placeholder-white/40 text-sm focus:outline-none focus:border-white/30"
+          required
+          aria-required="true"
+          class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
         />
-      </div>
+      </InputField>
 
       <!-- Submit-time revalidation banner -->
       <div
