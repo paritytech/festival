@@ -87,7 +87,7 @@ Each SPA needs a `.env` file. Copy from `.env.example`:
 | `VITE_DEV_SEED` (for local development)             | Signer seed that bypases signing outside of the host for faster development      |
 | `VITE_BULLETIN_SIGNER_SEED` (for local development) | Mnemonic for Bulletin Chain app account                                          |
 
-CI builds load these from `.github/env`.
+CI builds load these from `.github/env.paseo-next-v2`.
 
 ## Adding a Network
 

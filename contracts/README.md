@@ -103,7 +103,7 @@ make deploy-multicall  # Multicall3 (canonical source, custom-deployed bytecode)
 make deploy-multicall
 
 # 3. Smoke-test the assembly + value-accounting paths via eth_call (no gas, no signer).
-#    Reads VITE_MULTICALL_ADDRESS from .github/env automatically.
+#    Reads VITE_MULTICALL_ADDRESS from .github/env.paseo-next-v2 automatically.
 make test-revive
 make test-revive VITE_MULTICALL_ADDRESS=0x...   # to test a different deployment
 ```
