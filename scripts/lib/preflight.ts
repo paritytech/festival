@@ -94,8 +94,7 @@ export function checkTooling(): CheckResult[] {
     fix: gh ? undefined : 'Optional — without it the publish step prints manual steps instead of triggering CI.',
   })
 
-  // Contract libs (forge-std + OpenZeppelin). Gitignored, so a fresh clone lacks
-  // them; the build phase auto-installs via `make install`. Advisory only.
+  // contracts/lib isn't committed, so a fresh clone lacks it; the build phase installs it. Advisory.
   const libsPresent =
     existsSync('contracts/lib/forge-std') && existsSync('contracts/lib/openzeppelin-contracts')
   results.push({
