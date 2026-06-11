@@ -5,7 +5,6 @@ import {
   isItemPast,
   getItemId,
 } from "~/composables/useProgramTimeline";
-import { shortenAddress } from "@festival/shared/utils/address";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import {
   getMarkerLocationLabel,
@@ -68,8 +67,7 @@ const subtitle = computed(() => {
   if (props.item.type === "official") {
     return props.item.entry.speakers.join(", ");
   }
-  if (isOwner.value) return "My Session";
-  return shortenAddress(props.item.subEvent.creator);
+  return props.item.subEvent.metadata.speakers.join(", ");
 });
 
 const timeRange = computed(() => {

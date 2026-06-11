@@ -109,6 +109,11 @@ export async function readSessionDetails(
     at,
   })
 
+  const [flagCount, flagThreshold] = await Promise.all([
+    readContract<bigint>({ address, abi: FestivalSessionABI, functionName: 'flagCount', at }),
+    readContract<bigint>({ address, abi: FestivalSessionABI, functionName: 'FLAG_THRESHOLD', at }),
+  ])
+
   return {
     metadataCid: result[0],
     creator: result[1],
@@ -118,6 +123,8 @@ export async function readSessionDetails(
     endTime: result[5],
     cancelled: result[6],
     registeredCount: result[7],
+    flagCount,
+    flagThreshold,
   }
 }
 

@@ -1,8 +1,11 @@
 import { test, expect } from './setup'
 import { waitForAttendeeReady } from './helpers'
+import { seedFestivalPreimages } from '../../../scripts/e2e/seed-preimages'
 
 test.describe('Attendee home', () => {
   test('cold-boot splash plays then detaches before home renders', async ({ testHost }) => {
+    // This test skips waitForAttendeeReady, so seed the preimages here too.
+    await seedFestivalPreimages(testHost)
     await testHost.waitForConnection(60_000)
     const frame = testHost.productFrame()
 

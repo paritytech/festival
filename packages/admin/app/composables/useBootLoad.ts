@@ -190,6 +190,8 @@ async function runRound2(
   const sessionCalls = sessionAddrs.flatMap((addr) => [
     { address: addr, abi: FestivalSessionABI, functionName: 'getEventDetails' },
     { address: addr, abi: FestivalSessionABI, functionName: 'getAttendees' },
+    { address: addr, abi: FestivalSessionABI, functionName: 'flagCount' },
+    { address: addr, abi: FestivalSessionABI, functionName: 'FLAG_THRESHOLD' },
   ])
   // Per-role × index: getRoleMember enumeration.
   const roleMemberCalls = ROLE_ORDER.flatMap(({ hash }, i) =>
@@ -215,7 +217,7 @@ async function runRound2(
 
   // Decode session pairs. Collect metadata fetch targets here and fire them
   // in batches below to stay under the host's preimage rate budget.
-  const SESSION_STRIDE = 2
+  const SESSION_STRIDE = 4
   const metadataTargets: Array<{ address: `0x${string}`; cid: `0x${string}` }> = []
   for (let i = 0; i < sessionAddrs.length; i++) {
     const off = i * SESSION_STRIDE
@@ -235,6 +237,8 @@ async function runRound2(
       endTime: detailsRaw[5],
       cancelled: detailsRaw[6],
       registeredCount: detailsRaw[7],
+      flagCount: results[off + 2] as bigint,
+      flagThreshold: results[off + 3] as bigint,
     }
 
     const entry = festivalState.sessions[i]

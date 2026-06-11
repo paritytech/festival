@@ -5,6 +5,7 @@ import InputField from './ui/InputField.vue'
 
 interface FormData {
   name: string
+  speaker: string
   description: string
   dateKey: string
   startMinutesOfDay: number | null
@@ -39,6 +40,19 @@ defineExpose({ canProceed })
 
 <template>
   <div class="space-y-6 px-4">
+    <!-- Speaker (optional — left blank, a fun "Anonymous <Animal>" is saved) -->
+    <InputField v-slot="{ inputId }" label="Speaker">
+      <input
+        :id="inputId"
+        data-testid="session-speaker-input"
+        :value="modelValue.speaker"
+        type="text"
+        placeholder="Leave blank to stay anonymous"
+        class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
+        @input="patch('speaker', ($event.target as HTMLInputElement).value)"
+      />
+    </InputField>
+
     <!-- Session Name -->
     <InputField v-slot="{ inputId }" label="Session Name" required>
       <input

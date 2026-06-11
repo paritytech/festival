@@ -105,16 +105,11 @@ async function resolveFestivalPoapImage(imageCid: string): Promise<string | unde
   if (cached) return cached
 
   const { useBulletinStorage } = await import('@festival/shared/metadata/bulletin')
-  const { resolveImageUrl, resolveImageBlob } = useBulletinStorage()
+  const { resolveImageUrl, resolveImageBlob, resolveDisplayImageUrl } = useBulletinStorage()
 
-  let url: string | undefined
-  if (isInHost()) {
-    const blobUrl = await resolveImageBlob(imageCid)
-    url = blobUrl ?? resolveImageUrl(imageCid)
-  } else {
-    url = resolveImageUrl(imageCid)
-  }
-  // Background data-URL cache for offline use
+  // Blob URL via the preimage manager in the host, gateway URL standalone.
+  const url = (await resolveDisplayImageUrl(imageCid)) ?? undefined
+  // Cache a data URL in the background for offline use.
   cacheImageAsDataUrl(imageCid, resolveImageUrl, resolveImageBlob)
   return url
 }

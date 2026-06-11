@@ -178,6 +178,8 @@ export function applySessionCreated(
       endTime: 0n,
       cancelled: false,
       registeredCount: 0n,
+      flagCount: 0n,
+      flagThreshold: 5n,
     },
     metadata: null,
     attendees: [],

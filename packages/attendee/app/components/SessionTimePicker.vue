@@ -253,6 +253,16 @@ const showDurationFooter = computed(
       </div>
     </div>
 
+    <!-- Stage legend -->
+    <div
+      v-if="showGrid"
+      data-testid="session-time-stage-legend"
+      class="mt-3 text-center text-sm leading-5 font-normal text-text-and-icons-secondary"
+    >
+      <p>{{ stage === 'from-minute' || stage === 'to-minute' ? 'Select Minutes' : 'Select Hours' }}</p>
+      <hr class="mt-1 border-0 border-t border-stroke-primary" />
+    </div>
+
     <!-- From: Hour grid -->
     <div
       v-if="showGrid && stage === 'from-hour'"
