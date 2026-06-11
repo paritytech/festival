@@ -137,7 +137,6 @@ const form = reactive({
 });
 
 const submitValidationError = ref<SessionTimeValidationFailReason | null>(null);
-const venueConflictError = ref<string | null>(null);
 
 const showUpdatedToast = ref(false);
 const pendingSnapshot = ref<{
@@ -201,7 +200,12 @@ const pickerOpen = ref(false);
 const previewMapRef =
   useTemplateRef<InstanceType<typeof VenueMap>>("previewMapRef");
 
-const { busyMarkerIds, detectConflict } = useSessionVenueConflict({
+const {
+  busyMarkerIds,
+  detectConflict,
+  conflictError: venueConflictError,
+  setConflictError,
+} = useSessionVenueConflict({
   dateKey: () => form.dateKey,
   startMinutesOfDay: () => form.startMinutesOfDay,
   endMinutesOfDay: () => form.endMinutesOfDay,
@@ -209,15 +213,6 @@ const { busyMarkerIds, detectConflict } = useSessionVenueConflict({
   pickedLocation,
   excludeAddress: addr,
 });
-
-// Clear stale conflict banner once the user changes location or time —
-// otherwise the error sticks around after they've already resolved it.
-watch(
-  () => [pickedLocation.value?.markerId, form.dateKey, form.startMinutesOfDay, form.endMinutesOfDay],
-  () => {
-    venueConflictError.value = null;
-  },
-);
 
 const pickedLocationLabel = computed(() => {
   if (!pickedLocation.value) return "";
@@ -373,7 +368,6 @@ async function submit() {
     return;
 
   submitValidationError.value = null;
-  venueConflictError.value = null;
 
   // Re-validate against live `now` only if the user actually changed date/time.
   // If the original times are unchanged, leave them alone. Editing description
@@ -406,7 +400,7 @@ async function submit() {
 
   const conflict = detectConflict();
   if (conflict) {
-    venueConflictError.value = `That venue is already booked by "${conflict.title}" for this time. Pick a different spot or time.`;
+    setConflictError(conflict);
     return;
   }
 

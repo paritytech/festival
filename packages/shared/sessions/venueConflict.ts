@@ -26,8 +26,6 @@ interface SubEventLike {
   address: string;
   startTime: number;
   endTime: number;
-  /** Optional: callers may pass already-filtered lists with no `cancelled` field. */
-  cancelled?: boolean;
   metadata: { name: string; location?: string };
 }
 
@@ -56,8 +54,9 @@ function intervalsOverlap(
 }
 
 /** Returns the first conflicting item, or null if [startSec, endSec] is free
- *  at `markerId`. Excludes cancelled sub-events and the sub-event matching
- *  `excludeAddress` (used when editing an existing session). */
+ *  at `markerId`. Callers must pre-filter cancelled sub-events. Excludes the
+ *  sub-event matching `excludeAddress` (used when editing an existing
+ *  session). */
 export function findVenueConflict(
   markerId: string,
   startSec: number,
@@ -68,7 +67,6 @@ export function findVenueConflict(
   excludeAddress?: string,
 ): VenueConflictItem | null {
   for (const se of subEvents) {
-    if (se.cancelled) continue;
     if (
       excludeAddress &&
       se.address.toLowerCase() === excludeAddress.toLowerCase()

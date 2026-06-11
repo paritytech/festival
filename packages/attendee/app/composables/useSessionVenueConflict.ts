@@ -1,4 +1,4 @@
-import { computed, toValue, type MaybeRefOrGetter } from 'vue'
+import { computed, ref, watch, toValue, type MaybeRefOrGetter } from 'vue'
 import type { VenueMarker } from '@festival/shared/metadata/schemas'
 import type { PickedLocation } from '@festival/shared/venue/floors'
 import { SESSION_LOCATION_ALLOWED_TYPES } from '@festival/shared/venue/categories'
@@ -21,14 +21,6 @@ interface Options {
   excludeAddress?: string
 }
 
-/**
- * Shared venue-conflict wiring for the session create + edit flows.
- *
- * - `busyMarkerIds` is the set of markers already booked in the candidate
- *   window — pass it to the location picker so it can grey/toast them.
- * - `detectConflict()` runs the final check at submit time against the
- *   currently picked marker, returning the first overlap or null.
- */
 export function useSessionVenueConflict(opts: Options) {
   const { subEvents } = useSubEvents()
   const { entries: scheduleEntries } = useSchedule()
@@ -78,5 +70,29 @@ export function useSessionVenueConflict(opts: Options) {
     )
   }
 
-  return { candidateWindow, busyMarkerIds, detectConflict }
+  const conflictError = ref<string | null>(null)
+
+  function setConflictError(c: VenueConflictItem) {
+    conflictError.value = `That venue is already booked by "${c.title}" for this time. Pick a different spot or time.`
+  }
+
+  watch(
+    () => [
+      toValue(opts.pickedLocation)?.markerId ?? null,
+      toValue(opts.dateKey),
+      toValue(opts.startMinutesOfDay),
+      toValue(opts.endMinutesOfDay),
+    ],
+    () => {
+      conflictError.value = null
+    },
+  )
+
+  return {
+    candidateWindow,
+    busyMarkerIds,
+    detectConflict,
+    conflictError,
+    setConflictError,
+  }
 }

@@ -105,13 +105,6 @@ watch(currentStep, () => {
 const txStatus = ref<TxStatus>("idle");
 const error = ref<string | null>(null);
 const createdAddress = ref<string | null>(null);
-// Clear stale venue-conflict error once the user changes location or time.
-watch(
-  () => [pickedLocation.value?.markerId, form.dateKey, form.startMinutesOfDay, form.endMinutesOfDay],
-  () => {
-    if (error.value) error.value = null;
-  },
-);
 
 // ── Step 1 ref for canProceed ──
 
@@ -180,13 +173,14 @@ const venueZones = computed(() => {
   return DEFAULT_ZONES;
 });
 
-const { busyMarkerIds, detectConflict } = useSessionVenueConflict({
-  dateKey: () => form.dateKey,
-  startMinutesOfDay: () => form.startMinutesOfDay,
-  endMinutesOfDay: () => form.endMinutesOfDay,
-  venueMarkers,
-  pickedLocation,
-});
+const { busyMarkerIds, detectConflict, conflictError, setConflictError } =
+  useSessionVenueConflict({
+    dateKey: () => form.dateKey,
+    startMinutesOfDay: () => form.startMinutesOfDay,
+    endMinutesOfDay: () => form.endMinutesOfDay,
+    venueMarkers,
+    pickedLocation,
+  });
 
 // ── Navigation ──
 
@@ -286,7 +280,7 @@ async function submit() {
   // was still completing the form.
   const conflict = detectConflict();
   if (conflict) {
-    error.value = `That venue is already booked by "${conflict.title}" for this time. Pick a different spot or time.`;
+    setConflictError(conflict);
     return;
   }
 
@@ -630,7 +624,14 @@ async function submit() {
 
       <!-- Step 4: Create Session -->
       <template v-if="currentStep === 4">
-        <!-- Error -->
+        <div
+          v-if="conflictError"
+          data-testid="session-venue-conflict-banner"
+          class="rounded-2xl bg-red-900/30 border border-red-500/20 px-5 py-4 mb-3"
+        >
+          <p class="text-sm text-red-300">{{ conflictError }}</p>
+        </div>
+
         <div
           v-if="error"
           class="rounded-2xl bg-red-900/30 border border-red-500/20 px-5 py-4 mb-3"

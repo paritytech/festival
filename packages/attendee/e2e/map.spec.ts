@@ -28,7 +28,6 @@ test.describe('Venue map', () => {
     await (await navLink(frame, 'map')).click()
     await tapBuilding(frame)
 
-    // Indoor chrome appears.
     await expect(frame.locator('[data-testid="floor-control"]')).toBeVisible()
     await expect(frame.locator('[data-testid="map-empty-prompt"]')).toBeVisible()
     await expect(frame.locator('[data-testid="map-tap-hint"]')).toHaveCount(0)
@@ -110,19 +109,42 @@ test.describe('Venue map', () => {
     await expect(card).toHaveCount(0)
   })
 
-  test('floor toggle swaps the active floor in indoor mode', async ({ testHost }) => {
+  test('floor switcher: outdoor pill is present in indoor mode and switches the active floor', async ({ testHost }) => {
     const frame = await waitForAttendeeReady(testHost)
 
     await (await navLink(frame, 'map')).click()
     await tapBuilding(frame)
 
-    // The control is icon-only. The active floor is reflected in the
-    // "Switch to <other floor>" aria-label, which flips after toggling.
-    const floorControl = frame.locator('[data-testid="floor-control"]')
-    await expect(floorControl).toBeVisible()
-    const labelBefore = await floorControl.getAttribute('aria-label')
-    expect(labelBefore).toBeTruthy()
-    await floorControl.click()
-    await expect(floorControl).not.toHaveAttribute('aria-label', labelBefore!)
+    const outdoorPill = frame.locator('[data-testid="floor-control-pill-venue"]')
+    await expect(outdoorPill).toBeVisible()
+    await expect(outdoorPill).toHaveAttribute('aria-selected', 'false')
+
+    const floorPills = frame.locator('[data-testid^="floor-control-pill-block-"]')
+    const pillCount = await floorPills.count()
+    expect(pillCount).toBeGreaterThan(0)
+
+    let inactivePill = null
+    for (let i = 0; i < pillCount; i++) {
+      const pill = floorPills.nth(i)
+      if ((await pill.getAttribute('aria-selected')) === 'false') {
+        inactivePill = pill
+        break
+      }
+    }
+    if (!inactivePill) throw new Error('no inactive floor pill to click')
+    await inactivePill.click()
+    await expect(inactivePill).toHaveAttribute('aria-selected', 'true')
+  })
+
+  test('floor switcher: outdoor pill is also visible in outdoor mode', async ({ testHost }) => {
+    const frame = await waitForAttendeeReady(testHost)
+
+    await (await navLink(frame, 'map')).click()
+
+    const switcher = frame.locator('[data-testid="floor-control"]')
+    await expect(switcher).toBeVisible()
+    await expect(
+      frame.locator('[data-testid="floor-control-pill-venue"]'),
+    ).toHaveAttribute('aria-selected', 'true')
   })
 })
