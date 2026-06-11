@@ -11,6 +11,7 @@ import {
   formatPickedLocationCard,
   type PickedLocation,
 } from '@festival/shared/venue/floors'
+import { isMarkerAllowedAsSessionLocation } from '@festival/shared/venue/categories'
 import VenueMap from '~/components/VenueMap.vue'
 import FloorControl from '~/components/FloorControl.vue'
 
@@ -143,6 +144,19 @@ function handleMapClick(loc: { x: number; y: number; floorId: string }) {
   tempLoc.value = { x: loc.x, y: loc.y, floorId: loc.floorId, zoneId }
 }
 
+function handleMarkerClick(marker: VenueMarker) {
+  if (!isMarkerAllowedAsSessionLocation(marker.type)) {
+    showToast("You can't host a session here")
+    return
+  }
+  tempLoc.value = {
+    x: marker.x,
+    y: marker.y,
+    floorId: marker.floorId,
+    zoneId: marker.zoneId ?? null,
+  }
+}
+
 function handleDelete() {
   tempLoc.value = null
   mapRef.value?.fitToFloor()
@@ -191,6 +205,7 @@ function handleDone() {
           :user-spot="userSpotForView"
           :interactive="true"
           @map-click="handleMapClick"
+          @marker-click="handleMarkerClick"
           @blocked-click="showToast('You can\'t drop a pin here')"
           @building-click="enterBuilding"
           @ready="handleReady"
