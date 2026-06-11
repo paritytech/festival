@@ -20,6 +20,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   markerClick: [marker: VenueMarker]
   mapClick: [loc: { x: number; y: number; floorId: string }]
+  blockedClick: [loc: { x: number; y: number; floorId: string }]
   buildingClick: []
   ready: []
 }>()
@@ -40,8 +41,10 @@ onMounted(async () => {
     // Admin's landscape viewport would over-zoom the portrait outdoor venue
     // under cover fit; contain shows the whole venue for marker placement.
     outdoorFit: 'contain',
+    blockOutOfBounds: true,
     onMarkerClick: (m) => emit('markerClick', m),
     onMapClick: (loc) => emit('mapClick', loc),
+    onBlockedClick: (loc) => emit('blockedClick', loc),
     onBuildingClick: () => emit('buildingClick'),
     onReady: () => {
       if (!isReady.value) {
