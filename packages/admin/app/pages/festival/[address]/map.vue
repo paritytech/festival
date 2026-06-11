@@ -316,11 +316,11 @@ function removeMarker(id: string) {
   z-index: 1000;
   padding: 8px 14px;
   background: rgba(15, 15, 15, 0.85);
-  color: #ffffff;
-  border-radius: 999px;
+  color: var(--color-primary);
+  border-radius: var(--radius-3xl);
   font-size: 13px;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-md);
   pointer-events: none;
 }
 
