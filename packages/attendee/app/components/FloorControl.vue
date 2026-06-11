@@ -31,6 +31,13 @@ const emit = defineEmits<{
       {{ floor.label }}
     </button>
   </div>
+  <div
+    v-else-if="floors.length === 1"
+    class="floor-control floor-control--single"
+    data-testid="floor-control"
+  >
+    {{ floors[0].label }}
+  </div>
 </template>
 
 <style scoped>
@@ -38,6 +45,20 @@ const emit = defineEmits<{
   display: inline-flex;
   flex-direction: column;
   padding: 4px;
+  background: var(--color-bg-surface-container);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+}
+.floor-control--single {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--color-fg-secondary);
   background: var(--color-bg-surface-container);
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-md);
