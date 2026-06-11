@@ -72,7 +72,11 @@ const dominantColor = computed(() => {
 
 const hostedBy = computed(() => {
   if (!subEvent.value) return ''
-  return `Hosted by ${shortenAddress(subEvent.value.creator)}`
+  const speakers = subEvent.value.metadata.speakers?.filter(Boolean) ?? []
+  const label = speakers.length
+    ? speakers.join(', ')
+    : shortenAddress(subEvent.value.creator)
+  return `Hosted by ${label}`
 })
 
 const timeAndLocation = computed(() => {
