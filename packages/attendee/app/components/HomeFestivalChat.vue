@@ -8,29 +8,7 @@
     data-testid="home-festival-chat"
   >
     <div class="w-10 h-10 shrink-0 flex items-center justify-center">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="28"
-        height="28"
-        viewBox="0 0 24 24"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M5 4h11a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-2.5l-3 3v-3H7l-2 2V6a2 2 0 0 1 2-2Z"
-          stroke="currentColor"
-          stroke-width="1.6"
-          stroke-linejoin="round"
-          class="text-text-and-icons-primary"
-        />
-        <path
-          d="M9 8h6M9 11h4"
-          stroke="currentColor"
-          stroke-width="1.6"
-          stroke-linecap="round"
-          class="text-text-and-icons-primary"
-        />
-      </svg>
+      <img src="/question-answer.svg" alt="" aria-hidden="true" class="w-7 h-7" />
     </div>
     <div class="flex-1 min-w-0">
       <p class="text-base font-semibold text-text-and-icons-primary leading-snug">
