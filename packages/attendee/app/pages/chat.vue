@@ -15,27 +15,14 @@ const steps = [
     <!-- Header -->
     <div class="px-4 pt-4 pb-3 flex items-center shrink-0">
       <button
-        class="w-10 h-10 flex items-center justify-center -ml-2"
+        class="w-10 h-10 flex items-center justify-center -ml-2 text-text-and-icons-primary"
         aria-label="Back"
         @click="router.back()"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="text-white"
-        >
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
+        <BackIcon />
       </button>
       <h1
-        class="flex-1 text-center text-base font-semibold text-white"
+        class="flex-1 text-center text-base font-semibold text-text-and-icons-primary"
         data-testid="chat-heading"
       >
         Festival Chat
@@ -62,16 +49,16 @@ const steps = [
       </p>
 
       <div class="rounded-2xl border border-stroke-primary p-4 mt-8">
-        <p class="text-sm font-semibold uppercase tracking-wide text-white/50">
+        <p class="text-sm font-semibold uppercase tracking-wide text-text-and-icons-secondary">
           How to open chat
         </p>
         <ol class="mt-3 space-y-3">
           <li
             v-for="(step, i) in steps"
             :key="i"
-            class="flex items-center gap-2 text-base leading-snug text-white"
+            class="flex items-center gap-2 text-base leading-snug text-text-and-icons-primary"
           >
-            <span class="shrink-0 text-text-and-icons-primary">{{ i + 1 }}.</span>
+            <span class="shrink-0">{{ i + 1 }}.</span>
             <span>
               {{ step.before }}
               <img
@@ -82,8 +69,8 @@ const steps = [
               {{ step.after }}
             </span>
           </li>
-          <li class="flex items-center gap-2 text-base leading-snug text-white">
-            <span class="shrink-0 text-text-and-icons-primary">{{ steps.length + 1 }}.</span>
+          <li class="flex items-center gap-2 text-base leading-snug text-text-and-icons-primary">
+            <span class="shrink-0">{{ steps.length + 1 }}.</span>
             <span>Pick a topic to see the info</span>
           </li>
         </ol>

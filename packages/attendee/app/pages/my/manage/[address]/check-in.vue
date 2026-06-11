@@ -152,12 +152,10 @@ function onScannerError(msg: string) {
     <!-- Header -->
     <div class="flex items-center px-4 pt-4 pb-3">
       <button
-        class="w-10 h-10 flex items-center justify-center -ml-2"
+        class="w-10 h-10 flex items-center justify-center -ml-2 text-text-and-icons-primary"
         @click="router.back()"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
+        <BackIcon />
       </button>
     </div>
 
