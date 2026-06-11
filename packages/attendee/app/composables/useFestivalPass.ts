@@ -24,7 +24,7 @@ import { useRegistration } from './useRegistration'
 const pgasGranted = ref<boolean | null>(null)
 const hasActivatedFlag = ref(false) // mirrors localStorage for the current user
 const phase = ref<
-  'idle' | 'pass' | 'activating' | 'exploding' | 'badge' | 'notifications'
+  'idle' | 'pass' | 'activating' | 'exploding' | 'badge'
 >('idle')
 const activatedAtMs = ref<number | null>(null)
 const allocationWarning = ref<string | null>(null)
@@ -274,24 +274,6 @@ export function useFestivalPass() {
     }
   }
 
-  // Gating to the badge phase is what makes this fire once per fresh claim —
-  // no separate seen-flag needed.
-  function advanceToNotifications(): void {
-    if (phase.value === 'badge') {
-      phase.value = 'notifications'
-      if (explodeTimer !== null) {
-        clearTimeout(explodeTimer)
-        explodeTimer = null
-      }
-    }
-  }
-
-  function dismissNotifications(): void {
-    if (phase.value === 'notifications') {
-      phase.value = 'idle'
-    }
-  }
-
   // ── Exposed surface ──────────────────────────────────────────────────────
 
   // Every overlay phase requires the user still in host + connected + checked-in;
@@ -313,10 +295,6 @@ export function useFestivalPass() {
     () => overlayGate.value && phase.value === 'badge',
   )
 
-  const shouldShowNotifications = computed(
-    () => overlayGate.value && phase.value === 'notifications',
-  )
-
   const isActivating = computed(
     () => phase.value === 'activating' || isClaimingAllowances.value,
   )
@@ -326,15 +304,12 @@ export function useFestivalPass() {
   return {
     shouldShowPass,
     shouldShowBadge,
-    shouldShowNotifications,
     isActivating,
     isExploding,
     activatedAtMs,
     allocationWarning,
     activate,
     dismissBadge,
-    advanceToNotifications,
-    dismissNotifications,
     refreshAllowance,
   }
 }

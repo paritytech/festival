@@ -19,7 +19,6 @@ import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { useFestivalPass } from "~/composables/useFestivalPass";
 import FestivalPassScreen from "~/components/FestivalPassScreen.vue";
 import BadgeEarnedFestivalScreen from "~/components/BadgeEarnedFestivalScreen.vue";
-import NotificationActivationScreen from "~/components/NotificationActivationScreen.vue";
 import SuccessToast from "~/components/SuccessToast.vue";
 import {
   getMarkerLocationLabel,
@@ -50,14 +49,12 @@ const wallet = useWalletStore();
 const {
   shouldShowPass,
   shouldShowBadge,
-  shouldShowNotifications,
   isActivating: isPassActivating,
   isExploding: isPassExploding,
   activatedAtMs,
   allocationWarning,
   activate: onActivatePass,
-  advanceToNotifications: onBadgeNext,
-  dismissNotifications: onDismissNotifications,
+  dismissBadge: onBadgeNext,
 } = useFestivalPass();
 
 // ── Reactive clock (shared singleton). Drives EventReminder + My List ──
@@ -558,11 +555,6 @@ function getMyListRoute(item: TimelineItem): string {
     :received-at-ms="activatedAtMs ?? undefined"
     @next="onBadgeNext"
   />
-  <NotificationActivationScreen
-    v-if="shouldShowNotifications"
-    @dismiss="onDismissNotifications"
-  />
-
   <!-- Partial-allocation warning. SuccessToast auto-hides; activate() clears
        it on the next attempt. -->
   <Teleport to="body">

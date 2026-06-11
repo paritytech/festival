@@ -98,15 +98,8 @@ onUnmounted(teardown)
       <button class="w-10 h-10 flex items-center justify-center -ml-2 text-text-and-icons-primary" @click="router.push('/')">
         <BackIcon />
       </button>
-      <h1 class="flex-1 text-center text-base font-semibold text-white" data-testid="notifications-heading">Announcements</h1>
-      <button
-        class="w-10 h-10 flex items-center justify-center -mr-2"
-        aria-label="How to activate notifications"
-        data-testid="notifications-help"
-        @click="router.push('/my/notifications/how-to-activate')"
-      >
-        <img src="/help_outline.svg" alt="" width="24" height="24" />
-      </button>
+      <h1 class="flex-1 text-center text-base font-semibold text-text-and-icons-primary" data-testid="notifications-heading">Announcements</h1>
+      <div class="w-10" />
     </div>
 
     <div v-if="isLoading && !channel" class="flex-1 flex items-center justify-center py-12">
