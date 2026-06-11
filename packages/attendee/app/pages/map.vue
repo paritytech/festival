@@ -383,7 +383,7 @@ onBeforeUnmount(() => {
         class="map-page__hint"
         data-testid="map-tap-hint"
       >
-        Tap to place a pin or the building to go inside
+        Tap to place a pin or open the building
       </div>
 
       <!-- Indoor hint: pin instructions + zoom-out exit cue. -->
@@ -474,34 +474,20 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-.map-page__hint {
+.map-page__hint,
+.map-page__empty-prompt {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--safe-bottom) + 52px + 6px);
+  bottom: calc(var(--safe-bottom) + 52px + 24px);
   z-index: 1000;
   text-align: center;
-  padding: 10px 20px;
+  padding: 0 20px;
   color: rgba(255, 255, 255, 0.9);
   font-size: 15px;
   font-weight: 500;
   pointer-events: none;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.map-page__empty-prompt {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: calc(var(--safe-bottom) + 52px + 20px);
-  z-index: 1000;
-  text-align: center;
-  padding: 12px 20px;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 15px;
-  font-weight: 500;
-  pointer-events: none;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .map-page__bottom {

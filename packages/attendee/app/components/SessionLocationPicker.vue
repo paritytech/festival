@@ -230,8 +230,8 @@ function handleDone() {
 
         <!-- Empty-state hint -->
         <div v-if="!tempLoc" class="slp__hint">
-          <template v-if="isIndoor">Tap on the map to pick a location, or pinch out to go back</template>
-          <template v-else>Tap the building to go inside, or tap the map to pick a spot</template>
+          <template v-if="isIndoor">Tap to place a pin or zoom out to go back</template>
+          <template v-else>Tap to place a pin or open the building</template>
         </div>
 
         <!-- Bottom card -->
