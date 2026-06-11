@@ -3,9 +3,9 @@ import { ref, computed, watch, useTemplateRef, nextTick } from 'vue'
 import type { VenueMarker, VenueZone } from '@festival/shared/metadata/schemas'
 import {
   VENUE_OUTDOOR_FLOOR,
+  VENUE_BLOCKS,
   DEFAULT_FLOOR_ID,
   getBlockByFloor,
-  getFloor,
   isOutdoorFloor,
   describePickedLocation,
   formatPickedLocationCard,
@@ -54,15 +54,10 @@ const activeFloorId = computed(() =>
 const activeBlock = computed(() =>
   isIndoor.value ? getBlockByFloor(indoorFloorId.value) : undefined,
 )
-// Match the overall map's top-left label: just the floor (e.g. "Ground Floor",
-// "First Floor"). No block prefix.
-const breadcrumb = computed(() => {
-  if (!isIndoor.value) return 'Outdoors'
-  const floor = getFloor(activeFloorId.value)
-  if (!floor) return ''
-  return /floor/i.test(floor.label) ? floor.label : `${floor.label} Floor`
+const selectableFloors = computed(() => {
+  const block = activeBlock.value ?? VENUE_BLOCKS[0]
+  return [VENUE_OUTDOOR_FLOOR, ...(block?.floors ?? [])]
 })
-
 // Only render the user spot when the active floor matches the picked floor.
 // Keeps the pin off the wrong plan when the user is browsing other floors.
 const userSpotForView = computed(() =>
@@ -104,9 +99,9 @@ watch(
   { immediate: true },
 )
 
-function enterBuilding() {
+function enterBuilding(floorId?: string) {
   mode.value = 'indoor'
-  indoorFloorId.value = DEFAULT_FLOOR_ID
+  indoorFloorId.value = floorId && !isOutdoorFloor(floorId) ? floorId : DEFAULT_FLOOR_ID
   armPinchExit()
 }
 
@@ -121,6 +116,14 @@ function switchFloor(floorId: string) {
   indoorFloorId.value = floorId
   // Gesture stays armed across indoor-floor switches: the engine re-applies
   // the loosened minZoom on the new floor's applyFit automatically.
+}
+
+function handleFloorControlChange(floorId: string) {
+  if (floorId === activeFloorId.value) return
+  const targetIsOutdoor = isOutdoorFloor(floorId)
+  if (mode.value === 'outdoor' && !targetIsOutdoor) enterBuilding(floorId)
+  else if (mode.value === 'indoor' && targetIsOutdoor) exitToOutdoor()
+  else switchFloor(floorId)
 }
 
 /** Replaces the old `← Map` button. Once armed, a pinch-out past the
@@ -213,20 +216,12 @@ function handleDone() {
 
         <div v-if="toast" class="slp__toast" role="status">{{ toast }}</div>
 
-        <!-- Top overlay row: floor label (left), floor toggle (right).
-             Mirrors the overall map's overlay. The back button was removed in
-             favour of a pinch-out gesture (see armPinchExit). -->
-        <div class="slp__overlay-row">
-          <span class="slp__crumb-text">{{ breadcrumb }}</span>
-
-          <FloorControl
-            v-if="isIndoor && activeBlock && activeBlock.floors.length > 1"
-            :floors="activeBlock.floors"
-            :active-floor-id="activeFloorId"
-            @change="switchFloor"
-          />
-          <span v-else />
-        </div>
+        <FloorControl
+          class="slp__floor-control"
+          :floors="selectableFloors"
+          :active-floor-id="activeFloorId"
+          @change="handleFloorControlChange"
+        />
 
         <!-- Empty-state hint -->
         <div v-if="!tempLoc" class="slp__hint">
@@ -322,27 +317,11 @@ function handleDone() {
   min-height: 0;
 }
 
-.slp__overlay-row {
+.slp__floor-control {
   position: absolute;
   top: 12px;
   left: 16px;
-  right: 16px;
   z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  pointer-events: none;
-}
-.slp__overlay-row > * {
-  pointer-events: auto;
-}
-
-.slp__crumb-text {
-  font-size: 15px;
-  font-weight: 600;
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 .slp__hint {
