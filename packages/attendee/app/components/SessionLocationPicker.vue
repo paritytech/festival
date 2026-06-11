@@ -21,9 +21,12 @@ const props = withDefaults(
     initial: PickedLocation | null
     markers: VenueMarker[]
     zones: VenueZone[]
+    /** Marker IDs already booked for the candidate session's time window.
+     *  Tapping one shows a "Already booked" toast instead of selecting it. */
+    busyMarkerIds?: Set<string>
     title?: string
   }>(),
-  { title: 'Session Location' },
+  { title: 'Session Location', busyMarkerIds: () => new Set<string>() },
 )
 
 const emit = defineEmits<{
@@ -144,7 +147,7 @@ function handleReady() {
 
 function handleMapClick(loc: { x: number; y: number; floorId: string }) {
   const zoneId = mapRef.value?.getZoneAt(loc.x, loc.y) ?? null
-  tempLoc.value = { x: loc.x, y: loc.y, floorId: loc.floorId, zoneId }
+  tempLoc.value = { x: loc.x, y: loc.y, floorId: loc.floorId, zoneId, markerId: null }
 }
 
 function handleMarkerClick(marker: VenueMarker) {
@@ -152,11 +155,16 @@ function handleMarkerClick(marker: VenueMarker) {
     showToast("You can't host a session here")
     return
   }
+  if (props.busyMarkerIds.has(marker.id)) {
+    showToast(`${marker.label} is already booked for this time`)
+    return
+  }
   tempLoc.value = {
     x: marker.x,
     y: marker.y,
     floorId: marker.floorId,
     zoneId: marker.zoneId ?? null,
+    markerId: marker.id,
   }
 }
 

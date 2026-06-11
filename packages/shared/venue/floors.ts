@@ -166,6 +166,10 @@ export interface PickedLocation {
   y: number;
   floorId: string;
   zoneId: string | null;
+  /** Set when the user tapped a marker (vs. dropping a pin on bare map).
+   *  Lets the caller do venue-conflict checks without round-tripping coords
+   *  through nearest-marker resolution. */
+  markerId?: string | null;
 }
 
 export interface PickedLocationParts {
