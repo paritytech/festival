@@ -6,6 +6,7 @@ import {
   getFloor,
   getFloorBreadcrumb,
   isOutdoorFloor,
+  VENUE_OUTDOOR_FLOOR,
 } from '@festival/shared/venue/floors'
 import { useAttendeeMap } from '~/composables/useAttendeeMap'
 import FloorControl from '~/components/FloorControl.vue'
@@ -22,6 +23,7 @@ const {
   zones,
   activeFloorId,
   activeBlock,
+  blocks,
   selectedMarkerId,
   selectedMarker,
   markersReady,
@@ -35,6 +37,13 @@ const {
   switchFloor,
   getSessionStripFor,
 } = useAttendeeMap()
+
+// Locations selectable from the floor control: outdoor pseudo-floor + the
+// floors of whichever block is active (or the first block when outdoors).
+const selectableFloors = computed(() => {
+  const block = activeBlock.value ?? blocks.value[0]
+  return [VENUE_OUTDOOR_FLOOR, ...(block?.floors ?? [])]
+})
 
 const mapRef = ref<InstanceType<typeof VenueMap> | null>(null)
 const toast = ref<string | null>(null)
@@ -155,6 +164,19 @@ async function playExitChoreography() {
 function handleBuildingClick() {
   if (transitioning.value) return
   void playEnterChoreography()
+}
+
+function handleFloorControlChange(floorId: string) {
+  if (transitioning.value) return
+  if (floorId === activeFloorId.value) return
+  const targetIsOutdoor = isOutdoorFloor(floorId)
+  if (mode.value === 'outdoor' && !targetIsOutdoor) {
+    void playEnterChoreography(floorId)
+  } else if (mode.value === 'indoor' && targetIsOutdoor) {
+    void playExitChoreography()
+  } else {
+    switchFloor(floorId)
+  }
 }
 
 /** Arm the pinch-out / wheel-out gesture as the indoor exit. The engine fires
@@ -369,12 +391,10 @@ onBeforeUnmount(() => {
         </div>
 
         <FloorControl
-          v-if="isIndoor && activeBlock && activeBlock.floors.length > 1"
-          :floors="activeBlock.floors"
+          :floors="selectableFloors"
           :active-floor-id="activeFloorId"
-          @change="switchFloor"
+          @change="handleFloorControlChange"
         />
-        <div v-else />
       </div>
 
       <!-- Outdoor hint (hidden after a selection / placed spot). -->

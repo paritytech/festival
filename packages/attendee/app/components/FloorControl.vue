@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import type { VenueFloor } from '@festival/shared/metadata/schemas'
-import { FLOOR_SELECTOR_SVG } from '@festival/shared/venue/icons'
 
-const props = defineProps<{
+defineProps<{
+  /** All selectable locations. Includes the outdoor pseudo-floor when the
+   *  caller wants Outdoor to be reachable from this control. Order is preserved. */
   floors: VenueFloor[]
   activeFloorId: string
 }>()
@@ -11,38 +11,15 @@ const props = defineProps<{
 const emit = defineEmits<{
   change: [floorId: string]
 }>()
-
-// For 2-floor blocks: show a single toggle button with the OTHER floor's label.
-// For 3+ floors: show a pill stack.
-const otherFloor = computed<VenueFloor | null>(() => {
-  if (props.floors.length !== 2) return null
-  return props.floors.find(f => f.id !== props.activeFloorId) ?? null
-})
-
-function handleToggleClick() {
-  const next = otherFloor.value
-  if (next) emit('change', next.id)
-}
 </script>
 
 <template>
-  <!-- Single-floor blocks: no control rendered. -->
-  <template v-if="floors.length <= 1" />
-
-  <!-- Two-floor toggle: button with other floor's glyph + name. -->
-  <button
-    v-else-if="otherFloor"
-    type="button"
-    class="floor-control floor-control--toggle"
+  <div
+    v-if="floors.length > 1"
+    class="floor-control"
+    role="tablist"
     data-testid="floor-control"
-    :aria-label="`Switch to ${otherFloor.label}`"
-    @click.stop="handleToggleClick"
   >
-    <span class="floor-control__glyph" aria-hidden="true" v-html="FLOOR_SELECTOR_SVG" />
-  </button>
-
-  <!-- 3+ floors: pill stack. -->
-  <div v-else class="floor-control floor-control--stack" role="tablist" data-testid="floor-control">
     <button
       v-for="floor in floors"
       :key="floor.id"
@@ -61,58 +38,37 @@ function handleToggleClick() {
 <style scoped>
 .floor-control {
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  font-family: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-.floor-control--toggle {
-  /* Glyph button with adjacent label. */
-  gap: 8px;
-}
-
-.floor-control__glyph {
-  width: 40px;
-  height: 40px;
-  display: inline-block;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: transform 120ms ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-}
-.floor-control__glyph :deep(svg) {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.floor-control--toggle:hover .floor-control__glyph { transform: scale(1.05); }
-.floor-control--toggle:active .floor-control__glyph { transform: scale(0.97); }
-
-.floor-control--stack {
   flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
   padding: 4px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(15, 15, 15, 0.72);
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .floor-control__pill {
-  padding: 6px 12px;
-  font-size: 12px;
+  min-height: 44px;
+  padding: 10px 16px;
+  min-width: 104px;
+  font-family: inherit;
+  font-size: 14px;
   font-weight: 500;
+  line-height: 1.2;
+  text-align: right;
   background: transparent;
-  color: #3a3a3a;
+  color: rgba(255, 255, 255, 0.65);
   border: 0;
   border-radius: 8px;
   cursor: pointer;
   transition: background 150ms, color 150ms;
 }
+.floor-control__pill:hover {
+  color: rgba(255, 255, 255, 0.95);
+}
 .floor-control__pill.is-active {
-  background: #0f0f0f;
+  background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
 }
 </style>
