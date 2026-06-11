@@ -23,6 +23,7 @@ import {
   encodeCoordLocation,
   resolveLocationLabel,
 } from "@festival/shared/venue/floors";
+import { useSessionVenueConflict } from "~/composables/useSessionVenueConflict";
 import {
   getValidFestivalDays,
   getValidStartSlots,
@@ -104,6 +105,13 @@ watch(currentStep, () => {
 const txStatus = ref<TxStatus>("idle");
 const error = ref<string | null>(null);
 const createdAddress = ref<string | null>(null);
+// Clear stale venue-conflict error once the user changes location or time.
+watch(
+  () => [pickedLocation.value?.markerId, form.dateKey, form.startMinutesOfDay, form.endMinutesOfDay],
+  () => {
+    if (error.value) error.value = null;
+  },
+);
 
 // ── Step 1 ref for canProceed ──
 
@@ -170,6 +178,14 @@ const venueZones = computed(() => {
     return festivalMetadata.value.venueMap.zones;
   }
   return DEFAULT_ZONES;
+});
+
+const { busyMarkerIds, detectConflict } = useSessionVenueConflict({
+  dateKey: () => form.dateKey,
+  startMinutesOfDay: () => form.startMinutesOfDay,
+  endMinutesOfDay: () => form.endMinutesOfDay,
+  venueMarkers,
+  pickedLocation,
 });
 
 // ── Navigation ──
@@ -264,6 +280,15 @@ async function submit() {
     return;
   error.value = null;
   submitValidationError.value = null;
+
+  // Final venue-conflict check: a marker selected earlier may have been
+  // booked by someone else (or by the official schedule) while the user
+  // was still completing the form.
+  const conflict = detectConflict();
+  if (conflict) {
+    error.value = `That venue is already booked by "${conflict.title}" for this time. Pick a different spot or time.`;
+    return;
+  }
 
   // Re-validate against the live festival window, catching clock drift between
   // picking a time and tapping submit. Location and badge are preserved.
@@ -631,6 +656,7 @@ async function submit() {
     :initial="pickedLocation"
     :markers="venueMarkers"
     :zones="venueZones"
+    :busy-marker-ids="busyMarkerIds"
     @done="handlePickerDone"
     @cancel="pickerOpen = false"
   />

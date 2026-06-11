@@ -15,9 +15,11 @@ import {
   encodeCoordLocation,
   parseCoordLocation,
   describePickedLocation,
+  findNearestMarker,
   formatPickedLocationLong,
   type PickedLocation,
 } from "@festival/shared/venue/floors";
+import { useSessionVenueConflict } from "~/composables/useSessionVenueConflict";
 import {
   getValidFestivalDays,
   getValidStartSlots,
@@ -135,6 +137,7 @@ const form = reactive({
 });
 
 const submitValidationError = ref<SessionTimeValidationFailReason | null>(null);
+const venueConflictError = ref<string | null>(null);
 
 const showUpdatedToast = ref(false);
 const pendingSnapshot = ref<{
@@ -197,6 +200,24 @@ const pickedLocation = ref<PickedLocation | null>(null);
 const pickerOpen = ref(false);
 const previewMapRef =
   useTemplateRef<InstanceType<typeof VenueMap>>("previewMapRef");
+
+const { busyMarkerIds, detectConflict } = useSessionVenueConflict({
+  dateKey: () => form.dateKey,
+  startMinutesOfDay: () => form.startMinutesOfDay,
+  endMinutesOfDay: () => form.endMinutesOfDay,
+  venueMarkers,
+  pickedLocation,
+  excludeAddress: addr,
+});
+
+// Clear stale conflict banner once the user changes location or time —
+// otherwise the error sticks around after they've already resolved it.
+watch(
+  () => [pickedLocation.value?.markerId, form.dateKey, form.startMinutesOfDay, form.endMinutesOfDay],
+  () => {
+    venueConflictError.value = null;
+  },
+);
 
 const pickedLocationLabel = computed(() => {
   if (!pickedLocation.value) return "";
@@ -281,11 +302,22 @@ watch(
       form.endMinutesOfDay = berlinMinutesFromTs(Number(d.endTime));
 
       // Pre-fill location. zoneId is resolved later, after the preview map mounts
-      // and we can hit-test the SVG via getZoneAt.
+      // and we can hit-test the SVG via getZoneAt. Resolve nearest marker now
+      // so a time-only edit still gets venue-conflict checked.
       if (m.location) {
         const coord = parseCoordLocation(m.location);
         if (coord) {
-          pickedLocation.value = { ...coord, zoneId: null };
+          const nearest = findNearestMarker(
+            coord.x,
+            coord.y,
+            coord.floorId,
+            venueMarkers.value,
+          );
+          pickedLocation.value = {
+            ...coord,
+            zoneId: null,
+            markerId: nearest?.id ?? null,
+          };
         }
       }
 
@@ -341,6 +373,7 @@ async function submit() {
     return;
 
   submitValidationError.value = null;
+  venueConflictError.value = null;
 
   // Re-validate against live `now` only if the user actually changed date/time.
   // If the original times are unchanged, leave them alone. Editing description
@@ -369,6 +402,12 @@ async function submit() {
       form.endMinutesOfDay = null;
       return;
     }
+  }
+
+  const conflict = detectConflict();
+  if (conflict) {
+    venueConflictError.value = `That venue is already booked by "${conflict.title}" for this time. Pick a different spot or time.`;
+    return;
   }
 
   const location = pickedLocation.value
@@ -546,6 +585,16 @@ async function submit() {
 
       <!-- Location -->
       <div v-if="!pickerOpen">
+        <!-- Venue conflict banner: shown directly above the location map so
+             the user sees it next to the venue they need to change. -->
+        <div
+          v-if="venueConflictError"
+          data-testid="session-venue-conflict-banner"
+          class="rounded-2xl bg-red-900/30 border border-red-500/20 px-4 py-3 mb-3"
+        >
+          <p class="text-sm text-red-300">{{ venueConflictError }}</p>
+        </div>
+
         <p v-if="pickedLocation" class="text-xs text-white/40">
           Selected Location
         </p>
@@ -654,6 +703,7 @@ async function submit() {
     :initial="pickedLocation"
     :markers="venueMarkers"
     :zones="venueZones"
+    :busy-marker-ids="busyMarkerIds"
     title="Change Location"
     @done="handlePickerDone"
     @cancel="handlePickerCancel"
