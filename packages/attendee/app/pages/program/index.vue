@@ -248,8 +248,6 @@ function autoScrollToNow() {
   );
   if (!el) return;
 
-  // Land just below the sticky tab header + day header + legend. A small extra
-  // gap keeps the hour readable.
   const scrollerEl = scroller.value;
   if (!scrollerEl) return;
   // getBoundingClientRect is viewport-relative; convert to scroller-content
@@ -357,9 +355,6 @@ const subEventsEnabled = computed(() => {
           <span class="text-lg leading-[22px] font-semibold text-text-secondary">{{ day.label }}</span>
         </div>
 
-        <!-- Sessions Type legend (Program tab only). Sticky under the day
-             header; the per-day wrapper releases it when the next day's
-             section scrolls in, so each day shows its own legend. -->
         <div
           v-if="activeTab === 'program'"
           :ref="(el) => { if (el) legendEls[dayIdx] = el as HTMLElement }"
