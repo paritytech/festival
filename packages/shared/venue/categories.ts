@@ -75,7 +75,7 @@ export function getCategory(cat: MarkerCategory): CategorySpec {
 /** Marker types that can be selected as a session location in the picker.
  *  Tapping any other marker is treated as a blocked spot. */
 export const SESSION_LOCATION_ALLOWED_TYPES: ReadonlySet<MarkerType> = new Set<MarkerType>([
-  'room', 'stage', 'chill-zone', 'swimming-zone', 'camping',
+  'room', 'stage', 'chill-zone',
   'food', 'bar', 'coffee',
   'star',
 ])
