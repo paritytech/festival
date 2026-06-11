@@ -549,7 +549,9 @@ function getMyListRoute(item: TimelineItem): string {
       </NuxtLink>
 
       </div>
-      <!-- 8. Location (moves to bottom once the user is checked in) -->
+      <!-- 8. Festival chat -->
+      <HomeFestivalChat />
+      <!-- 9. Location (moves to bottom once the user is checked in) -->
       <HomeLocation />
     </template>
   </div>
