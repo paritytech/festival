@@ -1,6 +1,6 @@
 import { createClient, type PolkadotClient } from 'polkadot-api'
 import { getWsProvider } from 'polkadot-api/ws'
-import { createPapiProvider } from '@novasamatech/host-api-wrapper'
+import { getHostProvider } from '@parity/product-sdk-host'
 import { mainDescriptor, bulletinDescriptor } from '#active-descriptors'
 import {
   SUBSTRATE_WS_URL,
@@ -17,15 +17,21 @@ let bulletinClientInstance: PolkadotClient | null = null
 
 /**
  * Get or create a PAPI client for a given chain genesis hash.
- * Host mode: routed via createPapiProvider (through host sandbox).
+ * Host mode: routed via the host provider (through host sandbox).
  * Standalone mode: direct WebSocket connection.
+ *
+ * Async because the facade's `getHostProvider` resolves the host connection
+ * lazily (and is nullable outside a host container).
  */
-function getOrCreateClient(genesis: `0x${string}`): PolkadotClient {
+async function getOrCreateClient(genesis: `0x${string}`): Promise<PolkadotClient> {
   let client = clientCache.get(genesis)
   if (!client) {
     const provider = isInHost()
-      ? createPapiProvider(genesis)
+      ? await getHostProvider(genesis)
       : getWsProvider(SUBSTRATE_WS_URL)
+    if (!provider) {
+      throw new Error('[client] host provider unavailable')
+    }
 
     client = createClient(provider)
     clientCache.set(genesis, client)
@@ -37,8 +43,8 @@ function getOrCreateClient(genesis: `0x${string}`): PolkadotClient {
  * Main chain PAPI client (Polkadot Hub TestNet).
  * Cached per genesis hash for reuse.
  */
-export function useMainClient() {
-  const client = getOrCreateClient(CHAIN_GENESIS_HASH)
+export async function useMainClient() {
+  const client = await getOrCreateClient(CHAIN_GENESIS_HASH)
   return {
     client,
     api: client.getTypedApi(mainDescriptor),
@@ -47,14 +53,17 @@ export function useMainClient() {
 
 /**
  * Bulletin Chain PAPI client.
- * Host mode: routed via createPapiProvider on the bulletin genesis hash.
+ * Host mode: routed via the host provider on the bulletin genesis hash.
  * Standalone mode: direct WebSocket to BULLETIN_RPC.
  */
-export function useBulletinClient() {
+export async function useBulletinClient() {
   if (!bulletinClientInstance) {
     const provider = isInHost()
-      ? createPapiProvider(BULLETIN_GENESIS_HASH)
+      ? await getHostProvider(BULLETIN_GENESIS_HASH)
       : getWsProvider(BULLETIN_RPC)
+    if (!provider) {
+      throw new Error('[client] bulletin host provider unavailable')
+    }
     bulletinClientInstance = createClient(provider)
   }
   return {

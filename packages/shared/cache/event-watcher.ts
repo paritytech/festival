@@ -67,7 +67,11 @@ export function watchFestivalEvents(
     return { unsubscribe: () => {} }
   }
 
-  const { api } = useMainClient()
+  // useMainClient() is now async (the host provider resolves lazily), but this
+  // function keeps its synchronous `{ unsubscribe }` contract — the client is
+  // resolved inside subscribe() on first run.
+  type MainApi = Awaited<ReturnType<typeof useMainClient>>['api']
+  let api: MainApi | null = null
   const normalizedAddress = festivalAddress.toLowerCase()
   let subscription: { unsubscribe: () => void } | null = null
   let retryTimeout: ReturnType<typeof setTimeout> | null = null
@@ -136,7 +140,23 @@ export function watchFestivalEvents(
     }
   }
 
-  function subscribe() {
+  async function subscribe() {
+    if (stopped) return
+
+    // Resolve the (now async) main client once, lazily. On failure, retry on
+    // the same cadence as a subscribe error.
+    if (!api) {
+      try {
+        ;({ api } = await useMainClient())
+      } catch (err) {
+        console.warn(`[FestivalWatcher] client unavailable — will retry in ${RETRY_DELAY_MS}ms: ${(err as Error).message}`)
+        if (!stopped) {
+          if (retryTimeout) clearTimeout(retryTimeout)
+          retryTimeout = setTimeout(subscribe, RETRY_DELAY_MS)
+        }
+        return
+      }
+    }
     if (stopped) return
 
     // Dispose any prior subscription before opening a new one. This covers the

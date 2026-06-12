@@ -119,7 +119,7 @@ export async function writeContract({
   // "Permission denied" on first grant.
 
   const calldata = encodeFunctionData({ abi, functionName, args })
-  const { api } = useMainClient()
+  const { api } = await useMainClient()
 
   // An account is mapped once pallet-revive's map_account has stored its
   // SS58→H160 entry. sdk-ink's addressIsMapped did exactly this lookup:
