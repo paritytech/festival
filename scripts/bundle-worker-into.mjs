@@ -3,7 +3,7 @@
  * Build the announcements chat worker into a host product's deploy output.
  *
  * Only the attendee product declares a `worker` modality (see
- * `packages/attendee/bulletin-deploy.config.mjs`); for any other app this is a
+ * `packages/attendee/polkadot-app-deploy.config.mjs`); for any other app this is a
  * no-op. The worker build reads the same `VITE_*` env as the SPA build (this
  * process's env), so it targets the matching Festival + network. We then copy
  * the bundle to `<app>/out/worker/index.js` — the path the manifest's worker
