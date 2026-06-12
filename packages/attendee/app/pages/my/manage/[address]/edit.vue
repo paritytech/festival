@@ -14,8 +14,7 @@ import { decodeBadgeHex } from "@festival/shared/utils/badge";
 import {
   encodeCoordLocation,
   parseCoordLocation,
-  describePickedLocation,
-  formatPickedLocationLong,
+  formatPickedLocationFull,
   type PickedLocation,
 } from "@festival/shared/venue/floors";
 import {
@@ -200,12 +199,10 @@ const previewMapRef =
 
 const pickedLocationLabel = computed(() => {
   if (!pickedLocation.value) return "";
-  return formatPickedLocationLong(
-    describePickedLocation(
-      pickedLocation.value,
-      venueMarkers.value,
-      venueZones.value,
-    ),
+  return formatPickedLocationFull(
+    pickedLocation.value,
+    venueMarkers.value,
+    venueZones.value,
   );
 });
 

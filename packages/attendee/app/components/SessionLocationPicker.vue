@@ -7,8 +7,7 @@ import {
   getBlockByFloor,
   getFloor,
   isOutdoorFloor,
-  describePickedLocation,
-  formatPickedLocationCard,
+  formatChipFromPicked,
   type PickedLocation,
 } from '@festival/shared/venue/floors'
 import VenueMap from '~/components/VenueMap.vue'
@@ -72,9 +71,7 @@ const userSpotForView = computed(() =>
 
 const cardParts = computed(() =>
   tempLoc.value
-    ? formatPickedLocationCard(
-        describePickedLocation(tempLoc.value, props.markers, props.zones),
-      )
+    ? formatChipFromPicked(tempLoc.value, props.markers, props.zones)
     : null,
 )
 
@@ -225,8 +222,8 @@ function handleDone() {
             <img src="/icons/place.svg" alt="" width="24" height="24" />
           </div>
           <div class="slp__card-text">
-            <div class="slp__card-caption">{{ cardParts.caption }}</div>
-            <div class="slp__card-bold">{{ cardParts.bold }}</div>
+            <div class="slp__card-caption">{{ cardParts.sub }}</div>
+            <div class="slp__card-bold">{{ cardParts.headline }}</div>
           </div>
           <button
             type="button"

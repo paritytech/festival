@@ -14,7 +14,7 @@ import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
 import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
-import { resolveLocationLabel } from "@festival/shared/venue/floors";
+import { resolveFullLocationLabel } from "@festival/shared/venue/floors";
 import { useBulletinImage } from "~/composables/useBulletinImage";
 import {
   SESSION_CHECKIN_GRACE_MS,
@@ -161,9 +161,10 @@ const dayLabel = computed(() => {
 
 const locationLabel = computed(() => {
   if (!subEvent.value?.metadata.location) return "";
-  return resolveLocationLabel(
+  return resolveFullLocationLabel(
     subEvent.value.metadata.location,
     venueMarkers.value,
+    venueZones.value,
   );
 });
 

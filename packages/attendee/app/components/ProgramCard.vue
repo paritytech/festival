@@ -7,23 +7,30 @@ import {
 } from "~/composables/useProgramTimeline";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import {
-  getMarkerLocationLabel,
-  resolveLocationLabel,
+  resolveFullLocationLabel,
+  resolveShortLocationLabel,
 } from "@festival/shared/venue/floors";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { useRegistration } from "~/composables/useRegistration";
-import type { VenueMarker } from "@festival/shared/metadata/schemas";
+import type { VenueMarker, VenueZone } from "@festival/shared/metadata/schemas";
 import type { BookmarkPayload } from "~/composables/useBookmarks";
 import { useMyListFlyAnimation } from "~/composables/useMyListFlyAnimation";
 import { formatTimeBerlin, parseFestivalDate } from "@festival/shared/utils/time";
 
-const props = defineProps<{
-  item: TimelineItem;
-  venueMarkers?: VenueMarker[];
-  isBookmarked?: boolean;
-  now?: number;
-}>();
+const props = withDefaults(
+  defineProps<{
+    item: TimelineItem;
+    venueMarkers?: VenueMarker[];
+    venueZones?: VenueZone[];
+    isBookmarked?: boolean;
+    now?: number;
+    // `short` = "Floor · Zone" for quick scan (Program tab).
+    // `full`  = "Floor · Zone · Marker" for precise navigation (My List tab).
+    locationFormat?: "short" | "full";
+  }>(),
+  { locationFormat: "short" },
+);
 
 const emit = defineEmits<{
   toggleBookmark: [id: string, payload: BookmarkPayload];
@@ -83,19 +90,22 @@ const timeRange = computed(() => {
 
 const venueLabel = computed(() => {
   if (!props.venueMarkers?.length) return "";
+  const zones = props.venueZones ?? [];
+  const resolve =
+    props.locationFormat === "full"
+      ? resolveFullLocationLabel
+      : resolveShortLocationLabel;
   if (props.item.type === "official" && props.item.entry.venueMarkerId) {
-    return getMarkerLocationLabel(
-      props.item.entry.venueMarkerId,
-      props.venueMarkers,
-    );
+    return resolve(props.item.entry.venueMarkerId, props.venueMarkers, zones);
   }
   if (
     props.item.type === "community" &&
     props.item.subEvent.metadata.location
   ) {
-    return resolveLocationLabel(
+    return resolve(
       props.item.subEvent.metadata.location,
-      props.venueMarkers!,
+      props.venueMarkers,
+      zones,
     );
   }
   return "";

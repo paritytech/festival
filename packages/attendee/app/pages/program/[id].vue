@@ -8,7 +8,7 @@ import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
 import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
 import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
-import { getMarkerLocationLabel } from "@festival/shared/venue/floors";
+import { resolveFullLocationLabel } from "@festival/shared/venue/floors";
 import { useBulletinImage } from "~/composables/useBulletinImage";
 import { formatTimeBerlin, formatDateBerlin, parseFestivalDate, isSameDay } from "@festival/shared/utils/time";
 
@@ -79,7 +79,11 @@ const dayLabel = computed(() => {
 
 const locationLabel = computed(() => {
   if (!entry.value?.venueMarkerId) return "";
-  return getMarkerLocationLabel(entry.value.venueMarkerId, venueMarkers.value);
+  return resolveFullLocationLabel(
+    entry.value.venueMarkerId,
+    venueMarkers.value,
+    venueZones.value,
+  );
 });
 
 // Resolves through the host preimage manager, so it stays a blob URL in the host.

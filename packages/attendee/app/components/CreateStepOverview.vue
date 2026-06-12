@@ -4,8 +4,7 @@ import { decodeBadgeHex } from '@festival/shared/utils/badge'
 import { formatDateBerlin } from '@festival/shared/utils/time'
 import { formatTimeLabel } from '@festival/shared'
 import {
-  describePickedLocation,
-  formatPickedLocationLong,
+  formatPickedLocationFull,
   type PickedLocation,
 } from '@festival/shared/venue/floors'
 import type { VenueMarker, VenueZone } from '@festival/shared/metadata/schemas'
@@ -60,9 +59,7 @@ const timeLabel = computed(() => {
 
 const locationLabel = computed(() =>
   props.pickedLocation
-    ? formatPickedLocationLong(
-        describePickedLocation(props.pickedLocation, props.venueMarkers, props.venueZones),
-      )
+    ? formatPickedLocationFull(props.pickedLocation, props.venueMarkers, props.venueZones)
     : '',
 )
 </script>

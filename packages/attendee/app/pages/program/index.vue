@@ -13,6 +13,7 @@ import { useSavedItems } from "~/composables/useSavedItems";
 import { useOnboardingSeen } from "~/composables/useOnboardingSeen";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
+import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
 import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
 import { toBerlinDateKey, berlinHourOf } from "@festival/shared/utils/time";
 import type {
@@ -127,6 +128,13 @@ const venueMarkers = computed(() => {
     return metadata.value.venueMap.markers;
   }
   return MOCK_VENUE_MAP.markers;
+});
+
+const venueZones = computed(() => {
+  if (hasDeployedContracts() && metadata.value?.venueMap?.zones?.length) {
+    return metadata.value.venueMap.zones;
+  }
+  return DEFAULT_ZONES;
 });
 
 function onScroll() {
@@ -390,6 +398,7 @@ const subEventsEnabled = computed(() => {
                 <ProgramCard
                   :item="item"
                   :venue-markers="venueMarkers"
+                  :venue-zones="venueZones"
                   :is-bookmarked="isBookmarked(getItemId(item))"
                   :now="nowMs"
                   @toggle-bookmark="toggleBookmark"
@@ -407,6 +416,8 @@ const subEventsEnabled = computed(() => {
               :key="getItemId(item)"
               :item="item"
               :venue-markers="venueMarkers"
+              :venue-zones="venueZones"
+              location-format="full"
               :is-bookmarked="isBookmarked(getItemId(item))"
               :now="nowMs"
               @toggle-bookmark="toggleBookmark"

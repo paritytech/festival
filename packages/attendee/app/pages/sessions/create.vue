@@ -21,7 +21,7 @@ import { useWalletStore } from "@festival/shared/host/wallet";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import {
   encodeCoordLocation,
-  resolveLocationLabel,
+  formatPickedLocationFull,
 } from "@festival/shared/venue/floors";
 import {
   getValidFestivalDays,
@@ -237,12 +237,11 @@ function buildMetadata(): SubEventMetadata {
 
 const pickedLocationLabel = computed(() => {
   if (!pickedLocation.value) return "";
-  const encoded = encodeCoordLocation(
-    pickedLocation.value.floorId,
-    pickedLocation.value.x,
-    pickedLocation.value.y,
+  return formatPickedLocationFull(
+    pickedLocation.value,
+    venueMarkers.value,
+    venueZones.value,
   );
-  return resolveLocationLabel(encoded, venueMarkers.value);
 });
 
 const isCreatingSession = computed(

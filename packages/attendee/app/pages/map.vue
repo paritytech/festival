@@ -4,9 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import type { VenueMarker } from '@festival/shared/metadata/schemas'
 import {
   getFloor,
-  getFloorBreadcrumb,
+  getMapContextLabel,
+  formatChipFromMarker,
   isOutdoorFloor,
 } from '@festival/shared/venue/floors'
+import { TYPE_LABELS } from '@festival/shared/venue/categories'
 import { useAttendeeMap } from '~/composables/useAttendeeMap'
 import FloorControl from '~/components/FloorControl.vue'
 import VenueMap from '~/components/VenueMap.vue'
@@ -73,11 +75,25 @@ const topLeftLabel = computed(() => {
   return /floor/i.test(floor.label) ? floor.label : `${floor.label} Floor`
 })
 
-const selectedBreadcrumb = computed(() => {
-  // Floor label only, no block or zone.
-  if (selectedMarker.value) return getFloorBreadcrumb(selectedMarker.value.floorId)
-  if (userSpot.value) return getFloorBreadcrumb(userSpot.value.floorId)
-  return ''
+// Headline + sub-label for the bottom selected-card. Marker selected →
+// "marker name" + "Floor · Zone". User-dropped pin → "Pinned location" + Floor.
+const selectedChip = computed(() => {
+  if (selectedMarker.value) {
+    const chip = formatChipFromMarker(selectedMarker.value, zones.value)
+    // Icon-only categories may save with an empty label; fall back to the
+    // type label (e.g. "Restroom") so the headline is never blank.
+    if (!chip.headline) {
+      chip.headline = TYPE_LABELS[selectedMarker.value.type] || '(unnamed)'
+    }
+    return chip
+  }
+  if (userSpot.value) {
+    return {
+      headline: 'Pinned location',
+      sub: getMapContextLabel(userSpot.value.floorId),
+    }
+  }
+  return { headline: '', sub: '' }
 })
 
 const sessionStrip = computed(() => {
@@ -242,11 +258,11 @@ async function handleShare() {
 
   if (selectedMarker.value) {
     const m = selectedMarker.value
-    text = `${m.label} — ${selectedBreadcrumb.value}`
+    text = `${m.label} — ${selectedChip.value.sub}`
     url = `${origin}/#${router.resolve({ path: '/map', query: { marker: m.id } }).fullPath}`
   } else if (userSpot.value) {
     const s = userSpot.value
-    text = `Meet me here — ${selectedBreadcrumb.value}`
+    text = `Meet me here — ${selectedChip.value.sub}`
     url = `${origin}/#${router.resolve({ path: '/map', query: { spot: `${s.floorId}:${s.x}:${s.y}` } }).fullPath}`
   } else {
     return
@@ -401,7 +417,8 @@ onBeforeUnmount(() => {
     <div v-if="hasSelection && !transitioning" class="map-page__bottom">
       <MapSelectedCard
         :marker="selectedMarker"
-        :breadcrumb="selectedBreadcrumb"
+        :headline="selectedChip.headline"
+        :sub="selectedChip.sub"
         @share="handleShare"
         @close="handleClose"
       >

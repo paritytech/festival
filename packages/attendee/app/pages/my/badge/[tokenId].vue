@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { MOCK_VENUE_MAP } from '@festival/shared/mocks'
+import { DEFAULT_ZONES } from '@festival/shared/venue/zones'
 import { usePoaps } from '~/composables/usePoaps'
 import { useSubEvents } from '~/composables/useSubEvents'
 import { useFestival } from '~/composables/useFestival'
@@ -8,7 +9,7 @@ import { getDominantBadgeColor } from '@festival/shared/utils/badge'
 import { deriveFestivalColor } from '@festival/shared/utils/festivalColor'
 import { shortenAddress } from '@festival/shared/utils/address'
 import FestivalPoapBadge from '~/components/FestivalPoapBadge.vue'
-import { resolveLocationLabel } from '@festival/shared/venue/floors'
+import { resolveFullLocationLabel } from '@festival/shared/venue/floors'
 import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { formatTimeBerlin, formatDateBerlin } from '@festival/shared/utils/time'
 import {
@@ -59,6 +60,13 @@ const venueMarkers = computed(() => {
   return MOCK_VENUE_MAP.markers
 })
 
+const venueZones = computed(() => {
+  if (hasDeployedContracts() && festivalMetadata.value?.venueMap?.zones?.length) {
+    return festivalMetadata.value.venueMap.zones
+  }
+  return DEFAULT_ZONES
+})
+
 // ── Display data ──
 
 const dominantColor = computed(() => {
@@ -84,7 +92,11 @@ const timeAndLocation = computed(() => {
   const toTime = formatTimeBerlin(end)
   let label = `${dayAndMonth} · ${fromTime}–${toTime}`
   if (subEvent.value.metadata.location) {
-    const loc = resolveLocationLabel(subEvent.value.metadata.location, venueMarkers.value)
+    const loc = resolveFullLocationLabel(
+      subEvent.value.metadata.location,
+      venueMarkers.value,
+      venueZones.value,
+    )
     if (loc) label += ` ${loc}`
   }
   return label
