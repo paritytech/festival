@@ -96,14 +96,6 @@ function switchFloor(floorId: string) {
   editingMarker.value = null
 }
 
-const blockedNotice = ref<string | null>(null)
-let blockedTimer: ReturnType<typeof setTimeout> | null = null
-function flashBlockedNotice() {
-  blockedNotice.value = "Can't place a marker in a no-go zone"
-  if (blockedTimer) clearTimeout(blockedTimer)
-  blockedTimer = setTimeout(() => { blockedNotice.value = null }, 2000)
-}
-
 function handleMapClick(loc: { x: number; y: number; floorId: string }) {
   if (!canEditMetadata.value) return
   const zoneId = mapRef.value?.getZoneAt?.(loc.x, loc.y) ?? undefined
@@ -171,15 +163,7 @@ function removeMarker(id: string) {
           @map-click="handleMapClick"
           @marker-click="editMarker"
           @building-click="enterBuilding()"
-          @blocked-click="flashBlockedNotice"
         />
-        <div
-          v-if="blockedNotice"
-          class="admin-map-wrap__blocked-notice"
-          role="status"
-        >
-          {{ blockedNotice }}
-        </div>
       </ClientOnly>
 
       <button
@@ -307,22 +291,6 @@ function removeMarker(id: string) {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .admin-map-wrap__back:hover { background: rgba(15, 15, 15, 0.92); }
-
-.admin-map-wrap__blocked-notice {
-  position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  padding: 8px 14px;
-  background: rgba(15, 15, 15, 0.85);
-  color: var(--color-primary);
-  border-radius: var(--radius-3xl);
-  font-size: 13px;
-  font-weight: 500;
-  box-shadow: var(--shadow-md);
-  pointer-events: none;
-}
 
 .marker-row-icon {
   width: 32px;

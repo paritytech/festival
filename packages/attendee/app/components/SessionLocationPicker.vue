@@ -152,6 +152,10 @@ function handleMarkerClick(marker: VenueMarker) {
     showToast("You can't host a session here")
     return
   }
+  if (mapRef.value?.isPointInForbiddenZone(marker.x, marker.y)) {
+    showToast("You can't host a session here")
+    return
+  }
   tempLoc.value = {
     x: marker.x,
     y: marker.y,
