@@ -179,7 +179,7 @@ function removeMarker(id: string) {
       </button>
 
       <div
-        v-if="isIndoor && activeBlock && activeBlock.floors.length > 1"
+        v-if="isIndoor && activeBlock"
         class="admin-map-wrap__floor-control"
       >
         <FloorControl
