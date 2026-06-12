@@ -9,7 +9,7 @@ import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
 import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
 import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
 import { getMarkerLocationLabel } from "@festival/shared/venue/floors";
-import { cidToGatewayUrl } from "@festival/shared/metadata/cid";
+import { useBulletinImage } from "~/composables/useBulletinImage";
 import { formatTimeBerlin, formatDateBerlin, parseFestivalDate, isSameDay } from "@festival/shared/utils/time";
 
 const route = useRoute();
@@ -82,10 +82,10 @@ const locationLabel = computed(() => {
   return getMarkerLocationLabel(entry.value.venueMarkerId, venueMarkers.value);
 });
 
-const imageUrl = computed(() => {
-  const cid = metadata.value?.festivalPoapImage || metadata.value?.image;
-  return cid ? cidToGatewayUrl(cid) : null;
-});
+// Resolves through the host preimage manager, so it stays a blob URL in the host.
+const imageUrl = useBulletinImage(
+  () => metadata.value?.festivalPoapImage || metadata.value?.image || null,
+);
 
 function formatTime(d: Date): string {
   return formatTimeBerlin(d);

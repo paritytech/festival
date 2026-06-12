@@ -29,6 +29,8 @@ export interface SessionDetails {
   endTime: bigint
   cancelled: boolean
   registeredCount: bigint
+  flagCount: bigint
+  flagThreshold: bigint
 }
 
 /** POAP data from getPOAPData() */

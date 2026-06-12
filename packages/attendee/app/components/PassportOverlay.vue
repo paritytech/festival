@@ -1,5 +1,8 @@
 <script setup lang="ts">
-defineEmits<{ close: [] }>()
+defineProps<{
+  forceShowQr?: boolean;
+}>();
+defineEmits<{ close: [] }>();
 </script>
 
 <template>
@@ -12,7 +15,7 @@ defineEmits<{ close: [] }>()
     >
       <div class="flex-1 overflow-y-auto px-4 pt-[calc(env(safe-area-inset-top)+24px)] pb-4 flex items-center justify-center">
         <div class="w-full max-w-sm">
-          <HomePassport />
+          <HomePassport :force-show-qr="forceShowQr" />
         </div>
       </div>
 

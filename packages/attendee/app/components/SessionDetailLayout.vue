@@ -6,8 +6,8 @@ import type { VenueMarker, VenueZone } from '@festival/shared/metadata/schemas'
 const props = defineProps<{
   badgePixels?: number[] | null
   imageUrl?: string | null
-  bannerValue: string
-  bannerLabel: string
+  bannerValue?: string
+  bannerLabel?: string
   category?: string
   categoryColor?: string
   title: string
@@ -31,6 +31,7 @@ const props = defineProps<{
 
 defineEmits<{
   'toggle-bookmark': []
+  'open-location': []
 }>()
 
 const router = useRouter()
@@ -48,29 +49,13 @@ function onBack() {
   <div
     class="flex flex-col min-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom))] -mx-4"
   >
-    <!-- Top bar -->
-    <div class="flex items-center justify-between px-4 pt-4 pb-3">
-      <button
-        class="w-10 h-10 flex items-center justify-center -ml-2"
-        data-testid="session-detail-back"
-        @click="onBack"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="text-text-and-icons-primary"
-        >
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-      </button>
-      <div class="flex items-center gap-2 -mr-2">
+    <SessionTopBar
+      title="Session Detail"
+      title-testid="session-detail-title"
+      back-testid="session-detail-back"
+      @back="onBack"
+    >
+      <template #trailing>
         <slot name="topBarTrailing" />
         <button
           v-if="bookmarked != null"
@@ -93,8 +78,8 @@ function onBack() {
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
           </svg>
         </button>
-      </div>
-    </div>
+      </template>
+    </SessionTopBar>
 
     <!-- Top image tile + ongoing/ended indicator -->
     <div
@@ -133,7 +118,10 @@ function onBack() {
     </div>
 
     <!-- Banner -->
-    <div class="flex items-center justify-between gap-3 px-4 py-3 bg-surface mt-6">
+    <div
+      v-if="bannerLabel"
+      class="flex items-center justify-between gap-3 px-4 py-3 bg-surface mt-6"
+    >
       <div class="min-w-0 flex-1">
         <p class="text-xs text-text-muted">{{ bannerLabel }}</p>
         <p class="text-sm font-medium text-text-and-icons-primary mt-0.5 truncate">{{ bannerValue }}</p>
@@ -189,7 +177,15 @@ function onBack() {
           {{ locationLabel }}
         </p>
         <div v-if="location" class="mt-6">
-          <SessionLocationMap :location="location" :markers="venueMarkers" :zones="venueZones" />
+          <button
+            type="button"
+            class="block w-full text-left"
+            data-testid="session-location-map-link"
+            aria-label="Open session location"
+            @click="$emit('open-location')"
+          >
+            <SessionLocationMap :location="location" :markers="venueMarkers" :zones="venueZones" />
+          </button>
         </div>
       </div>
     </div>

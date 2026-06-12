@@ -10,6 +10,7 @@ import { useSubEvents } from "~/composables/useSubEvents";
 import { useNow } from "~/composables/useNow";
 import type { TxStatus } from "@festival/shared/contracts/write";
 import type { SubEventMetadata } from "@festival/shared/metadata/schemas";
+import { randomAnonymousSpeakerName } from "@festival/shared/metadata/anonymousSpeaker";
 import { writeContract } from "@festival/shared/contracts/write";
 import { FestivalABI } from "@festival/shared/contracts/abis";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
@@ -67,6 +68,7 @@ const stepTitle = computed(() => {
 
 const form = reactive({
   name: "",
+  speaker: "",
   description: "",
   dateKey: "",
   startMinutesOfDay: null as number | null,
@@ -77,6 +79,12 @@ const submitValidationError = ref<SessionTimeValidationFailReason | null>(null);
 const pickedLocation = ref<PickedLocation | null>(null);
 const pickerOpen = ref(false);
 const badgeHex = ref("");
+
+const fallbackSpeaker = ref(
+  randomAnonymousSpeakerName(
+    subEvents.value.flatMap((s) => s.metadata.speakers),
+  ),
+);
 
 const stepBodyRef = useTemplateRef<HTMLDivElement>("stepBodyRef");
 
@@ -169,6 +177,7 @@ const venueZones = computed(() => {
 const hasAnyData = computed(
   () =>
     form.name !== "" ||
+    form.speaker !== "" ||
     form.description !== "" ||
     form.dateKey !== "" ||
     form.startMinutesOfDay != null ||
@@ -212,13 +221,14 @@ function buildMetadata(): SubEventMetadata {
         pickedLocation.value.y,
       )
     : "";
+  const speaker = form.speaker.trim() || fallbackSpeaker.value;
   return {
     version: "1.0",
     type: "sub-event",
     name: form.name,
     description: form.description,
     location,
-    speakers: [],
+    speakers: [speaker],
     badgeHex: badgeHex.value || undefined,
   };
 }
@@ -552,6 +562,7 @@ async function submit() {
       <CreateStepOverview
         v-if="currentStep === 4"
         :name="form.name"
+        :speaker="form.speaker || fallbackSpeaker"
         :description="form.description"
         :date-key="form.dateKey"
         :start-minutes-of-day="form.startMinutesOfDay"
@@ -564,7 +575,7 @@ async function submit() {
       />
     </div>
 
-    <div class="sticky bottom-0 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-background">
+    <div class="sticky bottom-0 z-10 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-background">
       <!-- Step 1: Next -->
       <button
         v-if="currentStep === 1"

@@ -14,6 +14,7 @@ import EditButton from './ui/EditButton.vue'
 
 const props = defineProps<{
   name: string
+  speaker: string
   description: string
   dateKey: string
   startMinutesOfDay: number | null
@@ -102,6 +103,10 @@ const locationLabel = computed(() =>
       </p>
 
       <div class="mt-3 space-y-3">
+        <div v-if="speaker">
+          <p class="text-xs leading-[18px] text-text-and-icons-secondary">Session Speaker</p>
+          <p class="text-lg font-semibold text-text-and-icons-primary">{{ speaker }}</p>
+        </div>
         <div>
           <p class="text-xs leading-[18px] text-text-and-icons-secondary">Session Date</p>
           <p class="text-lg font-semibold text-text-and-icons-primary">{{ dateLabel }}</p>
@@ -126,7 +131,7 @@ const locationLabel = computed(() =>
       <p class="text-2xl leading-8 font-semibold text-text-and-icons-primary mb-4">{{ locationLabel }}</p>
       <div
         v-if="pickedLocation"
-        class="relative aspect-[4/3] rounded-2xl overflow-hidden"
+        class="relative aspect-[4/3] rounded-2xl overflow-hidden isolate"
       >
         <VenueMap
           ref="mapRef"

@@ -8,7 +8,9 @@ import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads"
 import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
 import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
 import type { SubEventMetadata } from "@festival/shared/metadata/schemas";
+import { randomAnonymousSpeakerName } from "@festival/shared/metadata/anonymousSpeaker";
 import { isValidEvmAddress } from "@festival/shared/utils/address";
+import { decodeBadgeHex } from "@festival/shared/utils/badge";
 import {
   encodeCoordLocation,
   parseCoordLocation,
@@ -26,6 +28,7 @@ import {
   type SessionTimeValidationFailReason,
 } from "@festival/shared";
 import VenueMap from "~/components/VenueMap.vue";
+import InputField from "~/components/ui/InputField.vue";
 
 definePageMeta({
   validate: (route) => isValidEvmAddress(route.params.address as string),
@@ -59,6 +62,17 @@ const {
 const { metadata: festivalMetadata, details: festivalDetails } = useFestival();
 
 const now = useNow();
+
+// Redirect to the read-only session page once the session has ended.
+watch(
+  [details, now],
+  ([d, n]) => {
+    if (d && d.endTime !== 0n && Number(d.endTime) * 1000 <= n) {
+      navigateTo(`/sessions/${addr}`, { replace: true });
+    }
+  },
+  { immediate: true },
+);
 
 // ── Modals ──
 
@@ -102,6 +116,11 @@ const venueZones = computed(() => {
     return festivalMetadata.value.venueMap.zones;
   }
   return DEFAULT_ZONES;
+});
+
+const badgePixels = computed(() => {
+  const hex = metadata.value?.badgeHex;
+  return hex ? decodeBadgeHex(hex) : null;
 });
 
 // ── Form state ──
@@ -360,16 +379,20 @@ async function submit() {
       )
     : "";
 
+  const enteredSpeakers = form.speakers
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   const updated: SubEventMetadata = {
     version: "1.0",
     type: "sub-event",
     name: form.name,
     description: form.description,
     location,
-    speakers: form.speakers
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean),
+    speakers: enteredSpeakers.length
+      ? enteredSpeakers
+      : [randomAnonymousSpeakerName()],
     badgeHex: metadata.value?.badgeHex,
   };
 
@@ -460,49 +483,37 @@ async function submit() {
     v-else
     class="flex flex-col min-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom))] -mx-4"
   >
-    <!-- Header: back + delete -->
-    <div class="flex items-center justify-between px-4 pt-4 pb-3">
-      <button
-        class="w-10 h-10 flex items-center justify-center -ml-2"
-        @click="handleBack"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="text-white"
-        >
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-      </button>
-
-      <div class="w-10" />
-    </div>
-
-    <!-- Title -->
-    <div class="px-4 mb-4">
-      <h1 class="text-2xl font-semibold text-white">Edit your session</h1>
-    </div>
+    <SessionTopBar title="Edit session’s details" @back="handleBack" />
 
     <!-- Form -->
-    <div class="flex-1 px-4 pt-6 space-y-6 border-t border-white/12">
-      <!-- Session Name -->
-      <div>
-        <label class="block text-sm text-white/70 mb-2">
-          Session Name <span class="text-red-400">*</span>
-        </label>
+    <div class="flex-1 px-4 pt-6 space-y-6">
+      <!-- Session Badge -->
+      <div v-if="badgePixels" class="w-24 aspect-square rounded-2xl overflow-hidden">
+        <BadgeCanvas :pixels="badgePixels" :size="96" />
+      </div>
+
+      <!-- Speakers -->
+      <InputField v-slot="{ inputId }" label="Speakers">
         <input
+          :id="inputId"
+          v-model="form.speakers"
+          type="text"
+          placeholder="Alice, Bob"
+          class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
+        />
+      </InputField>
+
+      <!-- Session Name -->
+      <InputField v-slot="{ inputId }" label="Session Name" required>
+        <input
+          :id="inputId"
           v-model="form.name"
           type="text"
-          class="w-full px-4 py-3 rounded-full border border-white/12 bg-transparent text-white placeholder-white/40 text-sm focus:outline-none focus:border-white/30"
+          required
+          aria-required="true"
+          class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
         />
-      </div>
+      </InputField>
 
       <!-- Submit-time revalidation banner -->
       <div
@@ -579,17 +590,6 @@ async function submit() {
         </div>
       </div>
 
-      <!-- Speakers -->
-      <div>
-        <label class="block text-sm text-white/70 mb-2">Speakers</label>
-        <input
-          v-model="form.speakers"
-          type="text"
-          placeholder="Alice, Bob"
-          class="w-full px-4 py-3 rounded-full border border-white/12 bg-transparent text-white placeholder-white/40 text-sm focus:outline-none focus:border-white/30"
-        />
-      </div>
-
       <!-- Error -->
       <div
         v-if="error"
@@ -598,9 +598,24 @@ async function submit() {
         <p class="text-sm text-red-300">{{ error }}</p>
       </div>
 
-      <!-- Submit (only when dirty) -->
+      <!-- Delete -->
       <button
-        v-if="isDirty"
+        class="w-full py-4 rounded-2xl text-sm font-normal text-danger"
+        style="background-color: rgba(255, 49, 35, 0.08)"
+        @click="showDeleteModal = true"
+      >
+        Delete Session
+      </button>
+
+      <div class="h-6" />
+    </div>
+
+    <!-- Sticky submit (only when dirty) -->
+    <div
+      v-if="isDirty"
+      class="sticky bottom-0 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-background"
+    >
+      <button
         class="w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
         :disabled="
           !form.name ||
@@ -621,17 +636,6 @@ async function submit() {
             : "Updating Session…"
         }}
       </button>
-
-      <!-- Delete -->
-      <button
-        class="w-full py-4 rounded-2xl text-sm font-normal text-danger"
-        style="background-color: rgba(255, 49, 35, 0.08)"
-        @click="showDeleteModal = true"
-      >
-        Delete Session
-      </button>
-
-      <div class="h-6" />
     </div>
   </div>
 

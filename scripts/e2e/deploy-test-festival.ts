@@ -40,7 +40,7 @@ import {
   DRY_RUN_DEPOSIT,
 } from '../deploy/deploy-festival'
 import { makeTestAccount } from './test-accounts'
-import { buildSessionMetadata, buildWindowedMetadata } from './test-metadata'
+import { buildChannelMetadata, buildSessionMetadata, buildWindowedMetadata } from './test-metadata'
 import { ensureBulletinAuthorization, isBlobOnIpfs, uploadToBulletin } from './bulletin-upload'
 import { computeCid, cidToBytes32 } from '../../packages/shared/metadata/cid'
 
@@ -203,8 +203,7 @@ async function main() {
   //     channel CID (one announcement channel per festival, registered
   //     atomically with the festival). Mirrors useFestivalCreate's
   //     "initial empty channel" pattern.
-  const channelDoc = { createdAt: Date.now(), announcements: [] as string[] }
-  const channelBytes = new TextEncoder().encode(JSON.stringify(channelDoc))
+  const channelBytes = buildChannelMetadata().bytes
   const channelCid = await computeCid(channelBytes)
   const channelCidBytes32 = cidToBytes32(channelCid)
   console.error('=== Channel metadata upload ===')
