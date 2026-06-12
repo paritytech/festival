@@ -66,7 +66,7 @@ export const NETWORKS: Record<NetworkKey, NetworkConfig> = {
     displayName: "Paseo Asset Hub",
     isTestnet: true,
     mainChain: {
-      wsUrl: "wss://asset-hub-paseo.ibp.network",
+      wsUrl: "wss://asset-hub-paseo-rpc.n.dwellir.com",
       genesisHash:
         "0xd6eec26135305a8ad257a20d003357284c8aa03d0bdb2b357ab0a22371e11ef2",
       descriptorKey: "paseoAh",

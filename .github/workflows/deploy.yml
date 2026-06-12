@@ -1,111 +1,38 @@
-# Build both SPAs from `.github/env.<network>` (written by `npm run setup`) and
-# publish each to IPFS + DotNS via the reusable deploy workflow.
+# Manually deploy both SPAs to their DotNS domains on paseo-next-v2.
 #
-# Trigger: Actions → "Deploy" → Run workflow, or
-#   gh workflow run deploy.yml -f network=paseo-next-v2
+# Trigger: Actions → "Deploy" → Run workflow.
 #
-# Required repo secret: DOTNS_MNEMONIC (the account that owns the DotNS domains).
+# Config lives in .github/env.paseo-next-v2 (domains + contract addresses).
+# Required repo secret: DOTNS_MNEMONIC (owner of the DotNS domains).
+#
+# Neither SPA is registered in the public Publisher registry here — that only
+# happens for the attendee app on a tagged release (see release.yml).
 name: Deploy
 
 on:
   workflow_dispatch:
-    inputs:
-      network:
-        description: "Network (must match a committed .github/env.<network>)"
-        required: true
-        default: paseo-next-v2
-        type: choice
-        options:
-          - paseo-next-v2
-          - paseo
 
 permissions:
   contents: read
   id-token: write
 
 jobs:
-  # Read the per-network env file once and expose domains + bulletin env id.
-  config:
-    runs-on: ubuntu-latest
-    outputs:
-      admin-domain: ${{ steps.read.outputs.admin-domain }}
-      attendee-domain: ${{ steps.read.outputs.attendee-domain }}
-      bulletin-env: ${{ steps.read.outputs.bulletin-env }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: read
-        name: Read .github/env.${{ inputs.network }}
-        run: |
-          FILE=".github/env.${{ inputs.network }}"
-          if [ ! -f "$FILE" ]; then
-            echo "::error::$FILE not found. Run \`npm run setup\` for this network and commit it."
-            exit 1
-          fi
-          set -a; source <(grep -v '^#' "$FILE" | grep -v '^$'); set +a
-          echo "admin-domain=${ADMIN_DOTNS_DOMAIN}" >> "$GITHUB_OUTPUT"
-          echo "attendee-domain=${ATTENDEE_DOTNS_DOMAIN}" >> "$GITHUB_OUTPUT"
-          echo "bulletin-env=${BULLETIN_ENV:-${{ inputs.network }}}" >> "$GITHUB_OUTPUT"
-
-  build:
-    needs: config
-    runs-on: ubuntu-latest
-    name: Build ${{ matrix.app }}
-    strategy:
-      fail-fast: false
-      matrix:
-        app: [admin, attendee]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Load environment config
-        run: grep -v '^#' .github/env.${{ inputs.network }} | grep -v '^$' >> "$GITHUB_ENV"
-      - name: Install dependencies
-        run: npm ci
-      - name: Generate static site + freeze manifest
-        run: |
-          export VITE_BUILD_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
-          if [ "${{ matrix.app }}" = "admin" ]; then
-            export VITE_DOTNS_ID="${{ needs.config.outputs.admin-domain }}"
-          else
-            export VITE_DOTNS_ID="${{ needs.config.outputs.attendee-domain }}"
-          fi
-          npm run -w packages/${{ matrix.app }} build
-          node scripts/bundle-worker-into.mjs ${{ matrix.app }}
-          node scripts/deploy/emit-manifest.mjs packages/${{ matrix.app }}
-        env:
-          NITRO_PRESET: static
-          VITE_BUILD_HASH: ${{ github.sha }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.app }}-build
-          path: packages/${{ matrix.app }}/out
-          retention-days: 7
-
-  # Admin first, attendee second (same publisher account → avoid nonce races).
-  deploy-admin:
-    needs: [config, build]
-    name: Publish admin → DotNS
-    uses: paritytech/bulletin-deploy/.github/workflows/deploy.yml@main
+  admin:
+    name: Admin
+    uses: ./.github/workflows/_deploy.yml
     with:
-      dotns-domain: ${{ needs.config.outputs.admin-domain }}
-      artifact-name: admin-build
-      env: ${{ needs.config.outputs.bulletin-env }}
-      max-retries: 3
-      publish: true
+      spa: admin
+      publish: false
     secrets:
       mnemonic: ${{ secrets.DOTNS_MNEMONIC }}
 
-  deploy-attendee:
-    needs: [config, build, deploy-admin]
-    name: Publish attendee → DotNS
-    uses: paritytech/bulletin-deploy/.github/workflows/deploy.yml@main
+  # Same publisher account as admin → run after it to avoid a nonce race.
+  attendee:
+    needs: admin
+    name: Attendee
+    uses: ./.github/workflows/_deploy.yml
     with:
-      dotns-domain: ${{ needs.config.outputs.attendee-domain }}
-      artifact-name: attendee-build
-      env: ${{ needs.config.outputs.bulletin-env }}
-      max-retries: 3
-      publish: true
+      spa: attendee
+      publish: false
     secrets:
       mnemonic: ${{ secrets.DOTNS_MNEMONIC }}
