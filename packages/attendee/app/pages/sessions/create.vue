@@ -20,7 +20,7 @@ import { useWalletStore } from "@festival/shared/host/wallet";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import {
   encodeCoordLocation,
-  formatFullLocation,
+  resolveFullLocationLabel,
 } from "@festival/shared/venue/floors";
 import {
   getValidFestivalDays,
@@ -198,6 +198,7 @@ function buildMetadata(): SubEventMetadata {
   const location = pickedLocation.value
     ? encodeCoordLocation(
         pickedLocation.value.floorId,
+        pickedLocation.value.zoneId,
         pickedLocation.value.x,
         pickedLocation.value.y,
       )
@@ -217,9 +218,10 @@ function buildMetadata(): SubEventMetadata {
 // ── Success screen helpers ──
 
 const pickedLocationLabel = computed(() => {
-  if (!pickedLocation.value) return "";
-  return formatFullLocation(
-    pickedLocation.value,
+  const loc = pickedLocation.value;
+  if (!loc) return "";
+  return resolveFullLocationLabel(
+    encodeCoordLocation(loc.floorId, loc.zoneId, loc.x, loc.y),
     venueMarkers.value,
     venueZones.value,
   );

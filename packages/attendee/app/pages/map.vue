@@ -98,11 +98,7 @@ const selectedChip = computed(() => {
 
 const sessionStrip = computed(() => {
   if (!selectedMarker.value) return null
-  return getSessionStripFor(selectedMarker.value.id, {
-    // Zone hit-test for coord-located community sessions. The marker's floor
-    // is the rendered one, so getZoneAt is valid here.
-    zoneAt: (x, y) => mapRef.value?.getZoneAt(x, y) ?? null,
-  })
+  return getSessionStripFor(selectedMarker.value.id)
 })
 
 const hasSelection = computed(() => !!selectedMarker.value || !!userSpot.value)

@@ -87,10 +87,12 @@ export function getMarkerLabel(
 }
 
 // ── Coordinate-based locations ──
-// Format: "coord:<floorId>:<x>:<y>"
+// Format: "coord:<floorId>:<zoneId>:<x>:<y>" — zoneId is the polygon zone the
+// picker resolved this point to (empty when the user picked outside any zone).
 
 export interface CoordLocation {
   floorId: string;
+  zoneId: string | null;
   x: number;
   y: number;
 }
@@ -99,21 +101,23 @@ const COORD_PREFIX = "coord:";
 
 export function encodeCoordLocation(
   floorId: string,
+  zoneId: string | null,
   x: number,
   y: number,
 ): string {
-  return `${COORD_PREFIX}${floorId}:${x}:${y}`;
+  return `${COORD_PREFIX}${floorId}:${zoneId ?? ""}:${x}:${y}`;
 }
 
 export function parseCoordLocation(location: string): CoordLocation | null {
   if (!location.startsWith(COORD_PREFIX)) return null;
   const parts = location.slice(COORD_PREFIX.length).split(":");
-  if (parts.length < 3) return null;
+  if (parts.length < 4) return null;
   const x = parseInt(parts[parts.length - 2], 10);
   const y = parseInt(parts[parts.length - 1], 10);
-  const floorId = parts.slice(0, -2).join(":");
+  const zoneId = parts[parts.length - 3] || null;
+  const floorId = parts.slice(0, -3).join(":");
   if (!floorId || isNaN(x) || isNaN(y)) return null;
-  return { floorId, x, y };
+  return { floorId, zoneId, x, y };
 }
 
 /** Find nearest marker on the same floor within a max distance (SVG px). */
@@ -195,20 +199,19 @@ function tripletFromMarker(
 }
 
 /** Triplet for any spot on the map (CoordLocation from storage, or
- *  PickedLocation from the picker). PickedLocation supplies an explicit
- *  zoneId (which may be `null` when the user picked outside any zone);
- *  CoordLocation omits the field, so we fall back to the nearest marker's
- *  zone. */
+ *  PickedLocation from the picker). Both carry an explicit `zoneId` (the
+ *  polygon zone the picker resolved this point to, or `null` when outside
+ *  any zone). The marker segment is inferred from the nearest marker, if
+ *  any. */
 function tripletFromSpot(
-  spot: { x: number; y: number; floorId: string; zoneId?: string | null },
+  spot: { x: number; y: number; floorId: string; zoneId: string | null },
   markers: VenueMarker[],
   zones: VenueZone[],
 ): LocationTriplet {
   const nearest = findNearestMarker(spot.x, spot.y, spot.floorId, markers);
-  const zoneId = "zoneId" in spot ? spot.zoneId : nearest?.zoneId;
   return {
     floor: getMapContextLabel(spot.floorId),
-    zone: findZoneLabel(zoneId, zones),
+    zone: findZoneLabel(spot.zoneId, zones),
     marker: nearest?.label ?? null,
   };
 }
@@ -232,28 +235,8 @@ const formatFull = (t: LocationTriplet) =>
 const formatShort = (t: LocationTriplet) =>
   joinLocationSegments([t.floor, t.zone ?? t.marker]);
 
-/** PickedLocation → full "[Floor] · [Zone] · [Marker]". Used during session
- *  composition (Overview, picker preview, edit). */
-export function formatFullLocation(
-  loc: PickedLocation,
-  markers: VenueMarker[],
-  zones: VenueZone[],
-): string {
-  return formatFull(tripletFromSpot(loc, markers, zones));
-}
-
-/** PickedLocation → short "[Floor] · [Zone]". */
-export function formatShortLocation(
-  loc: PickedLocation,
-  markers: VenueMarker[],
-  zones: VenueZone[],
-): string {
-  return formatShort(tripletFromSpot(loc, markers, zones));
-}
-
-/** Stored location → full "[Floor] · [Zone] · [Marker]". Used on Session
- *  Details and other detail-oriented screens. Returns the raw location
- *  string when it doesn't resolve. */
+/** Stored location → full "[Floor] · [Zone] · [Marker]". Returns the raw
+ *  location string when it doesn't resolve. */
 export function resolveFullLocationLabel(
   location: string,
   markers: VenueMarker[],

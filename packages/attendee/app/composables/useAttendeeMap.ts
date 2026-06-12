@@ -142,12 +142,10 @@ export function useAttendeeMap() {
 
   /** True when a community session's `metadata.location` belongs to the
    *  given marker. Cascade: exact marker id → coord whose nearest marker
-   *  (150px) is this one → coord inside the marker's zone (needs the
-   *  engine-backed `zoneAt` hit-test; silently skipped when absent). */
+   *  (150px) is this one → coord whose persisted zone matches the marker's. */
   function sessionMatchesMarker(
     location: string,
     marker: VenueMarker,
-    zoneAt?: (x: number, y: number, floorId: string) => string | null,
   ): boolean {
     if (!location) return false
     if (location === marker.id) return true
@@ -155,8 +153,7 @@ export function useAttendeeMap() {
     if (!coord || coord.floorId !== marker.floorId) return false
     const nearest = findNearestMarker(coord.x, coord.y, coord.floorId, markers.value)
     if (nearest) return nearest.id === marker.id
-    if (marker.zoneId && zoneAt) return zoneAt(coord.x, coord.y, coord.floorId) === marker.zoneId
-    return false
+    return marker.zoneId != null && coord.zoneId === marker.zoneId
   }
 
   /** The most-imminent program entry or community session tied to a marker.
@@ -164,7 +161,6 @@ export function useAttendeeMap() {
    *  most one strip across both sources, or null. */
   function getSessionStripFor(
     markerId: string,
-    opts?: { zoneAt?: (x: number, y: number, floorId: string) => string | null },
   ): MapSessionStripData | null {
     const marker = markers.value.find(m => m.id === markerId)
     if (!marker) return null
@@ -187,7 +183,7 @@ export function useAttendeeMap() {
     }
 
     for (const se of subEvents.value) {
-      if (!sessionMatchesMarker(se.metadata.location, marker, opts?.zoneAt)) continue
+      if (!sessionMatchesMarker(se.metadata.location, marker)) continue
       candidates.push({
         source: 'community',
         title: se.metadata.name,
