@@ -12,11 +12,13 @@ const props = withDefaults(defineProps<{
   userSpot?: UserSpot | null
   interactive?: boolean
   bottomNavHeight?: number
+  blockOutOfBounds?: boolean
 }>(), {
   selectedMarkerId: null,
   userSpot: null,
   interactive: true,
   bottomNavHeight: 0,
+  blockOutOfBounds: true,
 })
 
 const emit = defineEmits<{
@@ -42,7 +44,7 @@ onMounted(async () => {
   engine.value = await createVenueMap(containerRef.value, {
     interactive: props.interactive,
     bottomNavHeight: props.bottomNavHeight,
-    blockOutOfBounds: true,
+    blockOutOfBounds: props.blockOutOfBounds,
     onMarkerClick: (m) => emit('markerClick', m),
     onMapClick: (loc) => emit('mapClick', loc),
     onBlockedClick: (loc) => emit('blockedClick', loc),

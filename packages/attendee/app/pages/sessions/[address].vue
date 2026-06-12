@@ -324,14 +324,6 @@ function formatDay(d: Date): string {
         >
           Collect Badge
         </button>
-
-        <div
-          v-else-if="hasEnded"
-          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-white/5 text-white/40"
-          data-testid="session-ended"
-        >
-          Session ended
-        </div>
       </template>
     </template>
   </SessionDetailLayout>
