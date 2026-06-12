@@ -2,22 +2,14 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { isHappeningNow, timeUntil, formatTimeBerlin, parseFestivalDate } from '@festival/shared/utils/time'
 import type { ScheduleEntry } from '@festival/shared/metadata/schemas'
-import { MOCK_VENUE_MAP } from '@festival/shared/mocks'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
-import { getMarkerLocationLabel } from '@festival/shared/venue/floors'
-import { useFestival } from '~/composables/useFestival'
+import { resolveShortLocationLabel } from '@festival/shared/venue/floors'
+import { useVenueMap } from '~/composables/useVenueMap'
 
 const props = defineProps<{
   schedule: ScheduleEntry[]
 }>()
 
-const { metadata } = useFestival()
-const venueMarkers = computed(() => {
-  if (hasDeployedContracts() && metadata.value?.venueMap?.markers?.length) {
-    return metadata.value.venueMap.markers
-  }
-  return MOCK_VENUE_MAP.markers
-})
+const { markers: venueMarkers, zones: venueZones } = useVenueMap()
 
 const ROTATE_INTERVAL = 5000 // 5 seconds per card
 const PAUSE_DURATION = 15000 // 15s pause after manual interaction
@@ -228,7 +220,7 @@ watch(totalCards, () => {
         <!-- Location link -->
         <div v-if="currentEntry.venueMarkerId" class="mt-2">
           <span class="text-xs text-primary">
-            📍 {{ getMarkerLocationLabel(currentEntry.venueMarkerId!, venueMarkers) }}
+            📍 {{ resolveShortLocationLabel(currentEntry.venueMarkerId!, venueMarkers, venueZones) }}
           </span>
         </div>
 

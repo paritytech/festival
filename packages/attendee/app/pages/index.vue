@@ -21,12 +21,9 @@ import FestivalPassScreen from "~/components/FestivalPassScreen.vue";
 import BadgeEarnedFestivalScreen from "~/components/BadgeEarnedFestivalScreen.vue";
 import NotificationActivationScreen from "~/components/NotificationActivationScreen.vue";
 import SuccessToast from "~/components/SuccessToast.vue";
-import {
-  getMarkerLocationLabel,
-  resolveLocationLabel,
-} from "@festival/shared/venue/floors";
+import { resolveShortLocationLabel } from "@festival/shared/venue/floors";
 import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
+import { useVenueMap } from "~/composables/useVenueMap";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import { formatTimeBerlin } from "@festival/shared/utils/time";
 
@@ -64,15 +61,7 @@ const {
 const nowDate = useNow();
 const now = computed(() => nowDate.value.getTime());
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
+const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 // ── Section 4: Host your own session / My session card ──
 
@@ -154,12 +143,17 @@ function getMyListTimeLabel(item: TimelineItem): string {
 function getMyListLocation(item: TimelineItem): string {
   if (!venueMarkers.value.length) return "";
   if (item.type === "official" && item.entry.venueMarkerId) {
-    return getMarkerLocationLabel(item.entry.venueMarkerId, venueMarkers.value);
+    return resolveShortLocationLabel(
+      item.entry.venueMarkerId,
+      venueMarkers.value,
+      venueZones.value,
+    );
   }
   if (item.type === "community" && item.subEvent.metadata.location) {
-    return resolveLocationLabel(
+    return resolveShortLocationLabel(
       item.subEvent.metadata.location,
       venueMarkers.value,
+      venueZones.value,
     );
   }
   return "";
@@ -188,6 +182,7 @@ function getMyListRoute(item: TimelineItem): string {
     <EventReminder
       :entries="scheduleEntries"
       :venue-markers="venueMarkers"
+      :venue-zones="venueZones"
       :now="now"
       :festival-name="festivalMetadata?.name || 'Web3 Summit'"
     />
