@@ -203,16 +203,7 @@ function handleMapClick(loc: { x: number; y: number; floorId: string }) {
   nextTick(() => mapRef.value?.focusSpot({ x: loc.x, y: loc.y, floorId: loc.floorId }, { bottomPadding: 220 }))
 }
 
-/** Blocked (no-pin) and void (outside floor) taps still dismiss an open card. */
-function handleBlockedClick() {
-  if (transitioning.value) return
-  if (hasSelection.value) {
-    handleClose()
-    return
-  }
-  showToast("You can't drop a pin here")
-}
-
+/** Void (outside floor) taps still dismiss an open card. */
 function handleVoidClick() {
   if (transitioning.value) return
   if (hasSelection.value) handleClose()
@@ -351,9 +342,9 @@ onBeforeUnmount(() => {
           :selected-marker-id="selectedMarkerId"
           :user-spot="userSpot"
           :bottom-nav-height="bottomNavHeight"
+          :block-out-of-bounds="false"
           @marker-click="handleMarkerClick"
           @map-click="handleMapClick"
-          @blocked-click="handleBlockedClick"
           @void-click="handleVoidClick"
           @building-click="handleBuildingClick"
           @ready="handleEngineReady"

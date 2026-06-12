@@ -1,5 +1,7 @@
 name: PR Preview
 
+# Per-PR preview deploys of both SPAs to paseo-next-v2 via the reusable
+# _deploy.yml workflow. Previews are never listed in the Publisher registry.
 on:
   pull_request:
 
@@ -14,9 +16,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Flat-label previews using hyphen-separated segments. Sublabels end in a
-  # letter so bulletin-deploy's sanitizeDomainLabel trailing-digit truncation
-  # (>2 → keep last 2) doesn't kick in — full PR# is preserved, no collisions.
+  # Resolve the per-PR domain labels from the env file's base domains. The
+  # pr<N>- prefix ends in a letter, so polkadot-app-deploy's trailing-digit
+  # label truncation never kicks in and the full PR number is preserved.
   compute-label:
     runs-on: ubuntu-latest
     name: Compute preview label
@@ -24,63 +26,16 @@ jobs:
       admin: ${{ steps.label.outputs.admin }}
       attendee: ${{ steps.label.outputs.attendee }}
     steps:
-      - name: Compute sublabel
-        id: label
+      - uses: actions/checkout@v4
+      - id: label
         run: |
+          set -a; source <(grep -v '^#' .github/env.paseo-next-v2 | grep -v '^$'); set +a
           PR="${{ github.event.pull_request.number }}"
-          echo "admin=pr${PR}-web3summit-admin.dot" >> "$GITHUB_OUTPUT"
-          echo "attendee=pr${PR}-web3summit.dot"    >> "$GITHUB_OUTPUT"
-
-  # ── Builds (admin/attendee × paseo-next-v2/previewnet) ────────────────
-  # Same source, distinct artifacts: each bakes its env-file contracts and the
-  # PR-preview VITE_DOTNS_ID, and emit-manifest freezes a matching manifest.
-  build:
-    needs: compute-label
-    runs-on: ubuntu-latest
-    name: Build ${{ matrix.app }} (${{ matrix.network }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { app: admin,    network: v2,         env-file: .github/env,            artifact: admin-build }
-          - { app: attendee, network: v2,         env-file: .github/env,            artifact: attendee-build }
-          - { app: admin,    network: previewnet, env-file: .github/env.previewnet, artifact: admin-build-previewnet }
-          - { app: attendee, network: previewnet, env-file: .github/env.previewnet, artifact: attendee-build-previewnet }
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Load environment config
-        run: grep -v '^#' ${{ matrix.env-file }} | grep -v '^$' >> $GITHUB_ENV
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate static site
-        run: |
-          export VITE_BUILD_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
-          npm run -w packages/${{ matrix.app }} build
-          node scripts/bundle-worker-into.mjs ${{ matrix.app }}
-          node scripts/deploy/emit-manifest.mjs packages/${{ matrix.app }}
-        env:
-          NITRO_PRESET: static
-          VITE_BUILD_HASH: ${{ github.sha }}
-          VITE_DOTNS_ID: ${{ matrix.app == 'admin' && needs.compute-label.outputs.admin || needs.compute-label.outputs.attendee }}
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: packages/${{ matrix.app }}/out
-          retention-days: 1
+          echo "admin=pr${PR}-${ADMIN_DOTNS_DOMAIN}" >> "$GITHUB_OUTPUT"
+          echo "attendee=pr${PR}-${ATTENDEE_DOTNS_DOMAIN}" >> "$GITHUB_OUTPUT"
 
   comment-deploying:
-    needs: [build, compute-label]
+    needs: compute-label
     runs-on: ubuntu-latest
     name: Comment deploying
     steps:
@@ -91,73 +46,37 @@ jobs:
           message: |
             ## Preview Deployment
 
-            | App | Network | Status | Domain |
-            |:---:|:-------:|:------:|:------:|
-            | Admin | paseo-next-v2 | Deploying... | `${{ needs.compute-label.outputs.admin }}` |
-            | Festival | paseo-next-v2 | Deploying... | `${{ needs.compute-label.outputs.attendee }}` |
-            | Admin | previewnet | Deploying... | `${{ needs.compute-label.outputs.admin }}` |
-            | Festival | previewnet | Deploying... | `${{ needs.compute-label.outputs.attendee }}` |
+            | App | Status | Domain |
+            |:---:|:------:|:------:|
+            | Admin | Deploying... | `${{ needs.compute-label.outputs.admin }}` |
+            | Festival | Deploying... | `${{ needs.compute-label.outputs.attendee }}` |
 
             <sub>Deployment in progress. [View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>
 
-  # ── Deploys (paseo-next-v2) ───────────────────────────────────────────
+  # admin → attendee: one publisher account, so serialize to avoid a nonce race.
   deploy-admin:
-    needs: [build, compute-label]
-    name: Deploy admin preview (paseo-next-v2)
-    uses: paritytech/bulletin-deploy/.github/workflows/deploy.yml@main
+    name: Deploy admin preview
+    uses: ./.github/workflows/_deploy.yml
     with:
-      dotns-domain: ${{ needs.compute-label.outputs.admin }}
-      artifact-name: admin-build
-      env: paseo-next-v2
-      max-retries: 3
+      spa: admin
+      domain-prefix: "pr${{ github.event.pull_request.number }}-"
+      publish: false
     secrets:
       mnemonic: ${{ secrets.DOTNS_MNEMONIC }}
 
   deploy-attendee:
-    needs: [build, deploy-admin, compute-label]
-    name: Deploy festival preview (paseo-next-v2)
-    uses: paritytech/bulletin-deploy/.github/workflows/deploy.yml@main
+    needs: deploy-admin
+    name: Deploy festival preview
+    uses: ./.github/workflows/_deploy.yml
     with:
-      dotns-domain: ${{ needs.compute-label.outputs.attendee }}
-      artifact-name: attendee-build
-      env: paseo-next-v2
-      max-retries: 3
-    secrets:
-      mnemonic: ${{ secrets.DOTNS_MNEMONIC }}
-
-  # ── Deploys (previewnet) ──────────────────────────────────────────────
-  # Independent asset-hub → independent nonce, so this chain runs in parallel
-  # with the paseo-next-v2 one.
-  deploy-admin-previewnet:
-    needs: [build, compute-label]
-    name: Deploy admin preview (previewnet)
-    uses: paritytech/bulletin-deploy/.github/workflows/deploy.yml@main
-    with:
-      dotns-domain: ${{ needs.compute-label.outputs.admin }}
-      artifact-name: admin-build-previewnet
-      env: preview
-      max-retries: 3
-    secrets:
-      mnemonic: ${{ secrets.DOTNS_MNEMONIC }}
-
-  deploy-attendee-previewnet:
-    needs: [build, deploy-admin-previewnet, compute-label]
-    name: Deploy festival preview (previewnet)
-    uses: paritytech/bulletin-deploy/.github/workflows/deploy.yml@main
-    with:
-      dotns-domain: ${{ needs.compute-label.outputs.attendee }}
-      artifact-name: attendee-build-previewnet
-      env: preview
-      max-retries: 3
+      spa: attendee
+      domain-prefix: "pr${{ github.event.pull_request.number }}-"
+      publish: false
     secrets:
       mnemonic: ${{ secrets.DOTNS_MNEMONIC }}
 
   comment-success:
-    needs:
-      - deploy-admin
-      - deploy-attendee
-      - deploy-admin-previewnet
-      - deploy-attendee-previewnet
+    needs: [deploy-admin, deploy-attendee]
     if: success()
     runs-on: ubuntu-latest
     name: Comment success
@@ -169,22 +88,18 @@ jobs:
           message: |
             ## Preview Deployment Ready!
 
-            | App | Network | Domain | Preview |
-            |:---:|:-------:|:------:|:-------:|
-            | **Admin** | paseo-next-v2 | `${{ needs.deploy-admin.outputs.domain }}.dot` | [**dot.li/${{ needs.deploy-admin.outputs.domain }}.dot**](https://${{ needs.deploy-admin.outputs.domain }}.dot.li) |
-            | **Festival** | paseo-next-v2 | `${{ needs.deploy-attendee.outputs.domain }}.dot` | [**dot.li/${{ needs.deploy-attendee.outputs.domain }}.dot**](https://${{ needs.deploy-attendee.outputs.domain }}.dot.li) |
-            | **Admin** | previewnet | `${{ needs.deploy-admin-previewnet.outputs.domain }}.dot` | [**dot.li/${{ needs.deploy-admin-previewnet.outputs.domain }}.dot**](https://${{ needs.deploy-admin-previewnet.outputs.domain }}.dot.li) |
-            | **Festival** | previewnet | `${{ needs.deploy-attendee-previewnet.outputs.domain }}.dot` | [**dot.li/${{ needs.deploy-attendee-previewnet.outputs.domain }}.dot**](https://${{ needs.deploy-attendee-previewnet.outputs.domain }}.dot.li) |
+            | App | Domain |
+            |:---:|:------:|
+            | **Admin** | `${{ needs.deploy-admin.outputs.domain }}` |
+            | **Festival** | `${{ needs.deploy-attendee.outputs.domain }}` |
 
             <details>
             <summary>Deployment Details</summary>
 
-            | App | Network | CID |
-            |-----|---------|-----|
-            | Admin | paseo-next-v2 | `${{ needs.deploy-admin.outputs.cid }}` |
-            | Festival | paseo-next-v2 | `${{ needs.deploy-attendee.outputs.cid }}` |
-            | Admin | previewnet | `${{ needs.deploy-admin-previewnet.outputs.cid }}` |
-            | Festival | previewnet | `${{ needs.deploy-attendee-previewnet.outputs.cid }}` |
+            | App | CID |
+            |-----|-----|
+            | Admin | `${{ needs.deploy-admin.outputs.cid }}` |
+            | Festival | `${{ needs.deploy-attendee.outputs.cid }}` |
 
             | Info | Value |
             |------|-------|
@@ -197,12 +112,7 @@ jobs:
             <sub>Updates automatically on each push. [View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>
 
   comment-failure:
-    needs:
-      - build
-      - deploy-admin
-      - deploy-attendee
-      - deploy-admin-previewnet
-      - deploy-attendee-previewnet
+    needs: [deploy-admin, deploy-attendee]
     if: failure()
     runs-on: ubuntu-latest
     name: Comment failure
@@ -216,11 +126,8 @@ jobs:
 
             | Stage | Status |
             |:------|:------:|
-            | **Build** | ${{ needs.build.result == 'success' && 'OK' || 'Failed' }} |
             | **Deploy Admin** | ${{ needs.deploy-admin.result == 'success' && 'Deployed' || needs.deploy-admin.result == 'skipped' && 'Skipped' || 'Failed' }} |
             | **Deploy Festival** | ${{ needs.deploy-attendee.result == 'success' && 'Deployed' || needs.deploy-attendee.result == 'skipped' && 'Skipped' || 'Failed' }} |
-            | **Deploy Admin (previewnet)** | ${{ needs.deploy-admin-previewnet.result == 'success' && 'Deployed' || needs.deploy-admin-previewnet.result == 'skipped' && 'Skipped' || 'Failed' }} |
-            | **Deploy Festival (previewnet)** | ${{ needs.deploy-attendee-previewnet.result == 'success' && 'Deployed' || needs.deploy-attendee-previewnet.result == 'skipped' && 'Skipped' || 'Failed' }} |
 
             ---
             <sub>Fix issues and push again to retry. [View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>
