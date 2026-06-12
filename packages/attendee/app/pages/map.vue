@@ -6,6 +6,8 @@ import {
   getFloor,
   getFloorBreadcrumb,
   isOutdoorFloor,
+  VENUE_OUTDOOR_FLOOR,
+  VENUE_BLOCKS,
 } from '@festival/shared/venue/floors'
 import { useAttendeeMap } from '~/composables/useAttendeeMap'
 import FloorControl from '~/components/FloorControl.vue'
@@ -36,6 +38,11 @@ const {
   getSessionStripFor,
 } = useAttendeeMap()
 
+const selectableFloors = computed(() => {
+  const block = activeBlock.value ?? VENUE_BLOCKS[0]
+  return [VENUE_OUTDOOR_FLOOR, ...(block?.floors ?? [])]
+})
+
 const mapRef = ref<InstanceType<typeof VenueMap> | null>(null)
 const toast = ref<string | null>(null)
 let toastTimer: ReturnType<typeof setTimeout> | null = null
@@ -64,14 +71,6 @@ function measureBottomNavHeight() {
 }
 
 const isIndoor = computed(() => mode.value === 'indoor')
-
-/** Top-left floor label: "Outdoors" outside, "<Floor> Floor" indoor. */
-const topLeftLabel = computed(() => {
-  if (!isIndoor.value) return 'Outdoors'
-  const floor = getFloor(activeFloorId.value)
-  if (!floor) return ''
-  return /floor/i.test(floor.label) ? floor.label : `${floor.label} Floor`
-})
 
 const selectedBreadcrumb = computed(() => {
   // Floor label only, no block or zone.
@@ -157,6 +156,20 @@ function handleBuildingClick() {
   void playEnterChoreography()
 }
 
+function handleFloorControlChange(floorId: string) {
+  if (transitioning.value) return
+  if (floorId === activeFloorId.value) return
+  const targetIsOutdoor = isOutdoorFloor(floorId)
+  if (mode.value === 'outdoor' && !targetIsOutdoor) {
+    void playEnterChoreography(floorId)
+  } else if (mode.value === 'indoor' && targetIsOutdoor) {
+    void playExitChoreography()
+  } else {
+    switchFloor(floorId)
+  }
+}
+
+
 /** Arm the pinch-out / wheel-out gesture as the indoor exit. The engine fires
  *  the trigger once past `fitZoom - belowFitBy * 0.5` and self-disarms. */
 function armExitGesture() {
@@ -203,16 +216,7 @@ function handleMapClick(loc: { x: number; y: number; floorId: string }) {
   nextTick(() => mapRef.value?.focusSpot({ x: loc.x, y: loc.y, floorId: loc.floorId }, { bottomPadding: 220 }))
 }
 
-/** Blocked (no-pin) and void (outside floor) taps still dismiss an open card. */
-function handleBlockedClick() {
-  if (transitioning.value) return
-  if (hasSelection.value) {
-    handleClose()
-    return
-  }
-  showToast("You can't drop a pin here")
-}
-
+/** Void (outside floor) taps still dismiss an open card. */
 function handleVoidClick() {
   if (transitioning.value) return
   if (hasSelection.value) handleClose()
@@ -351,31 +355,24 @@ onBeforeUnmount(() => {
           :selected-marker-id="selectedMarkerId"
           :user-spot="userSpot"
           :bottom-nav-height="bottomNavHeight"
+          :block-out-of-bounds="false"
           @marker-click="handleMarkerClick"
           @map-click="handleMapClick"
-          @blocked-click="handleBlockedClick"
           @void-click="handleVoidClick"
           @building-click="handleBuildingClick"
           @ready="handleEngineReady"
         />
       </ClientOnly>
 
-      <!-- Top overlay: floor label on the left (any mode), floor toggle on
-           the right (indoor with multi-floor only). No back button. Exit
-           is via pinch-out (see enableZoomOutGesture in onModeChange below). -->
-      <div v-if="!transitioning" class="map-page__overlay-row">
-        <div class="map-page__floor-label" data-testid="map-floor-label">
-          {{ topLeftLabel }}
-        </div>
-
-        <FloorControl
-          v-if="isIndoor && activeBlock && activeBlock.floors.length > 1"
-          :floors="activeBlock.floors"
-          :active-floor-id="activeFloorId"
-          @change="switchFloor"
-        />
-        <div v-else />
-      </div>
+      <!-- Floor switcher (top-left of the map canvas). Includes Outdoor
+           as the first option, so it's shown in both outdoor and indoor modes. -->
+      <FloorControl
+        v-if="!transitioning"
+        class="map-page__floor-control"
+        :floors="selectableFloors"
+        :active-floor-id="activeFloorId"
+        @change="handleFloorControlChange"
+      />
 
       <!-- Outdoor hint (hidden after a selection / placed spot). -->
       <div
@@ -383,7 +380,7 @@ onBeforeUnmount(() => {
         class="map-page__hint"
         data-testid="map-tap-hint"
       >
-        Tap to place a pin or the building to go inside
+        Tap to place a pin or open the building
       </div>
 
       <!-- Indoor hint: pin instructions + zoom-out exit cue. -->
@@ -441,6 +438,13 @@ onBeforeUnmount(() => {
   margin: 16px 0;
 }
 
+.map-page__floor-control {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  z-index: 1000;
+}
+
 .map-page__canvas {
   position: relative;
   flex: 1;
@@ -450,58 +454,20 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
-.map-page__overlay-row {
-  position: absolute;
-  top: 12px;
-  left: 16px;
-  right: 16px;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  pointer-events: none;
-}
-.map-page__overlay-row > * {
-  pointer-events: auto;
-}
-
-.map-page__floor-label {
-  font-size: 15px;
-  font-weight: 600;
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-  pointer-events: none;
-}
-
-.map-page__hint {
+.map-page__hint,
+.map-page__empty-prompt {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--safe-bottom) + 52px + 6px);
+  bottom: calc(var(--safe-bottom) + 52px + 24px);
   z-index: 1000;
   text-align: center;
-  padding: 10px 20px;
+  padding: 0 20px;
   color: rgba(255, 255, 255, 0.9);
   font-size: 15px;
   font-weight: 500;
   pointer-events: none;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.map-page__empty-prompt {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: calc(var(--safe-bottom) + 52px + 20px);
-  z-index: 1000;
-  text-align: center;
-  padding: 12px 20px;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 15px;
-  font-weight: 500;
-  pointer-events: none;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .map-page__bottom {

@@ -23,6 +23,7 @@ left off.
 | **git**                       | Repo + (optional) CI publish                                                                                         |
 | **gh** (optional)             | Lets the wizard set repo secrets and trigger the publish for you                                                     |
 | **A funded deployer account** | Pays for contract deployment. On Paseo, fund it with PAS at <https://faucet.polkadot.io/> (pick **Paseo Asset Hub**) |
+| **Two `.dot` domains you own** | The Admin + Attendee SPAs publish to these; readiness blocks if the publisher doesn't own them                       |
 
 Install workspace dependencies once:
 
@@ -53,10 +54,11 @@ What happens, phase by phase:
    (shown as `SS58 (0xH160)` — derived from your seed, never typed), and set the
    two DotNS domains. Saved to `deploy.config.json`.
 3. **Readiness** — confirms the RPC is reachable, the deployer is funded, and
-   reports DotNS ownership + personhood for your domains. Only an **unfunded
-   deployer** blocks; personhood/ownership are advisories (the publish step
-   enforces them).
-4. **Build contracts** — `forge build` + copy ABIs.
+   checks DotNS ownership + personhood for your domains. An unfunded deployer or
+   a domain the publisher doesn't own blocks the run; override the DotNS gate
+   with `--skip-dotns-check`.
+4. **Build contracts** — installs forge-std + OpenZeppelin if missing, then
+   `forge build` + copy ABIs.
 5. **Deploy** — Multicall3, the two AttendancePOAPs, and the Festival; addresses
    are written into `packages/{admin,attendee}/.env.<network>`.
 6. **Roles** — optionally grant `VOLUNTEER_ROLE` to door staff.
@@ -73,14 +75,20 @@ What happens, phase by phase:
 The static build is published to IPFS + DotNS by the **Deploy** workflow
 (`.github/workflows/deploy.yml`), using your `DOTNS_MNEMONIC`.
 
-- **With `gh`:** the wizard offers to set the `DEPLOYER_SEED` / `DOTNS_MNEMONIC`
-  repo secrets and trigger the workflow for you.
-- **Without `gh`:** in your fork, add those two secrets (Settings → Secrets), then
-  run the workflow (Actions → **Deploy** → Run workflow), or:
+- **With `gh`:** the wizard offers to set the repo secrets and trigger the
+  workflow for you.
+- **Without `gh`:** in your fork, add the secrets (Settings → Secrets), then run
+  the workflow (Actions → **Deploy** → Run workflow), or:
 
   ```bash
-  gh workflow run deploy.yml -f network=paseo-next-v2
+  gh workflow run deploy.yml
   ```
+
+Three secrets, three distinct accounts (they may differ):
+
+- `DOTNS_MNEMONIC` — owns the `.dot` domains and publishes (required by the Deploy/Release/PR-Preview workflows).
+- `DEPLOYER_SEED` — deploys the contracts.
+- `E2E_DEPLOYER_SEED` — funds the e2e workflow's test deploys (test-only).
 
 Commit the generated `.github/env.<network>` file so the workflow can read your
 addresses and domains.
@@ -118,7 +126,7 @@ npm run setup -- --dry-run                         # phases 1–3 only, no on-ch
 ```
 
 Flags: `--network <key>`, `--yes`, `--dry-run`, `--skip-contracts`,
-`--skip-frontend`, `--config <path>`.
+`--skip-frontend`, `--skip-dotns-check`, `--config <path>`.
 
 ## Re-running / resume
 
@@ -132,5 +140,6 @@ contracts and completed builds. Delete that file to force a clean redeploy.
 | `BLOCKED: deployer has no PAS`             | Fund the shown account at the faucet, re-run.                                |
 | `Asset Hub RPC unreachable`                | Check your connection / the WS URL; retry.                                   |
 | `DotNS gating unavailable on this network` | Expected on `paseo`/custom chains — advisory only, deploy still proceeds.    |
-| `make copy-abis failed`                    | Run `cd contracts && make install` once (installs forge-std + OpenZeppelin). |
+| `make copy-abis failed`                    | Libs auto-install on first run; if it still fails, run `cd contracts && make install`. |
+| Readiness blocks on domain ownership       | Use domains the publisher owns, or re-run with `--skip-dotns-check`.                    |
 | Frontend build fails                       | Ensure `npm install` ran at the repo root first.                             |

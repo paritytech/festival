@@ -5,6 +5,7 @@ import { useFestival } from '~/composables/useFestival'
 import { useSubEvents } from '~/composables/useSubEvents'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import type { SubEventMetadata } from '@festival/shared/metadata/schemas'
+import { randomAnonymousSpeakerName } from '@festival/shared/metadata/anonymousSpeaker'
 import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { useBulletinStorage } from '@festival/shared/metadata/bulletin'
 import { formatTxError } from '@festival/shared/contracts/errors'
@@ -49,13 +50,14 @@ const error = ref<string | null>(null)
 const createdAddress = ref<string | null>(null)
 
 function buildMetadata(): SubEventMetadata {
+  const enteredSpeakers = form.speakers.split(',').map(s => s.trim()).filter(Boolean)
   return {
     version: '1.0',
     type: 'sub-event',
     name: form.name,
     description: form.description,
     location: form.venueMarkerId,
-    speakers: form.speakers.split(',').map(s => s.trim()).filter(Boolean),
+    speakers: enteredSpeakers.length ? enteredSpeakers : [randomAnonymousSpeakerName()],
     badgeHex: badgeHex.value || undefined,
   }
 }

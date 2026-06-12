@@ -11,7 +11,7 @@ import { computeCid, cidToBytes32, bytes32ToCid, cidToGatewayUrl } from './cid'
 import { getCachedMetadata, setCachedMetadata } from '../cache/cid-cache'
 import { isInHost } from '../host/detect'
 
-const PREIMAGE_LOOKUP_TIMEOUT_MS = 10_000
+const PREIMAGE_LOOKUP_TIMEOUT_MS = 30_000
 
 /**
  * Convert a CID-or-bytes32 string to the 32-byte preimage hash.
@@ -36,21 +36,36 @@ export type BulletinTxStatus =
   | 'finalized'
   | 'error'
 
-/** Wrap PreimageManager.lookup() subscription in a Promise. */
-async function lookupPreimage(hash: `0x${string}`): Promise<Uint8Array | null> {
+/**
+ * Look up a preimage through the host. `lookup` is a subscription: it fires with
+ * null while the value is still syncing and with the bytes once it lands, so we
+ * wait for real bytes and let the timeout be the only "not available" signal.
+ * Resolves with the bytes; rejects on interrupt or timeout; throws when the host
+ * has no preimage manager.
+ */
+async function lookupPreimage(
+  hash: `0x${string}`,
+  timeoutMs = PREIMAGE_LOOKUP_TIMEOUT_MS,
+): Promise<Uint8Array> {
   const manager = await getPreimageManager()
-  if (!manager) return null
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
+  if (!manager) throw new Error('preimage manager unavailable')
+  return new Promise<Uint8Array>((resolve, reject) => {
+    let settled = false
+    const settle = (fn: () => void) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
       subscription.unsubscribe()
-      resolve(null)
-    }, PREIMAGE_LOOKUP_TIMEOUT_MS)
-
+      fn()
+    }
+    const timer = setTimeout(
+      () => settle(() => reject(new Error('preimage lookup timed out'))),
+      timeoutMs,
+    )
     const subscription = manager.lookup(hash, (data) => {
-      clearTimeout(timeout)
-      subscription.unsubscribe()
-      resolve(data ?? null)
+      if (data) settle(() => resolve(data))
     })
+    subscription.onInterrupt(() => settle(() => reject(new Error('preimage lookup interrupted'))))
   })
 }
 
@@ -225,32 +240,22 @@ export function useBulletinStorage() {
     return { cid: cidStr, bytes32 }
   }
 
-  /** Retrieve plaintext metadata. Host: preimageManager. Standalone: IPFS fetch. */
+  /** Retrieve plaintext metadata. In the host: preimage only. Standalone: IPFS fetch. */
   async function retrievePlaintext<T = unknown>(cidOrBytes32: string): Promise<T> {
     const cached = await getCachedMetadata<T>(cidOrBytes32)
     if (cached) return cached
 
-    // In host mode, try preimage first (new data stored via preimageManager),
-    // fall back to IPFS fetch (pre-migration data stored on bulletin chain).
+    // In the host the preimage manager is the only way out to the network, so
+    // there's no gateway fallback. Standalone has none, so it fetches directly.
     if (isInHost()) {
-      try {
-        return await retrieveViaPreimage<T>(cidOrBytes32)
-      } catch {
-        // Preimage not found. Try IPFS fetch as fallback
-      }
+      return await retrieveViaPreimage<T>(cidOrBytes32)
     }
     return await retrieveViaFetch<T>(cidOrBytes32)
   }
 
-  /** Host mode: lookup preimage by hash. */
+  /** Host mode: lookup preimage by hash. Throws if it can't be fetched. */
   async function retrieveViaPreimage<T>(cidOrBytes32: string): Promise<T> {
-    const hash = toPreimageHash(cidOrBytes32)
-
-    const data = await lookupPreimage(hash)
-    if (!data) {
-      throw new Error(`Preimage not found for hash: ${hash.slice(0, 20)}...`)
-    }
-
+    const data = await lookupPreimage(toPreimageHash(cidOrBytes32))
     const result = JSON.parse(new TextDecoder().decode(data)) as T
     await setCachedMetadata(cidOrBytes32, result)
     return result
@@ -292,18 +297,30 @@ export function useBulletinStorage() {
   }
 
   /**
-   * Resolve an image CID/bytes32 to a blob URL via preimageManager.
-   * Host mode only. Returns null in standalone (use resolveImageUrl instead).
+   * Resolve an image CID/bytes32 to a blob URL via preimageManager. Host mode
+   * only. Returns null in standalone, or when the preimage can't be fetched, so
+   * the image just doesn't render.
    */
   async function resolveImageBlob(cidOrBytes32: string): Promise<string | null> {
     if (!isInHost()) return null
+    try {
+      const data = await lookupPreimage(toPreimageHash(cidOrBytes32))
+      const blob = new Blob([new Uint8Array(data)], { type: 'image/jpeg' })
+      return URL.createObjectURL(blob)
+    } catch {
+      return null
+    }
+  }
 
-    const hash = toPreimageHash(cidOrBytes32)
-    const data = await lookupPreimage(hash)
-    if (!data) return null
-
-    const blob = new Blob([new Uint8Array(data)], { type: 'image/jpeg' })
-    return URL.createObjectURL(blob)
+  /**
+   * Resolve a CID/bytes32 to a URL you can put in an `<img src>`.
+   *
+   * In the host this is a `blob:` URL from the preimage manager, or null when
+   * the preimage isn't there (callers just show no image). Standalone returns
+   * the gateway URL.
+   */
+  async function resolveDisplayImageUrl(cidOrBytes32: string): Promise<string | null> {
+    return isInHost() ? resolveImageBlob(cidOrBytes32) : resolveImageUrl(cidOrBytes32)
   }
 
   return {
@@ -315,5 +332,6 @@ export function useBulletinStorage() {
     retrievePlaintext,
     resolveImageUrl,
     resolveImageBlob,
+    resolveDisplayImageUrl,
   }
 }

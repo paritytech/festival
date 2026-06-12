@@ -1,5 +1,6 @@
 import type { TestHost } from '@parity/host-api-test-sdk/playwright'
 import type { FrameLocator } from '@playwright/test'
+import { seedFestivalPreimages } from '../../../scripts/e2e/seed-preimages'
 
 /**
  * Wait until the festival layout has booted AND roles have resolved.
@@ -15,6 +16,9 @@ export async function waitForAdminReady(
   options?: { timeout?: number },
 ): Promise<FrameLocator> {
   const timeout = options?.timeout ?? 60_000
+  // In the host, metadata resolves only through the preimage manager, and the
+  // test host has no Bulletin connection, so seed the blobs before boot.
+  await seedFestivalPreimages(testHost)
   await testHost.waitForConnection(timeout)
   const frame = testHost.productFrame()
 

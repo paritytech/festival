@@ -8,6 +8,9 @@
   background: transparent;
   outline: none;
   font-family: inherit;
+  /* Clamp internal marker/label/pin z-indices to this container's own layer
+     so they can't paint over siblings of the map (e.g. sticky action bars). */
+  isolation: isolate;
 }
 
 .venue-map.is-static { cursor: default; }

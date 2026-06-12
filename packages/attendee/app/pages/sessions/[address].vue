@@ -15,7 +15,7 @@ import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
 import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
 import { resolveLocationLabel } from "@festival/shared/venue/floors";
-import { cidToGatewayUrl } from "@festival/shared/metadata/cid";
+import { useBulletinImage } from "~/composables/useBulletinImage";
 import {
   SESSION_CHECKIN_GRACE_MS,
   formatCountdown,
@@ -26,7 +26,6 @@ import {
 import {
   ss58ToH160,
   isValidEvmAddress,
-  shortenAddress,
 } from "@festival/shared/utils/address";
 
 definePageMeta({
@@ -77,6 +76,7 @@ const { isHidden } = useHiddenSessions();
 
 const passportOpen = ref(false);
 const badgeEarnedOpen = ref(false);
+const locationViewOpen = ref(false);
 // "Received: 18 June, 12:03" line on the badge-earned screen. Stamped at the
 // moment the CheckedIn event lands; the precise on-chain timestamp is not
 // available client-side without an extra read.
@@ -140,12 +140,9 @@ const venueZones = computed(() => {
   return DEFAULT_ZONES;
 });
 
-const ownerLabel = computed(() => {
-  if (!subEvent.value) return "";
-  if (isCreator.value && wallet.accountName) return wallet.accountName;
-  if (subEvent.value.metadata.speakers.length)
-    return subEvent.value.metadata.speakers.join(", ");
-  return shortenAddress(subEvent.value.creator);
+const speakerLabel = computed(() => {
+  const speakers = subEvent.value?.metadata.speakers ?? [];
+  return speakers.length ? speakers.join(", ") : "";
 });
 
 const timeRange = computed(() => {
@@ -170,11 +167,10 @@ const locationLabel = computed(() => {
   );
 });
 
-const festivalPoapImageUrl = computed(() => {
-  const cid =
-    festivalMetadata.value?.festivalPoapImage || festivalMetadata.value?.image;
-  return cid ? cidToGatewayUrl(cid) : null;
-});
+// Resolves through the host preimage manager, so it stays a blob URL in the host.
+const festivalPoapImageUrl = useBulletinImage(
+  () => festivalMetadata.value?.festivalPoapImage || festivalMetadata.value?.image || null,
+);
 
 const isCreator = computed(() => {
   if (!subEvent.value || !wallet.isConnected) return false;
@@ -264,8 +260,8 @@ function formatDay(d: Date): string {
     v-if="subEvent"
     :badge-pixels="subEvent.metadata.badgePixels ?? null"
     :image-url="festivalPoapImageUrl"
-    :banner-value="ownerLabel"
-    banner-label="Session Owner"
+    :banner-value="speakerLabel"
+    :banner-label="speakerLabel ? 'Session Speaker' : undefined"
     category="Community"
     category-color="var(--color-community)"
     :title="subEvent.metadata.name"
@@ -280,8 +276,9 @@ function formatDay(d: Date): string {
     :ended="isPastEnd"
     :back-to="backTo"
     @toggle-bookmark="handleToggleBookmark"
+    @open-location="locationViewOpen = true"
   >
-    <template v-if="isCreator" #topBarTrailing>
+    <template v-if="isCreator && !isPastEnd" #topBarTrailing>
       <NuxtLink
         :to="`/my/manage/${addr}/edit`"
         class="w-10 h-10 flex items-center justify-center"
@@ -327,14 +324,6 @@ function formatDay(d: Date): string {
         >
           Collect Badge
         </button>
-
-        <div
-          v-else-if="hasEnded"
-          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-white/5 text-white/40"
-          data-testid="session-ended"
-        >
-          Session ended
-        </div>
       </template>
     </template>
   </SessionDetailLayout>
@@ -348,7 +337,7 @@ function formatDay(d: Date): string {
     @done="handleReportDone"
   />
 
-  <PassportOverlay v-if="passportOpen" @close="closePassport" />
+  <PassportOverlay v-if="passportOpen" :force-show-qr="true" @close="closePassport" />
 
   <BadgeEarnedScreen
     v-if="badgeEarnedOpen && subEvent"
@@ -356,5 +345,14 @@ function formatDay(d: Date): string {
     :session-name="subEvent.metadata.name"
     :received-label="receivedLabel"
     @dismiss="dismissBadgeEarned"
+  />
+
+  <SessionLocationView
+    v-if="locationViewOpen && subEvent?.metadata.location"
+    :location="subEvent.metadata.location"
+    :session-address="addr"
+    :markers="venueMarkers"
+    :zones="venueZones"
+    @close="locationViewOpen = false"
   />
 </template>

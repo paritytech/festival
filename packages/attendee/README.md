@@ -117,10 +117,11 @@ contracts via the parent festival.
 zones and category-tiered markers, an outdoor/indoor toggle (`FloorControl`),
 and a bottom session strip showing what's happening at a tapped marker.
 `useAttendeeMap` holds map state and matches a session's stored location string
-(`{x},{y},{floorId}`) to a marker or zone via the engine's hit-testing. Unlike
-the admin map, the attendee map runs with `blockOutOfBounds` on, so pins can't
-be dropped in `#forbidden` areas. See `packages/shared/venue/README.md` for the
-floor-plan pipeline.
+(`{x},{y},{floorId}`) to a marker or zone via the engine's hit-testing.
+`blockOutOfBounds` is opt-in per consumer (defaults to on): the session location
+picker keeps it on so session pins can't land in `#forbidden` areas, while the
+top-level Map page turns it off so attendees can drop a "meet me here" pin
+anywhere. See `packages/shared/venue/README.md` for the floor-plan pipeline.
 
 ---
 
