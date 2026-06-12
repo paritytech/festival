@@ -23,9 +23,7 @@ function onCollectMore() {
   <div class="-mx-4 flex flex-col min-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom))]">
     <!-- Header -->
     <div class="px-4 pt-4 pb-3 flex items-center shrink-0">
-      <button class="w-10 h-10 flex items-center justify-center -ml-2 text-text-and-icons-primary" @click="router.back()">
-        <BackIcon />
-      </button>
+      <BackButton class="text-text-and-icons-primary" />
       <h1 class="flex-1 text-center text-base font-semibold text-white">Badge Collection</h1>
       <div class="w-10" />
     </div>

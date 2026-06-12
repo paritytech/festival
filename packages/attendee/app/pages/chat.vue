@@ -1,6 +1,4 @@
 <script setup lang="ts">
-const router = useRouter()
-
 const steps = [
   { icon: '/three-dots-inline.svg', before: 'Tap the', after: 'menu in the top right' },
   { icon: '/chat-bubble-inline.svg', before: 'Open', after: '"Chat" from the menu' },
@@ -14,13 +12,7 @@ const steps = [
   >
     <!-- Header -->
     <div class="px-4 pt-4 pb-3 flex items-center shrink-0">
-      <button
-        class="w-10 h-10 flex items-center justify-center -ml-2 text-text-and-icons-primary"
-        aria-label="Back"
-        @click="router.back()"
-      >
-        <BackIcon />
-      </button>
+      <BackButton class="text-text-and-icons-primary" />
       <h1
         class="flex-1 text-center text-base font-semibold text-text-and-icons-primary"
         data-testid="chat-heading"

@@ -53,13 +53,7 @@ function goNext() {
   <div class="-mx-4 flex flex-col min-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom))] bg-white text-black">
     <!-- Header: back arrow + step progress -->
     <div class="px-4 pt-4 pb-3 flex items-center gap-3 shrink-0">
-      <button
-        class="w-10 h-10 flex items-center justify-center -ml-2"
-        aria-label="Back"
-        @click="goBack"
-      >
-        <BackIcon />
-      </button>
+      <BackButton @click="goBack" />
       <div class="flex-1">
         <StepProgressBar :steps="steps.length" :current-step="currentStep" variant="dark" />
       </div>

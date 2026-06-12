@@ -4,7 +4,6 @@ import { useRegistration } from '~/composables/useRegistration'
 import { useOnboardingSeen } from '~/composables/useOnboardingSeen'
 import { FESTIVAL_ADDRESS } from '@festival/shared/contracts/addresses'
 
-const router = useRouter()
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS)
 const { markSeen } = useOnboardingSeen()
 
@@ -25,12 +24,7 @@ onMounted(() => {
   <div class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-[60] bg-white flex flex-col">
     <!-- Back chevron -->
     <div class="px-4 pt-[calc(var(--safe-top)+16px)] pb-3">
-      <button
-        class="w-10 h-10 flex items-center justify-center -ml-2 text-fg-primary-inverted"
-        @click="router.back()"
-      >
-        <BackIcon />
-      </button>
+      <BackButton class="text-fg-primary-inverted" />
     </div>
 
     <!-- Centered illustration area -->

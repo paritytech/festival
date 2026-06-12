@@ -23,7 +23,6 @@ definePageMeta({
   },
 })
 
-const router = useRouter()
 const route = useRoute()
 const tokenId = Number(route.params.tokenId)
 const poapContract = (route.query.contract as string) || ''
@@ -154,9 +153,7 @@ onUnmounted(() => {
   <div class="flex flex-col min-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-68px)] -mx-4">
     <!-- Header: back only -->
     <div class="px-4 pt-4 pb-3">
-      <button class="w-10 h-10 flex items-center justify-center -ml-2 text-text-and-icons-primary" @click="router.back()">
-        <BackIcon />
-      </button>
+      <BackButton class="text-text-and-icons-primary" />
     </div>
 
     <template v-if="poap">
