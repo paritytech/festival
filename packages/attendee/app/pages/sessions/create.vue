@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, useTemplateRef, nextTick } from "vue";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
-import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
 import type { PickedLocation } from "@festival/shared/venue/floors";
 import { useFestival } from "~/composables/useFestival";
+import { useVenueMap } from "~/composables/useVenueMap";
 import { usePoaps } from "~/composables/usePoaps";
 import { useRegistration } from "~/composables/useRegistration";
 import { useSubEvents } from "~/composables/useSubEvents";
@@ -21,7 +20,7 @@ import { useWalletStore } from "@festival/shared/host/wallet";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import {
   encodeCoordLocation,
-  formatPickedLocationFull,
+  formatFullLocation,
 } from "@festival/shared/venue/floors";
 import {
   getValidFestivalDays,
@@ -152,25 +151,7 @@ const endTimeLabel = computed(() =>
 
 // ── Venue markers ──
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
-
-const venueZones = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.zones?.length
-  ) {
-    return festivalMetadata.value.venueMap.zones;
-  }
-  return DEFAULT_ZONES;
-});
+const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 // ── Navigation ──
 
@@ -237,7 +218,7 @@ function buildMetadata(): SubEventMetadata {
 
 const pickedLocationLabel = computed(() => {
   if (!pickedLocation.value) return "";
-  return formatPickedLocationFull(
+  return formatFullLocation(
     pickedLocation.value,
     venueMarkers.value,
     venueZones.value,

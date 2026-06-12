@@ -5,12 +5,8 @@ import { getCategory } from '@festival/shared/venue/categories'
 import { getMarkerIcon } from '@festival/shared/venue/icons'
 
 const props = defineProps<{
-  /** Drives the icon tile (colored circle + glyph) when set; null renders
-   *  the neutral pin tile used for user-placed spots. */
   marker?: VenueMarker | null
-  /** Bold primary line. Marker name or zone name per the location legend. */
   headline: string
-  /** Smaller sub-label. "Floor · Zone" or just "Floor". */
   sub: string
 }>()
 

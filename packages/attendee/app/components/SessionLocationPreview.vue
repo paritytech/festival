@@ -2,7 +2,7 @@
 import { computed, useTemplateRef, watch } from 'vue'
 import type { VenueMarker, VenueZone } from '@festival/shared/metadata/schemas'
 import {
-  formatPickedLocationFull,
+  formatFullLocation,
   type PickedLocation,
 } from '@festival/shared/venue/floors'
 import VenueMap from '~/components/VenueMap.vue'
@@ -20,7 +20,7 @@ defineEmits<{
 const mapRef = useTemplateRef<InstanceType<typeof VenueMap>>('mapRef')
 
 const longLabel = computed(() =>
-  formatPickedLocationFull(props.loc, props.markers, props.zones),
+  formatFullLocation(props.loc, props.markers, props.zones),
 )
 
 function focusSpot() {

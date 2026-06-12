@@ -22,9 +22,8 @@ import BadgeEarnedFestivalScreen from "~/components/BadgeEarnedFestivalScreen.vu
 import NotificationActivationScreen from "~/components/NotificationActivationScreen.vue";
 import SuccessToast from "~/components/SuccessToast.vue";
 import { resolveShortLocationLabel } from "@festival/shared/venue/floors";
-import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
 import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
+import { useVenueMap } from "~/composables/useVenueMap";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import { formatTimeBerlin } from "@festival/shared/utils/time";
 
@@ -62,25 +61,7 @@ const {
 const nowDate = useNow();
 const now = computed(() => nowDate.value.getTime());
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
-
-const venueZones = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.zones?.length
-  ) {
-    return festivalMetadata.value.venueMap.zones;
-  }
-  return DEFAULT_ZONES;
-});
+const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 // ── Section 4: Host your own session / My session card ──
 
