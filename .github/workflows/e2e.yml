@@ -39,7 +39,7 @@ jobs:
           cache: "npm"
 
       - name: Load environment config
-        run: grep -v '^#' .github/env | grep -v '^$' >> $GITHUB_ENV
+        run: grep -v '^#' .github/env.paseo-next-v2 | grep -v '^$' >> $GITHUB_ENV
 
       - name: Install dependencies
         run: npm ci
@@ -78,7 +78,7 @@ jobs:
           set -euo pipefail
           # pipefail is critical: without it, `script | tee` reports success
           # even when the script crashes, leaving downstream jobs with empty
-          # contract-address env vars → they fall back to .github/env's stale
+          # contract-address env vars → they fall back to .github/env.paseo-next-v2's stale
           # value and tests run against the wrong contract.
           npx tsx scripts/e2e/deploy-test-festival.ts | tee /tmp/seed.env
           while IFS='=' read -r key value; do
@@ -112,7 +112,7 @@ jobs:
           cache: "npm"
 
       - name: Load environment config (non-seeded keys only)
-        run: grep -v '^#' .github/env | grep -v '^$' | grep -v '^VITE_FESTIVAL_\|^VITE_SUB_EVENT_' >> $GITHUB_ENV
+        run: grep -v '^#' .github/env.paseo-next-v2 | grep -v '^$' | grep -v '^VITE_FESTIVAL_\|^VITE_SUB_EVENT_' >> $GITHUB_ENV
 
       - name: Install dependencies
         run: npm ci
@@ -152,7 +152,7 @@ jobs:
           cache: "npm"
 
       - name: Load environment config (non-seeded keys only)
-        run: grep -v '^#' .github/env | grep -v '^$' | grep -v '^VITE_FESTIVAL_\|^VITE_SUB_EVENT_' >> $GITHUB_ENV
+        run: grep -v '^#' .github/env.paseo-next-v2 | grep -v '^$' | grep -v '^VITE_FESTIVAL_\|^VITE_SUB_EVENT_' >> $GITHUB_ENV
 
       - name: Install dependencies
         run: npm ci

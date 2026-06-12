@@ -3,7 +3,7 @@
   "descriptorPath": ".papi/descriptors",
   "entries": {
     "paseoAh": {
-      "wsUrl": "wss://asset-hub-paseo.ibp.network",
+      "wsUrl": "wss://asset-hub-paseo-rpc.n.dwellir.com",
       "metadata": ".papi/metadata/paseoAh.scale",
       "genesis": "0xd6eec26135305a8ad257a20d003357284c8aa03d0bdb2b357ab0a22371e11ef2",
       "codeHash": "0xfddf30fb88912790c5c7efd5918a9498821a80e22d5604ae115f4ed4b3580048"

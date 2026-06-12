@@ -36,6 +36,9 @@ conference-app/
 | Session AttendancePOAP  | `0xa97fc2bfc59a58778807ba34e8b57402536a786a` |
 | Multicall3              | `0x2c2fdf374009bc4f2af002c887fd962b63a68d89` |
 
+Upstream reference deployment: your own `npm run setup` writes fresh addresses
+to `.github/env.paseo-next-v2` and `packages/*/.env.<network>`.
+
 ## Getting Started
 
 ### Deploy everything (recommended)
@@ -48,6 +51,9 @@ npm install
 cp .env.example .env        # set DEPLOYER_SEED (a funded mnemonic)
 npm run setup               # interactive wizard
 ```
+
+`npm run setup` installs the contract libraries (forge-std + OpenZeppelin) on
+first run if they're missing.
 
 See **[DEPLOY.md](./DEPLOY.md)** for the full walkthrough, networks (including
 custom chains), non-interactive/CI usage, and troubleshooting.
@@ -87,7 +93,7 @@ Each SPA needs a `.env` file. Copy from `.env.example`:
 | `VITE_DEV_SEED` (for local development)             | Signer seed that bypases signing outside of the host for faster development      |
 | `VITE_BULLETIN_SIGNER_SEED` (for local development) | Mnemonic for Bulletin Chain app account                                          |
 
-CI builds load these from `.github/env`.
+CI builds load these from `.github/env.paseo-next-v2`.
 
 ## Adding a Network
 
