@@ -13,10 +13,10 @@
  * Uses eth_call only. No on-chain state changes, no gas paid, no signer needed.
  * Dev tooling, not CI-grade: no retry/timeout handling for flaky public RPCs.
  *
- * Env (resolved from process env, then contracts/.env, then .github/env. First wins):
+ * Env (resolved from process env, then contracts/.env, then .github/env.paseo-next-v2. First wins):
  *   VITE_MULTICALL_ADDRESS  required. H160 of a deployed Multicall3
- *                           (the canonical value is committed in .github/env, so by default
- *                            the script just works without any local config)
+ *                           (the canonical value is committed in .github/env.paseo-next-v2, so by
+ *                            default the script just works without any local config)
  *   ETH_RPC_URL             defaults to https://eth-rpc-testnet.polkadot.io/
  */
 
@@ -25,11 +25,11 @@ import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // Precedence (first wins): process env, then <cwd>/.env, then contracts/.env,
-// then .github/env (where the committed VITE_MULTICALL_ADDRESS lives).
+// then .github/env.paseo-next-v2 (where the committed VITE_MULTICALL_ADDRESS lives).
 const __dirname = dirname(fileURLToPath(import.meta.url))
 dotenv.config()
 dotenv.config({ path: resolve(__dirname, '..', '..', 'contracts/.env') })
-dotenv.config({ path: resolve(__dirname, '..', '..', '.github/env') })
+dotenv.config({ path: resolve(__dirname, '..', '..', '.github/env.paseo-next-v2') })
 
 import {
   createPublicClient,
@@ -48,8 +48,8 @@ const ETH_RPC_URL = process.env.ETH_RPC_URL || DEFAULT_ETH_RPC_URL
 
 if (!VITE_MULTICALL_ADDRESS) {
   console.error('VITE_MULTICALL_ADDRESS not set.')
-  console.error('Expected to be loaded from .github/env automatically. Either:')
-  console.error('  - check the value is present in .github/env (or contracts/.env), or')
+  console.error('Expected to be loaded from .github/env.paseo-next-v2 automatically. Either:')
+  console.error('  - check the value is present in .github/env.paseo-next-v2 (or contracts/.env), or')
   console.error('  - run via Make with a command-line override: make test-revive VITE_MULTICALL_ADDRESS=0x..., or')
   console.error('  - deploy a fresh instance with `npx tsx scripts/deploy-multicall.ts`.')
   process.exit(1)

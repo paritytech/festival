@@ -1,0 +1,128 @@
+# Reusable building block: build ONE SPA for ONE network env and publish it to
+# its DotNS domain via the polkadot-app-deploy reusable workflow.
+#
+# Callers fan out over (env × spa): they invoke this once per SPA, sequencing
+# admin → attendee because both sign with the same DOTNS_MNEMONIC publisher
+# account and would otherwise race its nonce.
+#
+# Nothing org-specific lives here. The DotNS base domains and contract
+# addresses come from the env-file (.github/env.<network>); the per-target
+# domain prefix and the publish decision come from the caller.
+name: _deploy (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      spa:
+        description: "Which SPA to build/deploy: admin or attendee"
+        required: true
+        type: string
+      env-file:
+        description: "Path to the committed env file for this network"
+        default: .github/env.paseo-next-v2
+        type: string
+      domain-prefix:
+        description: "Prepended to the base DotNS domain (e.g. '', 'stg.', 'pr42-')"
+        default: ""
+        type: string
+      publish:
+        description: "List the domain in the public Publisher registry"
+        default: false
+        type: boolean
+      max-retries:
+        description: "Deploy retry attempts"
+        default: 3
+        type: number
+      artifact-suffix:
+        description: "Disambiguates artifacts when several envs deploy in one run"
+        default: ""
+        type: string
+    secrets:
+      mnemonic:
+        description: "Mnemonic of the DotNS domain owner"
+        required: true
+    outputs:
+      cid:
+        description: "Content CID of the deployment"
+        value: ${{ jobs.deploy.outputs.cid }}
+      domain:
+        description: "Full DotNS domain the SPA was published to"
+        value: ${{ jobs.deploy.outputs.domain }}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build ${{ inputs.spa }}
+    outputs:
+      domain: ${{ steps.resolve.outputs.domain }}
+      bulletin-env: ${{ steps.resolve.outputs.bulletin-env }}
+      artifact: ${{ steps.resolve.outputs.artifact }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Load the env file into both this step (to resolve the domain) and
+      # $GITHUB_ENV (so the build step sees VITE_NETWORK + contract addresses).
+      - name: Load env + resolve domain
+        id: resolve
+        run: |
+          set -euo pipefail
+          FILE="${{ inputs.env-file }}"
+          if [ ! -f "$FILE" ]; then
+            echo "::error::$FILE not found. Run \`npm run setup\` for this network and commit it."
+            exit 1
+          fi
+          set -a; source <(grep -v '^#' "$FILE" | grep -v '^$'); set +a
+          grep -v '^#' "$FILE" | grep -v '^$' >> "$GITHUB_ENV"
+          if [ "${{ inputs.spa }}" = "admin" ]; then
+            base="$ADMIN_DOTNS_DOMAIN"
+          else
+            base="$ATTENDEE_DOTNS_DOMAIN"
+          fi
+          if [ -z "${base:-}" ]; then
+            echo "::error::base DotNS domain missing for ${{ inputs.spa }} in $FILE"
+            exit 1
+          fi
+          echo "domain=${{ inputs.domain-prefix }}${base}" >> "$GITHUB_OUTPUT"
+          echo "bulletin-env=${BULLETIN_ENV:-paseo-next-v2}" >> "$GITHUB_OUTPUT"
+          echo "artifact=${{ inputs.spa }}-build${{ inputs.artifact-suffix }}" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate static site + freeze manifest
+        run: |
+          export VITE_BUILD_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          export VITE_DOTNS_ID="${{ steps.resolve.outputs.domain }}"
+          npm run -w packages/${{ inputs.spa }} build
+          node scripts/bundle-worker-into.mjs ${{ inputs.spa }}
+          node scripts/deploy/emit-manifest.mjs packages/${{ inputs.spa }}
+        env:
+          NITRO_PRESET: static
+          VITE_BUILD_HASH: ${{ github.sha }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.resolve.outputs.artifact }}
+          path: packages/${{ inputs.spa }}/out
+          retention-days: 7
+
+  deploy:
+    needs: build
+    name: Publish ${{ inputs.spa }} → DotNS
+    uses: paritytech/polkadot-app-deploy/.github/workflows/deploy.yml@main
+    with:
+      dotns-domain: ${{ needs.build.outputs.domain }}
+      artifact-name: ${{ needs.build.outputs.artifact }}
+      env: ${{ needs.build.outputs.bulletin-env }}
+      max-retries: ${{ inputs.max-retries }}
+      publish: ${{ inputs.publish }}
+    secrets:
+      mnemonic: ${{ secrets.mnemonic }}
