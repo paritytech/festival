@@ -96,6 +96,8 @@ defineExpose({
   fitToFloor: () => engine.value?.fitToFloor(),
   invalidateSize: () => engine.value?.invalidateSize(),
   getZoneAt: (x: number, y: number) => engine.value?.getZoneAt(x, y) ?? null,
+  isPointInForbiddenZone: (x: number, y: number) =>
+    engine.value?.isPointInForbiddenZone(x, y) ?? false,
   setTransitioning: (value: boolean) => engine.value?.setTransitioning(value),
   flyToBuildingBounds: (opts?: { duration?: number; maxZoomDelta?: number }) =>
     engine.value?.flyToBuildingBounds(opts) ?? Promise.resolve(false),

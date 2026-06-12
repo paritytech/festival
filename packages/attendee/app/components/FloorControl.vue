@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import type { VenueFloor } from '@festival/shared/metadata/schemas'
-import { FLOOR_SELECTOR_SVG } from '@festival/shared/venue/icons'
 
-const props = defineProps<{
+defineProps<{
   floors: VenueFloor[]
   activeFloorId: string
 }>()
@@ -11,38 +9,15 @@ const props = defineProps<{
 const emit = defineEmits<{
   change: [floorId: string]
 }>()
-
-// For 2-floor blocks: show a single toggle button with the OTHER floor's label.
-// For 3+ floors: show a pill stack.
-const otherFloor = computed<VenueFloor | null>(() => {
-  if (props.floors.length !== 2) return null
-  return props.floors.find(f => f.id !== props.activeFloorId) ?? null
-})
-
-function handleToggleClick() {
-  const next = otherFloor.value
-  if (next) emit('change', next.id)
-}
 </script>
 
 <template>
-  <!-- Single-floor blocks: no control rendered. -->
-  <template v-if="floors.length <= 1" />
-
-  <!-- Two-floor toggle: button with other floor's glyph + name. -->
-  <button
-    v-else-if="otherFloor"
-    type="button"
-    class="floor-control floor-control--toggle"
+  <div
+    v-if="floors.length > 1"
+    class="floor-control floor-control--stack"
+    role="tablist"
     data-testid="floor-control"
-    :aria-label="`Switch to ${otherFloor.label}`"
-    @click.stop="handleToggleClick"
   >
-    <span class="floor-control__glyph" aria-hidden="true" v-html="FLOOR_SELECTOR_SVG" />
-  </button>
-
-  <!-- 3+ floors: pill stack. -->
-  <div v-else class="floor-control floor-control--stack" role="tablist" data-testid="floor-control">
     <button
       v-for="floor in floors"
       :key="floor.id"
@@ -56,63 +31,59 @@ function handleToggleClick() {
       {{ floor.label }}
     </button>
   </div>
+  <div
+    v-else-if="floors.length === 1"
+    class="floor-control floor-control--single"
+    data-testid="floor-control"
+  >
+    {{ floors[0].label }}
+  </div>
 </template>
 
 <style scoped>
-.floor-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  font-family: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-.floor-control--toggle {
-  /* Glyph button with adjacent label. */
-  gap: 8px;
-}
-
-.floor-control__glyph {
-  width: 40px;
-  height: 40px;
-  display: inline-block;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: transform 120ms ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-}
-.floor-control__glyph :deep(svg) {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.floor-control--toggle:hover .floor-control__glyph { transform: scale(1.05); }
-.floor-control--toggle:active .floor-control__glyph { transform: scale(0.97); }
-
 .floor-control--stack {
+  display: inline-flex;
   flex-direction: column;
   padding: 4px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  background: var(--color-bg-surface-container);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+}
+.floor-control--single {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--color-fg-secondary);
+  background: var(--color-bg-surface-container);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
 }
 .floor-control__pill {
-  padding: 6px 12px;
-  font-size: 12px;
+  min-height: 36px;
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 14px;
   font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
   background: transparent;
-  color: #3a3a3a;
+  color: var(--color-fg-secondary);
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-xl);
   cursor: pointer;
   transition: background 150ms, color 150ms;
 }
+.floor-control__pill:hover {
+  color: var(--color-fg-primary);
+}
 .floor-control__pill.is-active {
-  background: #0f0f0f;
-  color: #ffffff;
+  background: var(--color-bg-surface-container-inverted);
+  color: var(--color-fg-primary-inverted);
 }
 </style>
