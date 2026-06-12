@@ -486,7 +486,7 @@ async function submit() {
     <SessionTopBar title="Edit session’s details" @back="handleBack" />
 
     <!-- Form -->
-    <div class="flex-1 px-4 pt-6 space-y-6">
+    <div class="flex-1 px-4 pt-6 space-y-6 border-t border-white/12">
       <!-- Session Badge -->
       <div v-if="badgePixels" class="w-24 aspect-square rounded-2xl overflow-hidden">
         <BadgeCanvas :pixels="badgePixels" :size="96" />

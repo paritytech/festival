@@ -113,9 +113,17 @@ const isScrolled = ref(false);
 const scrollContainer = ref<HTMLElement | null>(null);
 const headerEl = ref<HTMLElement | null>(null);
 const headerHeight = ref(0);
+const dayHeaderHeight = ref(0);
+const legendHeight = ref(0);
+
+const dayHeaderStickyTop = computed(() => `${headerHeight.value}px`);
+const legendStickyTop = computed(
+  () => `${headerHeight.value + dayHeaderHeight.value}px`,
+);
 
 const stuckDays = ref<Set<string>>(new Set());
 const dayHeaderEls = ref<HTMLElement[]>([]);
+const legendEls = ref<HTMLElement[]>([]);
 let stickyObserver: IntersectionObserver | null = null;
 
 const activeDays = computed<TimelineDay[]>(() =>
@@ -166,11 +174,22 @@ watch(
   [activeDays, headerHeight],
   () => {
     dayHeaderEls.value = [];
+    legendEls.value = [];
     stuckDays.value = new Set();
-    void nextTick(attachStickyObserver);
+    void nextTick(() => {
+      measureStickyHeights();
+      attachStickyObserver();
+    });
   },
   { immediate: true },
 );
+
+function measureStickyHeights() {
+  const dayHeader = dayHeaderEls.value[0];
+  if (dayHeader) dayHeaderHeight.value = dayHeader.offsetHeight;
+  const legend = legendEls.value[0];
+  if (legend) legendHeight.value = legend.offsetHeight;
+}
 
 function attachStickyObserver() {
   stickyObserver?.disconnect();
@@ -229,9 +248,6 @@ function autoScrollToNow() {
   );
   if (!el) return;
 
-  // Land just below the sticky tab header + day header. The day header is
-  // ~52 px (py-3 + 14 px of text); a small extra gap keeps it readable.
-  const dayHeaderHeight = 52;
   const scrollerEl = scroller.value;
   if (!scrollerEl) return;
   // getBoundingClientRect is viewport-relative; convert to scroller-content
@@ -241,7 +257,8 @@ function autoScrollToNow() {
     scrollerEl.getBoundingClientRect().top +
     scrollerEl.scrollTop -
     headerHeight.value -
-    dayHeaderHeight -
+    dayHeaderHeight.value -
+    legendHeight.value -
     8;
   scrollerEl.scrollTo({ top: Math.max(0, top), behavior: "auto" });
   hasAutoScrolledToNow.value = true;
@@ -330,7 +347,7 @@ const subEventsEnabled = computed(() => {
             stuckDays.has(day.dateKey) ? 'bg-surface' : '',
             day.dayNumber !== 1 ? 'mt-6' : '',
           ]"
-          :style="{ top: headerHeight + 'px' }"
+          :style="{ top: dayHeaderStickyTop }"
         >
           <span class="text-lg leading-[22px] font-semibold text-white"
             >Day {{ day.dayNumber }}</span
@@ -338,11 +355,11 @@ const subEventsEnabled = computed(() => {
           <span class="text-lg leading-[22px] font-semibold text-text-secondary">{{ day.label }}</span>
         </div>
 
-        <!-- Sessions Type legend (Program tab only). Not sticky; scrolls
-             with content and slides under the sticky day header above. -->
         <div
           v-if="activeTab === 'program'"
-          class="-mx-4 px-4 py-2.5 flex items-center justify-between"
+          :ref="(el) => { if (el) legendEls[dayIdx] = el as HTMLElement }"
+          class="sticky z-[9] -mx-4 px-4 py-2.5 flex items-center justify-between bg-background"
+          :style="{ top: legendStickyTop }"
           data-testid="sessions-type-legend"
         >
           <span class="text-xs text-text-muted">Sessions Type</span>
@@ -477,21 +494,7 @@ const subEventsEnabled = computed(() => {
       >
         Host your own session
       </span>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="22"
-        height="22"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="black"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="shrink-0"
-      >
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
-      </svg>
+      <PlusIcon :size="22" :stroke-width="2" class="shrink-0 text-black" />
     </NuxtLink>
   </div>
 </template>

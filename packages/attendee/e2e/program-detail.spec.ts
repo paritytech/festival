@@ -78,7 +78,7 @@ test.describe('Program detail', () => {
     await expect(frame.getByRole('button', { name: /^Register$/ })).toHaveCount(0)
 
     const ctaStates = frame.locator(
-      '[data-testid="session-collect-badge-pending"], [data-testid="session-collect-badge-cta"], [data-testid="session-ended"]',
+      '[data-testid="session-collect-badge-pending"], [data-testid="session-collect-badge-cta"]',
     )
     // Manage role + creator branches don't render any of these. Non-owner +
     // non-volunteer with no festival check-in renders nothing too. We only
