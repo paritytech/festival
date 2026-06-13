@@ -63,11 +63,12 @@ useFestivalWatcher(address.value as `0x${string}`, {
   deferWhileLoading: festival.isLoading,
 })
 
-// Visibility change as safety net. Re-runs bootLoad with `at: 'finalized'`
-// to converge to ground-truth state.
+// Visibility change as safety net. Reads at best, like every other state
+// source: all festival state is monotonic, so a finalized read could only
+// regress fresher best-derived state (e.g. revert a just-landed check-in).
 useVisibilityReconcile(() => {
   const userH160 = wallet.isConnected ? walletAddressToH160(wallet.address) : null
-  return bootLoadAdmin(address.value as `0x${string}`, userH160, { at: 'finalized' })
+  return bootLoadAdmin(address.value as `0x${string}`, userH160)
 })
 
 function shortenAddr(addr: string) {
