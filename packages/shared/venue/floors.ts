@@ -4,6 +4,7 @@ import type {
   VenueMarker,
   VenueZone,
 } from "../metadata/schemas";
+import { TYPE_LABELS } from "./categories";
 
 /** Outdoor venue overhead. Treated as a pseudo-"floor" so markers can be
  *  placed against it using the same coordinate model as indoor floors,
@@ -186,7 +187,10 @@ function joinLocationSegments(
   return out.join(" · ");
 }
 
-/** Triplet for a typed marker. */
+/** Triplet for a typed marker. Icon-only categories (service / emergency /
+ *  money / scenery) save with an empty label by design, so fall back to the
+ *  type label (e.g. "Restroom", "ATM") — kept as a render-time lookup so it
+ *  stays rename- and i18n-safe rather than baked into stored metadata. */
 function tripletFromMarker(
   marker: VenueMarker,
   zones: VenueZone[],
@@ -194,7 +198,7 @@ function tripletFromMarker(
   return {
     floor: getMapContextLabel(marker.floorId),
     zone: findZoneLabel(marker.zoneId, zones),
-    marker: marker.label,
+    marker: marker.label || TYPE_LABELS[marker.type],
   };
 }
 

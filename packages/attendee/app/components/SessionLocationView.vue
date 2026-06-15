@@ -10,7 +10,6 @@ import {
   isOutdoorFloor,
   parseCoordLocation,
 } from '@festival/shared/venue/floors'
-import { TYPE_LABELS } from '@festival/shared/venue/categories'
 import VenueMap from '~/components/VenueMap.vue'
 import FloorControl from '~/components/FloorControl.vue'
 import MapSelectedCard from '~/components/MapSelectedCard.vue'
@@ -66,16 +65,13 @@ const activeBlock = computed(() => {
   return getBlockByFloor(activeFloorId.value)
 })
 
-// Chip used by the bottom MapSelectedCard. Marker → marker name + "Floor · Zone".
-// Spot-resolved sessions (coord locations) have no marker, so the chip falls
-// back to the floor only.
+// Chip used by the bottom MapSelectedCard. Marker → marker name + "Floor · Zone"
+// (formatChipFromMarker falls back to the type label for icon-only markers that
+// save with an empty label). Spot-resolved sessions (coord locations) have no
+// marker, so the chip falls back to the floor only.
 const chip = computed(() => {
   if (resolved.value?.kind === 'marker') {
-    const c = formatChipFromMarker(resolved.value.marker, props.zones)
-    if (!c.headline) {
-      c.headline = TYPE_LABELS[resolved.value.marker.type] || '(unnamed)'
-    }
-    return c
+    return formatChipFromMarker(resolved.value.marker, props.zones)
   }
   if (resolved.value?.kind === 'spot') {
     return {

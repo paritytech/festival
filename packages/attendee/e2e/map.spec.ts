@@ -64,6 +64,9 @@ test.describe('Venue map', () => {
     await expect(card).toBeVisible()
     await expect(card.locator('.sel-card__row')).toBeVisible()
     await expect(card.locator('.sel-card__breadcrumb')).not.toHaveText('')
+    // The description line is always populated — named markers show their label,
+    // icon-only markers (empty label) fall back to their type label.
+    await expect(card.locator('.sel-card__primary')).not.toHaveText('')
 
     // The session strip only renders when an entry is imminent. Assert it
     // is either absent or, when present, carries a source accent class.
