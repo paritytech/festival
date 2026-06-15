@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, useTemplateRef, nextTick } from "vue";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
-import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
 import type { PickedLocation } from "@festival/shared/venue/floors";
 import { useFestival } from "~/composables/useFestival";
+import { useVenueMap } from "~/composables/useVenueMap";
 import { usePoaps } from "~/composables/usePoaps";
 import { useRegistration } from "~/composables/useRegistration";
 import { useSubEvents } from "~/composables/useSubEvents";
@@ -14,14 +13,13 @@ import { randomAnonymousSpeakerName } from "@festival/shared/metadata/anonymousS
 import { writeContract } from "@festival/shared/contracts/write";
 import { FestivalABI } from "@festival/shared/contracts/abis";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
 import { useBulletinStorage } from "@festival/shared/metadata/bulletin";
 import { formatTxError } from "@festival/shared/contracts/errors";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import {
   encodeCoordLocation,
-  resolveLocationLabel,
+  resolveFullLocationLabel,
 } from "@festival/shared/venue/floors";
 import {
   getValidFestivalDays,
@@ -152,25 +150,7 @@ const endTimeLabel = computed(() =>
 
 // ── Venue markers ──
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
-
-const venueZones = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.zones?.length
-  ) {
-    return festivalMetadata.value.venueMap.zones;
-  }
-  return DEFAULT_ZONES;
-});
+const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 // ── Navigation ──
 
@@ -217,6 +197,7 @@ function buildMetadata(): SubEventMetadata {
   const location = pickedLocation.value
     ? encodeCoordLocation(
         pickedLocation.value.floorId,
+        pickedLocation.value.zoneId,
         pickedLocation.value.x,
         pickedLocation.value.y,
       )
@@ -236,13 +217,13 @@ function buildMetadata(): SubEventMetadata {
 // ── Success screen helpers ──
 
 const pickedLocationLabel = computed(() => {
-  if (!pickedLocation.value) return "";
-  const encoded = encodeCoordLocation(
-    pickedLocation.value.floorId,
-    pickedLocation.value.x,
-    pickedLocation.value.y,
+  const loc = pickedLocation.value;
+  if (!loc) return "";
+  return resolveFullLocationLabel(
+    encodeCoordLocation(loc.floorId, loc.zoneId, loc.x, loc.y),
+    venueMarkers.value,
+    venueZones.value,
   );
-  return resolveLocationLabel(encoded, venueMarkers.value);
 });
 
 const isCreatingSession = computed(
@@ -291,14 +272,6 @@ async function submit() {
 
   txStatus.value = "preparing";
   try {
-    if (!hasDeployedContracts()) {
-      await new Promise((r) => setTimeout(r, 1200));
-      txStatus.value = "finalized";
-      createdAddress.value =
-        "0xsub" + Math.random().toString(16).slice(2, 10) + "0".repeat(30);
-      return;
-    }
-
     if (!wallet.isConnected) throw new Error("Wallet not connected");
 
     const myFestivalPoap = festivalPoaps.value[0];

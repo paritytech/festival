@@ -9,12 +9,10 @@ import { useHiddenSessions } from "~/composables/useHiddenSessions";
 import { useBookmarks } from "~/composables/useBookmarks";
 import { useNow } from "~/composables/useNow";
 import { useSessionWatcher } from "~/composables/useSessionWatcher";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
-import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
-import { resolveLocationLabel } from "@festival/shared/venue/floors";
+import { resolveFullLocationLabel } from "@festival/shared/venue/floors";
+import { useVenueMap } from "~/composables/useVenueMap";
 import { useBulletinImage } from "~/composables/useBulletinImage";
 import {
   SESSION_CHECKIN_GRACE_MS,
@@ -120,25 +118,7 @@ function dismissBadgeEarned() {
   badgeEarnedOpen.value = false;
 }
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
-
-const venueZones = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.zones?.length
-  ) {
-    return festivalMetadata.value.venueMap.zones;
-  }
-  return DEFAULT_ZONES;
-});
+const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 const speakerLabel = computed(() => {
   const speakers = subEvent.value?.metadata.speakers ?? [];
@@ -161,9 +141,10 @@ const dayLabel = computed(() => {
 
 const locationLabel = computed(() => {
   if (!subEvent.value?.metadata.location) return "";
-  return resolveLocationLabel(
+  return resolveFullLocationLabel(
     subEvent.value.metadata.location,
     venueMarkers.value,
+    venueZones.value,
   );
 });
 

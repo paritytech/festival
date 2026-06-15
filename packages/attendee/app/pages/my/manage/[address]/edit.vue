@@ -4,9 +4,7 @@ import { useSubEventManage } from "~/composables/useSubEventManage";
 import { useSubEvents } from "~/composables/useSubEvents";
 import { useFestival } from "~/composables/useFestival";
 import { useNow } from "~/composables/useNow";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
-import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
+import { useVenueMap } from "~/composables/useVenueMap";
 import type { SubEventMetadata } from "@festival/shared/metadata/schemas";
 import { randomAnonymousSpeakerName } from "@festival/shared/metadata/anonymousSpeaker";
 import { isValidEvmAddress } from "@festival/shared/utils/address";
@@ -14,8 +12,7 @@ import { decodeBadgeHex } from "@festival/shared/utils/badge";
 import {
   encodeCoordLocation,
   parseCoordLocation,
-  describePickedLocation,
-  formatPickedLocationLong,
+  resolveFullLocationLabel,
   type PickedLocation,
 } from "@festival/shared/venue/floors";
 import {
@@ -59,7 +56,7 @@ const {
   handleUpdateMetadata,
   handleCancel,
 } = useSubEventManage(addr);
-const { metadata: festivalMetadata, details: festivalDetails } = useFestival();
+const { details: festivalDetails } = useFestival();
 
 const now = useNow();
 
@@ -98,25 +95,7 @@ const festivalDays = computed(() => {
 
 // ── Venue markers ──
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
-
-const venueZones = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.zones?.length
-  ) {
-    return festivalMetadata.value.venueMap.zones;
-  }
-  return DEFAULT_ZONES;
-});
+const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 const badgePixels = computed(() => {
   const hex = metadata.value?.badgeHex;
@@ -199,23 +178,19 @@ const previewMapRef =
   useTemplateRef<InstanceType<typeof VenueMap>>("previewMapRef");
 
 const pickedLocationLabel = computed(() => {
-  if (!pickedLocation.value) return "";
-  return formatPickedLocationLong(
-    describePickedLocation(
-      pickedLocation.value,
-      venueMarkers.value,
-      venueZones.value,
-    ),
+  const loc = pickedLocation.value;
+  if (!loc) return "";
+  return resolveFullLocationLabel(
+    encodeCoordLocation(loc.floorId, loc.zoneId, loc.x, loc.y),
+    venueMarkers.value,
+    venueZones.value,
   );
 });
 
 const currentLocationEncoded = computed(() => {
-  if (!pickedLocation.value) return "";
-  return encodeCoordLocation(
-    pickedLocation.value.floorId,
-    pickedLocation.value.x,
-    pickedLocation.value.y,
-  );
+  const loc = pickedLocation.value;
+  if (!loc) return "";
+  return encodeCoordLocation(loc.floorId, loc.zoneId, loc.x, loc.y);
 });
 
 function handlePickerDone(loc: PickedLocation) {
@@ -227,17 +202,10 @@ function handlePickerCancel() {
   pickerOpen.value = false;
 }
 
-// On the preview map, recenter on the pin and (if zoneId is missing from
-// pre-fill) resolve it now that the SVG is mounted, so the label upgrades from
-// "Custom location" to the proper zone name.
 function handlePreviewReady() {
   const loc = pickedLocation.value;
   if (!loc) return;
   previewMapRef.value?.focusSpot(loc, { targetZoomDelta: 1, animate: false });
-  if (loc.zoneId === null) {
-    const zoneId = previewMapRef.value?.getZoneAt(loc.x, loc.y) ?? null;
-    if (zoneId) pickedLocation.value = { ...loc, zoneId };
-  }
 }
 
 // ── Pre-fill form from metadata ──
@@ -280,13 +248,9 @@ watch(
       form.startMinutesOfDay = berlinMinutesFromTs(Number(d.startTime));
       form.endMinutesOfDay = berlinMinutesFromTs(Number(d.endTime));
 
-      // Pre-fill location. zoneId is resolved later, after the preview map mounts
-      // and we can hit-test the SVG via getZoneAt.
       if (m.location) {
         const coord = parseCoordLocation(m.location);
-        if (coord) {
-          pickedLocation.value = { ...coord, zoneId: null };
-        }
+        if (coord) pickedLocation.value = coord;
       }
 
       // Store originals for dirty tracking
@@ -374,6 +338,7 @@ async function submit() {
   const location = pickedLocation.value
     ? encodeCoordLocation(
         pickedLocation.value.floorId,
+        pickedLocation.value.zoneId,
         pickedLocation.value.x,
         pickedLocation.value.y,
       )

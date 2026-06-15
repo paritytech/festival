@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { useSubEvents } from '~/composables/useSubEvents'
 import { useHiddenSessions } from '~/composables/useHiddenSessions'
 import { useWalletStore } from '@festival/shared/host/wallet'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { ss58ToH160, isValidEvmAddress } from '@festival/shared/utils/address'
 import { formatTimeBerlin } from '@festival/shared/utils/time'
 
@@ -13,7 +12,6 @@ const wallet = useWalletStore()
 
 const userH160 = computed(() => {
   if (!wallet.isConnected) return null
-  if (!hasDeployedContracts()) return '0x' + '0'.repeat(39) + '1' // mock creator
   return isValidEvmAddress(wallet.address)
     ? wallet.address.toLowerCase()
     : ss58ToH160(wallet.address).toLowerCase()

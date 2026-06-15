@@ -848,7 +848,6 @@ export async function createVenueMap(
   function buildMarkerHtml(m: VenueMarker): string {
     const category = normalizeCategory(m.category);
     const type = normalizeType(category, m.type);
-    const spec = getCategory(category);
     const glyph = getMarkerIcon(category, type);
     if (!MARKER_ICONS[`${category}/${type}`]) {
       // Loud warning so missing icons surface in dev instead of silently
@@ -858,13 +857,8 @@ export async function createVenueMap(
         `[venue map] no MARKER_ICONS entry for ${category}/${type} — using base/room fallback`,
       );
     }
-    const labelHtml =
-      spec.hasLabel && m.label
-        ? `<span class="vmarker__label">${escapeHtml(m.label)}</span>`
-        : "";
     return `<div class="vmarker" data-category="${category}" data-type="${type}" data-marker-id="${escapeHtml(m.id)}">
       <span class="vmarker__icon" aria-hidden="true">${glyph}</span>
-      ${labelHtml}
     </div>`;
   }
 

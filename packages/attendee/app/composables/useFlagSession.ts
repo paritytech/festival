@@ -2,7 +2,6 @@ import { ref } from 'vue'
 import { writeContract } from '@festival/shared/contracts/write'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { FestivalSessionABI } from '@festival/shared/contracts/abis'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { useHiddenSessions } from './useHiddenSessions'
@@ -27,14 +26,6 @@ export function useFlagSession() {
     txStatus.value = 'preparing'
 
     try {
-      if (!hasDeployedContracts()) {
-        await new Promise((r) => setTimeout(r, 800))
-        txStatus.value = 'finalized'
-        hide(sessionAddress)
-        if (isBookmarked(sessionAddress)) toggleBookmark(sessionAddress)
-        return true
-      }
-
       const tokenId = userFestivalPoapTokenId()
       if (tokenId === null) {
         throw new Error('You need a festival POAP to report a session.')

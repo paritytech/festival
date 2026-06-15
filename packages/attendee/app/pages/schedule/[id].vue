@@ -1,24 +1,15 @@
 <script setup lang="ts">
 import { useSchedule } from '~/composables/useSchedule'
 import { useBookmarks } from '~/composables/useBookmarks'
-import { useFestival } from '~/composables/useFestival'
-import { MOCK_VENUE_MAP } from '@festival/shared/mocks'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
-import { getMarkerLocationLabel } from '@festival/shared/venue/floors'
+import { useVenueMap } from '~/composables/useVenueMap'
+import { resolveFullLocationLabel } from '@festival/shared/venue/floors'
 import { formatDateTimeBerlin, parseFestivalDate } from '@festival/shared/utils/time'
 
 const route = useRoute()
 const id = route.params.id as string
 const { getById } = useSchedule()
 const { toggleBookmark, isBookmarked } = useBookmarks()
-const { metadata } = useFestival()
-
-const venueMarkers = computed(() => {
-  if (hasDeployedContracts() && metadata.value?.venueMap?.markers?.length) {
-    return metadata.value.venueMap.markers
-  }
-  return MOCK_VENUE_MAP.markers
-})
+const { markers: venueMarkers, zones: venueZones } = useVenueMap()
 
 const entry = getById(id)
 
@@ -29,7 +20,7 @@ function formatDateTime(iso: string) {
 function handleToggle() {
   if (!entry) return
   const location = entry.venueMarkerId
-    ? getMarkerLocationLabel(entry.venueMarkerId, venueMarkers.value)
+    ? resolveFullLocationLabel(entry.venueMarkerId, venueMarkers.value, venueZones.value)
     : undefined
   toggleBookmark(entry.id, {
     startMs: parseFestivalDate(entry.start).getTime(),
@@ -86,7 +77,7 @@ function handleToggle() {
         </div>
         <div v-if="entry.venueMarkerId">
           <p class="text-text-muted text-xs">Location</p>
-          <p>{{ getMarkerLocationLabel(entry.venueMarkerId!, venueMarkers) }}</p>
+          <p>{{ resolveFullLocationLabel(entry.venueMarkerId!, venueMarkers, venueZones) }}</p>
         </div>
       </div>
 

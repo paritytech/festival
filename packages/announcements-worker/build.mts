@@ -25,6 +25,22 @@ const net = resolveNetwork(network, {
 const festival =
   process.env.VITE_FESTIVAL_ADDRESS || '0xe4e3a76a4ccae0c8bbdd7472f2f766ab2f9890df'
 
+/**
+ * dotNS host the worker deeplinks into. Inherits the attendee app's
+ * `VITE_DOTNS_ID` (the worker only bundles into attendee). Dev values
+ * (localhost/ports) aren't `.dot` hosts → '' → deeplink buttons no-op.
+ */
+function toDotHost(raw: string): string {
+  const host = raw
+    .trim()
+    .replace(/^https?:\/\//, '')
+    .split('/')[0]
+    .split(':')[0]
+  return /\.dot(\.li)?$/.test(host) ? host : ''
+}
+
+const dotns = toDotHost(process.env.VITE_DOTNS_ID || '')
+
 await build({
   entryPoints: ['worker/index.ts'],
   bundle: true,
@@ -37,10 +53,11 @@ await build({
   define: {
     'process.env.WORKER_FESTIVAL_ADDRESS': JSON.stringify(festival),
     'process.env.WORKER_CHAIN_GENESIS': JSON.stringify(net.mainChain.genesisHash),
+    'process.env.WORKER_DOTNS_ID': JSON.stringify(dotns),
   },
 })
 
 console.log(
   `[build] network=${network} festival=${festival} ` +
-    `genesis=${net.mainChain.genesisHash.slice(0, 12)}…`,
+    `genesis=${net.mainChain.genesisHash.slice(0, 12)}… dotns=${dotns || '(unset)'}`,
 )

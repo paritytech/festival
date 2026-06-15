@@ -1,7 +1,6 @@
 import { ref } from 'vue'
 import type { ContractRole } from '@festival/shared/permissions'
 import { loadUserRoles } from '@festival/shared/contracts/role-helpers'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 
 /**
  * Reactive wrapper around shared loadUserRoles() for a specific sub-event contract.
@@ -14,14 +13,6 @@ export function useSubEventRoles(subEventAddress: string) {
   async function load() {
     isLoading.value = true
     try {
-      if (!hasDeployedContracts()) {
-        // Mock: first sub-event has all roles (creator), second has none
-        roles.value = subEventAddress.startsWith('0xsub1')
-          ? ['ADMIN', 'MANAGER', 'CHECK_IN', 'TREASURER']
-          : []
-        return
-      }
-
       roles.value = await loadUserRoles(subEventAddress as `0x${string}`)
     } catch (e) {
       console.error('[useSubEventRoles] Error:', e)

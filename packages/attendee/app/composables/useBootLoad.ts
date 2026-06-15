@@ -5,10 +5,7 @@ import {
   FESTIVAL_POAP_ADDRESS,
   SUB_EVENT_POAP_ADDRESS,
 } from '@festival/shared/contracts/addresses'
-import {
-  hasDeployedContracts,
-  isNonZeroCid,
-} from '@festival/shared/contracts/festival-reads'
+import { isNonZeroCid } from '@festival/shared/contracts/festival-reads'
 import type { FestivalDetails, SessionDetails, POAPData } from '@festival/shared/contracts/types'
 import type { FestivalMetadata, SubEventMetadata } from '@festival/shared/metadata/schemas'
 import { hydrateSubEventMetadata } from '@festival/shared/metadata/schemas'
@@ -46,8 +43,6 @@ export function bootLoadAttendee(
   userAddress: `0x${string}` | null,
   options: BootLoadOptions = {},
 ): Promise<void> {
-  if (!hasDeployedContracts()) return Promise.resolve()
-
   if (!current) {
     current = runBootLoad(userAddress, options).finally(() => {
       current = null

@@ -36,7 +36,6 @@ export function useRegistration(_festivalAddress: string) {
 
   const isRegistered: WritableComputedRef<boolean> = computed({
     get: () => {
-      if (!hasDeployedContracts()) return true
       // Either present in attendees OR the user holds a festival POAP.
       return Boolean(findUserAttendee()) || festivalState.user.ticketTokenId > 0n
     },
@@ -58,10 +57,7 @@ export function useRegistration(_festivalAddress: string) {
   })
 
   const isCheckedIn: WritableComputedRef<boolean> = computed({
-    get: () => {
-      if (!hasDeployedContracts()) return false
-      return findUserAttendee()?.isCheckedIn ?? false
-    },
+    get: () => findUserAttendee()?.isCheckedIn ?? false,
     set: (v) => {
       const ul = userLower()
       if (!ul || !festivalState.festival) return
@@ -71,7 +67,6 @@ export function useRegistration(_festivalAddress: string) {
   })
 
   const ticketTokenId = computed<number | null>(() => {
-    if (!hasDeployedContracts()) return 42
     const t = festivalState.user.ticketTokenId
     return t > 0n ? Number(t) : null
   })
@@ -80,15 +75,6 @@ export function useRegistration(_festivalAddress: string) {
     error.value = null
     txStatus.value = 'preparing'
     try {
-      if (!hasDeployedContracts()) {
-        await new Promise((r) => setTimeout(r, 1200))
-        txStatus.value = 'finalized'
-        // Mock-mode optimistic flip: writable computed setter handles the array push.
-        isRegistered.value = true
-        setTimeout(() => { txStatus.value = 'idle' }, 2000)
-        return
-      }
-
       const wallet = useWalletStore()
       await writeContract({
         address: FESTIVAL_ADDRESS as `0x${string}`,

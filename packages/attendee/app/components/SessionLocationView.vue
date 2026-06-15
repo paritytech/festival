@@ -5,7 +5,8 @@ import type { VenueMarker, VenueZone } from '@festival/shared/metadata/schemas'
 import {
   getBlockByFloor,
   getFloor,
-  getFloorBreadcrumb,
+  getMapContextLabel,
+  formatChipFromMarker,
   isOutdoorFloor,
   parseCoordLocation,
 } from '@festival/shared/venue/floors'
@@ -64,9 +65,22 @@ const activeBlock = computed(() => {
   return getBlockByFloor(activeFloorId.value)
 })
 
-const breadcrumb = computed(() =>
-  activeFloorId.value ? getFloorBreadcrumb(activeFloorId.value) : '',
-)
+// Chip used by the bottom MapSelectedCard. Marker → marker name + "Floor · Zone"
+// (formatChipFromMarker falls back to the type label for icon-only markers that
+// save with an empty label). Spot-resolved sessions (coord locations) have no
+// marker, so the chip falls back to the floor only.
+const chip = computed(() => {
+  if (resolved.value?.kind === 'marker') {
+    return formatChipFromMarker(resolved.value.marker, props.zones)
+  }
+  if (resolved.value?.kind === 'spot') {
+    return {
+      headline: 'Pinned location',
+      sub: getMapContextLabel(resolved.value.floorId),
+    }
+  }
+  return { headline: '', sub: '' }
+})
 
 const topLeftLabel = computed(() => {
   if (!activeFloorId.value) return ''
@@ -110,10 +124,7 @@ const router = useRouter()
 async function handleShare() {
   if (typeof navigator === 'undefined' || typeof window === 'undefined') return
   if (!resolved.value || resolved.value.kind === 'unknown') return
-  const where =
-    resolved.value.kind === 'marker'
-      ? `${resolved.value.marker.label || 'Location'} — ${breadcrumb.value}`
-      : `Pinned location — ${breadcrumb.value}`
+  const where = `${chip.value.headline || 'Location'} — ${chip.value.sub}`
   // Hash-mode share URL, matching the convention in pages/map.vue.
   const fullPath = router.resolve(`/sessions/${props.sessionAddress}`).fullPath
   const url = `${window.location.origin}/#${fullPath}`
@@ -187,7 +198,8 @@ async function handleShare() {
     <div v-if="resolved && resolved.kind !== 'unknown'" class="loc-view__bottom">
       <MapSelectedCard
         :marker="resolved.kind === 'marker' ? resolved.marker : null"
-        :breadcrumb="breadcrumb"
+        :headline="chip.headline"
+        :sub="chip.sub"
         @share="handleShare"
         @close="emit('close')"
       />

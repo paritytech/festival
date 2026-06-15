@@ -12,7 +12,7 @@ import {
   shortenAddress,
   ss58ToH160,
 } from '@festival/shared/utils/address'
-import { resolveLocationLabel } from '@festival/shared/venue/floors'
+import { resolveFullLocationLabel } from '@festival/shared/venue/floors'
 import { formatTimeBerlin } from '@festival/shared/utils/time'
 
 definePageMeta({
@@ -60,10 +60,11 @@ const checkedInCount = computed(
 // ── Location line (no mock fallback) ──
 const { metadata: festivalMetadata } = useFestival()
 const venueMarkers = computed(() => festivalMetadata.value?.venueMap?.markers ?? [])
+const venueZones = computed(() => festivalMetadata.value?.venueMap?.zones ?? [])
 const locationLabel = computed(() => {
   const loc = session.value?.metadata.location
   if (!loc || !venueMarkers.value.length) return ''
-  return resolveLocationLabel(loc, venueMarkers.value)
+  return resolveFullLocationLabel(loc, venueMarkers.value, venueZones.value)
 })
 
 const timeRange = computed(() => {
