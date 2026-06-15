@@ -1,7 +1,6 @@
 import { ref } from 'vue'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { checkInSession, manualCheckInSession } from '@festival/shared/contracts/session-writes'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { FestivalABI } from '@festival/shared/contracts/abis'
 import { batchRead } from '@festival/shared/contracts/multicall'
 import { formatTxError } from '@festival/shared/contracts/errors'
@@ -68,12 +67,6 @@ export function useSubEventCheckIn(subEventAddress: string) {
     error.value = null
     step.value = 'validating'
 
-    if (!hasDeployedContracts()) {
-      accountStatus.value = { registered: false, checkedIn: false }
-      step.value = 'confirming'
-      return
-    }
-
     try {
       const attendeeH160 = ss58ToH160(address)
       const [registered, checkedIn] = await batchRead([
@@ -101,17 +94,6 @@ export function useSubEventCheckIn(subEventAddress: string) {
     step.value = 'executing'
     txStatus.value = 'preparing'
     error.value = null
-
-    if (!hasDeployedContracts()) {
-      await new Promise((r) => setTimeout(r, 800))
-      txStatus.value = 'finalized'
-      addRecentCheckin({
-        address: shortenAddress(attendeeSS58.value),
-        time: 'just now',
-      })
-      step.value = 'success'
-      return
-    }
 
     try {
       const wallet = useWalletStore()

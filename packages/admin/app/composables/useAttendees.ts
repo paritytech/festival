@@ -1,6 +1,4 @@
 import { ref, computed } from 'vue'
-import { MOCK_ATTENDEES } from '@festival/shared/mocks'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { h160ToSs58, walletAddressToH160 } from '@festival/shared/utils/address'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { festivalState } from '@festival/shared/cache/festival-state'
@@ -19,23 +17,14 @@ export interface CheckedInAttendee {
 export function useAttendees(festivalAddress: string) {
   const search = ref('')
 
-  const attendees = computed<CheckedInAttendee[]>(() => {
-    if (!hasDeployedContracts()) {
-      const now = Math.floor(Date.now() / 1000)
-      return MOCK_ATTENDEES
-        .filter((a) => a.isCheckedIn)
-        .map((a, i) => ({
-          address: a.address as `0x${string}`,
-          checkedInAt: now - (i + 1) * 600,
-        }))
-    }
-    return festivalState.user.festivalPoaps
+  const attendees = computed<CheckedInAttendee[]>(() =>
+    festivalState.user.festivalPoaps
       .map((p) => ({
         address: p.data.attendee,
         checkedInAt: Number(p.data.issuedAt),
       }))
-      .sort((a, b) => b.checkedInAt - a.checkedInAt)
-  })
+      .sort((a, b) => b.checkedInAt - a.checkedInAt),
+  )
 
   const filtered = computed(() => {
     const q = search.value.trim().toLowerCase()

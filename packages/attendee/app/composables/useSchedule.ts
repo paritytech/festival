@@ -1,6 +1,4 @@
 import { computed } from 'vue'
-import { createLiveSchedule } from '@festival/shared/mocks'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { isHappeningNow, parseFestivalDate } from '@festival/shared/utils/time'
 import type { ScheduleEntry } from '@festival/shared/metadata/schemas'
 import { useBookmarks } from './useBookmarks'
@@ -11,12 +9,7 @@ const { metadata } = useFestival()
 export function useSchedule() {
   const { isBookmarked } = useBookmarks()
 
-  const entries = computed<ScheduleEntry[]>(() => {
-    if (hasDeployedContracts() && metadata.value?.schedule?.length) {
-      return metadata.value.schedule
-    }
-    return createLiveSchedule()
-  })
+  const entries = computed<ScheduleEntry[]>(() => metadata.value?.schedule ?? [])
 
   const happeningNow = computed(() =>
     entries.value.filter(e => isHappeningNow(e.start, e.end)),

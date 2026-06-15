@@ -1,7 +1,6 @@
 import { onUnmounted, getCurrentInstance, watch, type Ref, type WatchStopHandle } from 'vue'
 import type { FestivalMetadata } from '../metadata/schemas'
 import { useBulletinStorage } from '../metadata/bulletin'
-import { hasDeployedContracts } from '../contracts/festival-reads'
 import { watchFestivalEvents } from './event-watcher'
 import {
   applyMetadataUpdated,
@@ -34,8 +33,6 @@ export function useFestivalWatcher(
   festivalAddress: `0x${string}`,
   options: FestivalWatcherOptions = {},
 ) {
-  if (!hasDeployedContracts()) return
-
   const instance = getCurrentInstance()
   if (!instance) {
     console.error(`[FestivalWatcher] useFestivalWatcher: called OUTSIDE setup — cleanup cannot register. This is a bug: move the call to script-setup top level and pass deferWhileLoading instead.`)

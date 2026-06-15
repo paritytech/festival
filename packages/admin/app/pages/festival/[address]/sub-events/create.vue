@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import { MOCK_VENUE_MAP } from '@festival/shared/mocks'
 import { useFestival } from '~/composables/useFestival'
 import { useSubEvents } from '~/composables/useSubEvents'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import type { SubEventMetadata } from '@festival/shared/metadata/schemas'
 import { randomAnonymousSpeakerName } from '@festival/shared/metadata/anonymousSpeaker'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { useBulletinStorage } from '@festival/shared/metadata/bulletin'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { timestampToInputBounds, berlinFormToUnix } from '@festival/shared/utils/time'
@@ -26,12 +24,7 @@ const festivalBounds = computed(() => {
   }
 })
 
-const venueMarkers = computed(() => {
-  if (hasDeployedContracts() && festivalMetadata.value?.venueMap?.markers?.length) {
-    return festivalMetadata.value.venueMap.markers
-  }
-  return MOCK_VENUE_MAP.markers
-})
+const venueMarkers = computed(() => festivalMetadata.value?.venueMap?.markers ?? [])
 
 const form = reactive({
   name: '',
@@ -67,13 +60,6 @@ async function submit() {
   error.value = null
   txStatus.value = 'preparing'
   try {
-    if (!hasDeployedContracts()) {
-      await new Promise(r => setTimeout(r, 1200))
-      txStatus.value = 'finalized'
-      createdAddress.value = '0xsub' + Math.random().toString(16).slice(2, 10) + '0'.repeat(30)
-      return
-    }
-
     // Store metadata on Bulletin Chain. Must succeed. Otherwise the
     // session lands on-chain with a zero CID and the agenda renders it
     // without a name or image. Surface the failure and abort.

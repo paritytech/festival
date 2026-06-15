@@ -13,7 +13,6 @@ import { randomAnonymousSpeakerName } from "@festival/shared/metadata/anonymousS
 import { writeContract } from "@festival/shared/contracts/write";
 import { FestivalABI } from "@festival/shared/contracts/abis";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
 import { useBulletinStorage } from "@festival/shared/metadata/bulletin";
 import { formatTxError } from "@festival/shared/contracts/errors";
 import { useWalletStore } from "@festival/shared/host/wallet";
@@ -273,14 +272,6 @@ async function submit() {
 
   txStatus.value = "preparing";
   try {
-    if (!hasDeployedContracts()) {
-      await new Promise((r) => setTimeout(r, 1200));
-      txStatus.value = "finalized";
-      createdAddress.value =
-        "0xsub" + Math.random().toString(16).slice(2, 10) + "0".repeat(30);
-      return;
-    }
-
     if (!wallet.isConnected) throw new Error("Wallet not connected");
 
     const myFestivalPoap = festivalPoaps.value[0];

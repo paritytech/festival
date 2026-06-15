@@ -17,7 +17,6 @@ import type { TimelineItem } from "~/composables/useProgramTimeline";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { resolveShortLocationLabel } from "@festival/shared/venue/floors";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
 import { useVenueMap } from "~/composables/useVenueMap";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import { formatTimeBerlin } from "@festival/shared/utils/time";
@@ -50,7 +49,6 @@ const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 const userH160 = computed(() => {
   if (!wallet.isConnected) return null;
-  if (!hasDeployedContracts()) return "0x" + "0".repeat(39) + "1";
   return isValidEvmAddress(wallet.address)
     ? wallet.address.toLowerCase()
     : ss58ToH160(wallet.address).toLowerCase();

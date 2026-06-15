@@ -3,7 +3,6 @@ import type { FestivalMetadata } from '@festival/shared/metadata/schemas'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { writeContract } from '@festival/shared/contracts/write'
 import { FestivalABI } from '@festival/shared/contracts/abis'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { useBulletinStorage } from '@festival/shared/metadata/bulletin'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
@@ -23,15 +22,6 @@ export function useMetadataSave(festivalAddress: string) {
     txStatus.value = 'preparing'
 
     try {
-      if (!hasDeployedContracts()) {
-        await new Promise(r => setTimeout(r, 600))
-        txStatus.value = 'signing'
-        await new Promise(r => setTimeout(r, 600))
-        txStatus.value = 'finalized'
-        lastSavedCid.value = 'mock-cid-' + Date.now()
-        return
-      }
-
       const { storePlaintext } = useBulletinStorage()
       const { cid, bytes32 } = await storePlaintext(metadata)
 

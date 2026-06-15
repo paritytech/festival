@@ -3,8 +3,7 @@ import { useDebounceFn } from '@vueuse/core'
 import type { FestivalRole } from './usePermissions'
 import type { FestivalMetadata } from '@festival/shared/metadata/schemas'
 import type { TxStatus } from '@festival/shared/contracts/write'
-import { MOCK_FESTIVAL_METADATA } from '@festival/shared/mocks'
-import { hasDeployedContracts, readFestivalDetails } from '@festival/shared/contracts/festival-reads'
+import { readFestivalDetails } from '@festival/shared/contracts/festival-reads'
 import { festivalState } from '@festival/shared/cache/festival-state'
 
 /** Deep-copy that works on Vue reactive proxies (structuredClone can't handle them). */
@@ -39,15 +38,11 @@ const FESTIVAL_CONTEXT_KEY: InjectionKey<FestivalContext> = Symbol('festival-con
 
 export function provideFestivalContext(address: string) {
   // Roles flow from `festivalState.user.roles` (populated by bootLoadAdmin).
-  // In dev/mock mode, surface all roles so the full UI is reachable.
-  const userRoles = computed<FestivalRole[]>(() =>
-    hasDeployedContracts() ? festivalState.user.roles : ['ADMIN', 'MANAGER', 'VOLUNTEER'],
-  )
-  const rolesReady = computed(() => !hasDeployedContracts() || festivalState.loaded)
+  const userRoles = computed<FestivalRole[]>(() => festivalState.user.roles)
+  const rolesReady = computed(() => festivalState.loaded)
 
-  const initialMetadata = hasDeployedContracts() ? null : deepCopy(MOCK_FESTIVAL_METADATA)
-  const savedMetadata = ref<FestivalMetadata | null>(initialMetadata)
-  const draft = reactive<FestivalMetadata>(initialMetadata || {
+  const savedMetadata = ref<FestivalMetadata | null>(null)
+  const draft = reactive<FestivalMetadata>({
     version: '1.0', type: 'festival', name: '', description: '',
     location: { venue: '', address: '' }, image: '', organizer: '', tags: [], schedule: [],
   } as FestivalMetadata)
@@ -121,17 +116,6 @@ export function provideFestivalContext(address: string) {
     txError.value = null
     txStatus.value = 'preparing'
     try {
-      if (!hasDeployedContracts()) {
-        await new Promise(r => setTimeout(r, 800))
-        txStatus.value = 'signing'
-        await new Promise(r => setTimeout(r, 800))
-        txStatus.value = 'finalized'
-        savedMetadata.value = deepCopy(draft)
-        setTimeout(() => { txStatus.value = 'idle' }, 3000)
-        return
-      }
-
-      // Real path: store on Bulletin Chain, then update CID on-chain
       const { useMetadataSave } = await import('./useMetadataSave')
       const saver = useMetadataSave(address)
       await saver.save(toRaw(draft) as FestivalMetadata)
@@ -253,19 +237,17 @@ export function provideFestivalContext(address: string) {
   // Seed savedMetadata + draft from festivalState once bootLoadAdmin lands
   // and metadata resolves. Roles flow through `userRoles` directly via the
   // computed above. No manual refresh needed.
-  if (hasDeployedContracts()) {
-    let stop: (() => void) | null = null
-    stop = watch(
-      () => festivalState.festival?.metadata,
-      (meta) => {
-        if (!meta) return
-        stop?.()
-        savedMetadata.value = deepCopy(meta)
-        Object.assign(draft, deepCopy(meta))
-      },
-      { immediate: true },
-    )
-  }
+  let stop: (() => void) | null = null
+  stop = watch(
+    () => festivalState.festival?.metadata,
+    (meta) => {
+      if (!meta) return
+      stop?.()
+      savedMetadata.value = deepCopy(meta)
+      Object.assign(draft, deepCopy(meta))
+    },
+    { immediate: true },
+  )
 
   const context: FestivalContext = {
     address, userRoles, rolesReady, savedMetadata, draft, isDirty, changedSections, totalChangeCount,

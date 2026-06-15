@@ -1,29 +1,15 @@
 /**
- * Worker-native chain + Bulletin read layer — every read goes through the host.
+ * Host-routed chain + Bulletin read layer. The worker never touches the network
+ * itself — two transports, both serviced by the host, no gateway, no fetch():
  *
- * Constraint A: the worker never touches the network itself. Two host-routed
- * transports, no gateway, no fetch():
+ *   1. Contract reads via `createPapiProvider(genesisHash)` + PAPI's untyped
+ *      `getUnsafeApi()`, so no descriptors / ABIs / viem are bundled.
+ *   2. Bulletin blobs via `@parity/product-sdk-cloud-storage`'s `queryJson`,
+ *      which resolves through the host preimage lookup. It has NO HTTP fallback,
+ *      which is the point: the fetch moves into the trusted, cached host.
  *
- *   1. Contract reads — `createPapiProvider(genesisHash)` returns a JSON-RPC
- *      provider the host services in its trusted Electron context
- *      (handleChainConnection). We use PAPI's untyped `getUnsafeApi()` so no
- *      generated descriptors / ABIs / viem are bundled (constraint B).
- *
- *   2. Bulletin blobs — `@parity/product-sdk-cloud-storage`'s `queryJson`
- *      resolves content through `getPreimageManager().lookup(...)`, which the
- *      host answers itself (cached). The SDK's only query strategy is the
- *      host-preimage one — it has NO HTTP fallback: it either uses the host
- *      lookup or throws `CloudStorageHostUnavailableError`. So there is
- *      deliberately no gateway URL and no `fetch()` anywhere in this bundle.
- *
- * This is not gateway-free at the protocol level (the host still fetches the
- * blob from IPFS); it moves the fetch out of the prompting sandbox into the
- * trusted, silent, cached host — which is the win.
- *
- * Deliberately does NOT reuse `@festival/shared`'s read helpers: those gate
- * host calls on `isInHost()` (window-based, false in this sandbox) and pull in
- * viem + descriptors. The worker is always inside the host, so the host
- * transports above are the only ones it needs.
+ * Does NOT reuse `@festival/shared`'s read helpers — they gate on `isInHost()`
+ * (window-based, false in this sandbox) and pull in viem + descriptors.
  */
 
 import { Binary, createClient, type PolkadotClient } from 'polkadot-api'
@@ -31,17 +17,13 @@ import { createPapiProvider } from '@novasamatech/host-api-wrapper'
 import { hashToCid, queryJson } from '@parity/product-sdk-cloud-storage'
 import { CHAIN_GENESIS_HASH, FESTIVAL_ADDRESS, READ_ONLY_ORIGIN, ZERO_BYTES32 } from './config'
 
-/**
- * Festival getter selectors = keccak256("<sig>")[:4]. Both are no-arg
- * `view returns (bytes32)` getters, so the returned 32-byte word IS the value —
- * no ABI decode needed, just the static selector.
- */
+/** Festival getter selectors = keccak256("<sig>")[:4]. Both return a single bytes32. */
 const SELECTOR = {
   channelMetadataCid: '0xd5ec6bab',
   metadataCid: '0xff368581',
 } as const
 
-/** Minimal view of `ReviveApi.call` dry-run output (PAPI's unsafe API is untyped). */
+/** Minimal view of `ReviveApi.call` dry-run output (the unsafe API is untyped). */
 interface ReviveCallDryRun {
   result:
     | { success: true; value: { flags: number; data: Uint8Array } }
@@ -50,23 +32,26 @@ interface ReviveCallDryRun {
 
 let client: PolkadotClient | null = null
 
-function getClient(): PolkadotClient {
+/** Shared host-routed PAPI client (lazy). Reused by readCall and the watcher. */
+export function getClient(): PolkadotClient {
   if (!client) client = createClient(createPapiProvider(CHAIN_GENESIS_HASH))
   return client
 }
 
 /**
- * Dry-run a no-arg Festival getter that returns a single bytes32, via
- * pallet-revive's `ReviveApi.call`. Args in runtime-API order: origin
- * (read-only AccountId), dest (H160), value, gas_limit (None),
- * storage_deposit_limit (None), input_data. (Call shape carried over from the
- * prior worker; the actual chain round-trip is exercised by the in-host live
- * test.)
+ * Dry-run a no-arg view getter on any contract, returning the full ABI
+ * returndata. Args in runtime-API order: origin, dest (H160), value,
+ * gas_limit (None), storage_deposit_limit (None), input. The `.toLowerCase()`
+ * on the H160 is mandatory — EIP-55 mixed case fails the dry-run.
  */
-async function readBytes32(selector: string, label: string): Promise<`0x${string}`> {
+export async function readCall(
+  address: `0x${string}`,
+  selector: string,
+  label: string,
+): Promise<`0x${string}`> {
   const dryRun = (await getClient().getUnsafeApi().apis.ReviveApi.call(
     READ_ONLY_ORIGIN,
-    FESTIVAL_ADDRESS.toLowerCase(),
+    address.toLowerCase(),
     0n,
     undefined,
     undefined,
@@ -77,6 +62,11 @@ async function readBytes32(selector: string, label: string): Promise<`0x${string
   if (!dryRun.result.success) throw new Error(`${label} dry-run failed`)
   if (dryRun.result.value.flags & 1) throw new Error(`${label} reverted`)
   return Binary.toHex(dryRun.result.value.data) as `0x${string}`
+}
+
+/** Single-bytes32 Festival getter — the returned word IS the value. */
+function readBytes32(selector: string, label: string): Promise<`0x${string}`> {
+  return readCall(FESTIVAL_ADDRESS, selector, label)
 }
 
 /** Read `Festival.channelMetadataCid()` → bytes32 pointer (zero when unset). */
@@ -95,19 +85,25 @@ export function isZeroCid(cid: `0x${string}`): boolean {
 
 /**
  * On-chain bytes32 digest → CIDv1 string. `hashToCid` defaults to blake2b-256 +
- * raw codec — exactly the format Bulletin's TransactionStorage produces (same
- * conversion `@festival/shared` uses). Announcement body CIDs already arrive as
- * CID strings in the channel doc; this is only for the on-chain bytes32 pointers.
+ * raw codec, the format Bulletin's TransactionStorage produces. Body CIDs in the
+ * channel doc are already CID strings; this is only for on-chain bytes32 pointers.
  */
 export function bytes32ToCid(bytes32: `0x${string}`): string {
   return hashToCid(bytes32)
 }
 
 /**
- * Retrieve + JSON-parse a Bulletin blob through the host (constraint A).
- * `queryJson` reassembles chunked / DAG-PB content and is serviced by the host
- * preimage lookup — no gateway, no fetch, no fallback.
+ * Resolved-blob cache. Content is addressed by CID (immutable), so a hit is
+ * always valid — a changed doc means a new pointer → new CID → cache miss. This
+ * lets the snapshot rebuild on an event without re-fetching unchanged blobs.
+ * Bounded by the festival's finite doc count, so no eviction.
  */
-export function retrieveJson<T>(cid: string): Promise<T> {
-  return queryJson<T>(cid)
+const blobCache = new Map<string, unknown>()
+
+/** Retrieve + JSON-parse a Bulletin blob through the host. Cached by CID. */
+export async function retrieveJson<T>(cid: string): Promise<T> {
+  if (blobCache.has(cid)) return blobCache.get(cid) as T
+  const value = await queryJson<T>(cid)
+  blobCache.set(cid, value)
+  return value
 }

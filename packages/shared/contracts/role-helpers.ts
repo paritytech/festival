@@ -1,6 +1,5 @@
 import type { ContractRole } from '../permissions'
 import { ROLES } from './types'
-import { hasDeployedContracts } from './festival-reads'
 import { FestivalABI } from './abis'
 import { batchRead } from './multicall'
 import { useWalletStore } from '../host/wallet'
@@ -17,11 +16,8 @@ const ROLE_CHECK_ORDER: { hash: `0x${string}`; label: ContractRole }[] = [
  * OZ AccessControlEnumerable (Festival or FestivalSubEvent).
  *
  * Returns ContractRole[] labels for roles the user holds.
- * Mock path returns all 4 roles when contracts aren't deployed.
  */
 export async function loadUserRoles(contractAddress: `0x${string}`): Promise<ContractRole[]> {
-  if (!hasDeployedContracts()) return ['ADMIN', 'MANAGER', 'VOLUNTEER']
-
   const wallet = useWalletStore()
   if (!wallet.isConnected) return []
 

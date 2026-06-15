@@ -12,7 +12,6 @@ import { useRegistration } from "~/composables/useRegistration";
 import { useSavedItems } from "~/composables/useSavedItems";
 import { useOnboardingSeen } from "~/composables/useOnboardingSeen";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
 import { useVenueMap } from "~/composables/useVenueMap";
 import { toBerlinDateKey, berlinHourOf } from "@festival/shared/utils/time";
 import type {
@@ -282,12 +281,7 @@ watch(
   { immediate: true },
 );
 
-const subEventsEnabled = computed(() => {
-  if (hasDeployedContracts() && metadata.value) {
-    return metadata.value.subEventsEnabled !== false;
-  }
-  return true;
-});
+const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== false);
 </script>
 
 <template>
