@@ -21,6 +21,17 @@ interface BootLoadOptions {
   at?: 'best' | 'finalized'
 }
 
+// Single-flight with one trailing rerun. At most one load runs at a time, so
+// concurrent triggers (check-in poll, visibility reconcile, post-tx reloads)
+// never interleave writes into the festivalState singleton. Calls arriving
+// mid-flight coalesce into a single follow-up run with the latest arguments,
+// and resolve when that run completes — every caller is guaranteed a load
+// whose chain reads started no earlier than its call, so a reload() fired
+// after a tx lands always observes the tx.
+let current: Promise<void> | null = null
+let trailing: Promise<void> | null = null
+let trailingArgs: [`0x${string}` | null, BootLoadOptions] | null = null
+
 /**
  * Cold-load the entire festival state in up to three Multicall3 round-trips.
  * Each round is keyed on the previous round's results:
@@ -31,12 +42,37 @@ interface BootLoadOptions {
  *      token (getPOAPData).
  * R3 — per session POAP token (getPOAPData), only when any exist.
  */
-export async function bootLoadAttendee(
+export function bootLoadAttendee(
   userAddress: `0x${string}` | null,
   options: BootLoadOptions = {},
 ): Promise<void> {
-  if (!hasDeployedContracts()) return
+  if (!hasDeployedContracts()) return Promise.resolve()
 
+  if (!current) {
+    current = runBootLoad(userAddress, options).finally(() => {
+      current = null
+    })
+    return current
+  }
+
+  trailingArgs = [userAddress, options]
+  if (!trailing) {
+    // runBootLoad never rejects (errors land in festivalState.error), but the
+    // catch keeps a future regression from wedging the trailing slot shut.
+    trailing = current.catch(() => {}).then(() => {
+      const [user, opts] = trailingArgs!
+      trailingArgs = null
+      trailing = null
+      return bootLoadAttendee(user, opts)
+    })
+  }
+  return trailing
+}
+
+async function runBootLoad(
+  userAddress: `0x${string}` | null,
+  options: BootLoadOptions,
+): Promise<void> {
   festivalState.loading = true
   festivalState.error = null
   festivalState.user.address = userAddress
@@ -141,6 +177,8 @@ async function runRound1(
       endTime: 0n,
       cancelled: false,
       registeredCount: 0n,
+      flagCount: 0n,
+      flagThreshold: 5n,
     },
     metadata: null,
     attendees: [],
