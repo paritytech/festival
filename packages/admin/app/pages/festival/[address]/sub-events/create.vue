@@ -89,7 +89,7 @@ async function submit() {
     const startTs = BigInt(berlinFormToUnix(form.startDate, form.startTime))
     const endTs = BigInt(berlinFormToUnix(form.endDate, form.endTime))
 
-    const addr = await createSession(bytes32, startTs, endTs, 0n)
+    const addr = await createSession(bytes32, startTs, endTs, 0n, metadata)
     createdAddress.value = addr || address
   } catch (e: any) {
     txStatus.value = 'error'

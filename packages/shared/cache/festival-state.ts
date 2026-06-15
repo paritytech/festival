@@ -1,8 +1,9 @@
-import { reactive } from 'vue'
+import { reactive, watch, effectScope } from 'vue'
 import type { FestivalDetails, SessionDetails, POAPData } from '../contracts/types'
 import type { FestivalMetadata, SubEventMetadata } from '../metadata/schemas'
 import type { ContractRole } from '../permissions'
 import { getStorage } from './storage'
+import { mergeAttendees, mergeSessions, mergePoaps, keepPositive } from './merge'
 
 /**
  * Central festival state. Boot-load fills it; watchers and reconcile mutate it
@@ -110,31 +111,30 @@ export function applyMetadataUpdated(
 
 export function applyRegistered(attendee: `0x${string}`): void {
   if (!festivalState.festival) return
-  festivalState.festival.details = {
-    ...festivalState.festival.details,
-    registeredCount: festivalState.festival.details.registeredCount + 1n,
-  }
-  const lower = attendee.toLowerCase()
-  const exists = festivalState.festival.attendees.some(
-    (a) => a.address.toLowerCase() === lower,
+  // Only count rows we have not seen. Reads return the count and the list
+  // from the same block, so a known row means the count already includes it.
+  // That keeps replayed events from inflating the number.
+  const known = festivalState.festival.attendees.some(
+    (a) => a.address.toLowerCase() === attendee.toLowerCase(),
   )
-  if (!exists) {
-    festivalState.festival.attendees.push({ address: attendee, isCheckedIn: false })
+  if (!known) {
+    festivalState.festival.details = {
+      ...festivalState.festival.details,
+      registeredCount: festivalState.festival.details.registeredCount + 1n,
+    }
+    festivalState.festival.attendees = mergeAttendees(festivalState.festival.attendees, [
+      { address: attendee, isCheckedIn: false },
+    ])
   }
 }
 
 export function applyCheckedIn(attendee: `0x${string}`): void {
   if (!festivalState.festival) return
-  const lower = attendee.toLowerCase()
-  const row = festivalState.festival.attendees.find(
-    (a) => a.address.toLowerCase() === lower,
-  )
-  if (row) {
-    row.isCheckedIn = true
-  } else {
-    // CheckedIn implies the attendee is registered. Append both states.
-    festivalState.festival.attendees.push({ address: attendee, isCheckedIn: true })
-  }
+  // CheckedIn implies registered; mergeAttendees latches isCheckedIn true and
+  // appends the row if the Registered event was missed.
+  festivalState.festival.attendees = mergeAttendees(festivalState.festival.attendees, [
+    { address: attendee, isCheckedIn: true },
+  ])
 }
 
 export function applyCapacityUpdated(newCapacity: number): void {
@@ -163,28 +163,56 @@ export function applySessionCreated(
   creator: `0x${string}`,
   metadataCid: `0x${string}`,
 ): void {
-  const exists = festivalState.sessions.some(
+  // The watcher replays this event on resubscribe, so an entry we already
+  // hold may carry a NEWER cid than the creation one. Keep what we have in
+  // that case, the event only seeds brand new or zero stub entries.
+  const existing = festivalState.sessions.find(
     (s) => s.address.toLowerCase() === sessionAddress.toLowerCase(),
   )
-  if (exists) return
-  festivalState.sessions.push({
-    address: sessionAddress,
-    details: {
-      metadataCid,
-      creator,
-      poapContract: '0x0000000000000000000000000000000000000000' as `0x${string}`,
-      parentFestival: festivalState.festival?.address ?? '0x0000000000000000000000000000000000000000' as `0x${string}`,
-      startTime: 0n,
-      endTime: 0n,
-      cancelled: false,
-      registeredCount: 0n,
-      flagCount: 0n,
-      flagThreshold: 5n,
+  const cid =
+    existing && !/^0x0+$/.test(existing.details.metadataCid)
+      ? existing.details.metadataCid
+      : metadataCid
+
+  festivalState.sessions = mergeSessions(festivalState.sessions, [
+    {
+      address: sessionAddress,
+      details: {
+        metadataCid: cid,
+        creator,
+        poapContract: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+        parentFestival: festivalState.festival?.address ?? '0x0000000000000000000000000000000000000000' as `0x${string}`,
+        startTime: 0n,
+        endTime: 0n,
+        cancelled: false,
+        registeredCount: 0n,
+        flagCount: 0n,
+        flagThreshold: 0n,
+      },
+      metadata: null,
+      attendees: [],
+      poapTokenIds: [],
     },
-    metadata: null,
-    attendees: [],
-    poapTokenIds: [],
-  })
+  ])
+}
+
+/**
+ * Attach fetched metadata to a session. When expectedCid is given the write
+ * only lands if the entry still points at that cid, so a fetch that raced a
+ * newer update cannot put old content back.
+ */
+export function applySessionMetadata(
+  sessionAddress: `0x${string}`,
+  metadata: SubEventMetadata | null,
+  expectedCid?: `0x${string}`,
+): void {
+  if (!metadata) return
+  const entry = festivalState.sessions.find(
+    (s) => s.address.toLowerCase() === sessionAddress.toLowerCase(),
+  )
+  if (!entry) return
+  if (expectedCid && entry.details.metadataCid.toLowerCase() !== expectedCid.toLowerCase()) return
+  entry.metadata = metadata
 }
 
 // ── Persistent cache ───────────────────────────────────────────────────────
@@ -195,8 +223,18 @@ export function applySessionCreated(
 
 const CACHE_KEY_PREFIX = 'festivalState'
 
+// Bump when CachedShape's structure changes incompatibly. A cache written by
+// an older shape is dropped on read rather than half-hydrated into the new one.
+const CACHE_VERSION = 1
+
 function cacheKey(festivalAddress: string, userH160: string | null): string {
   return `${CACHE_KEY_PREFIX}:${festivalAddress.toLowerCase()}:${userH160?.toLowerCase() ?? 'anon'}`
+}
+
+// Pointer to the last user whose state was persisted, so a cold boot can
+// hydrate the right cache slot before the wallet has connected.
+function lastUserKey(festivalAddress: string): string {
+  return `${CACHE_KEY_PREFIX}:lastUser:${festivalAddress.toLowerCase()}`
 }
 
 const BIGINT_MARKER = '__bigint__:'
@@ -214,26 +252,59 @@ function bigintReviver(_key: string, value: unknown): unknown {
 }
 
 interface CachedShape {
+  version: number
   festival: FestivalState['festival']
   user: FestivalState['user']
   sessions: FestivalState['sessions']
   roles: FestivalState['roles']
 }
 
-/** Load cached state for the (festival, user) pair, if any, into the singleton. */
+/**
+ * Load cached state for the (festival, user) pair into the singleton.
+ *
+ * Cached data is **merged into** current state, not assigned over it: hydration
+ * is async (host storage bridge), so a watcher event or an early chain read may
+ * already have landed by the time the cache resolves. The monotonic merge keeps
+ * whichever side is fresher, so late hydration can never clobber live state.
+ */
 export async function hydrateFromCache(
   festivalAddress: `0x${string}`,
   userAddress: `0x${string}` | null,
+  opts: { onlyBeforeBoot?: boolean } = {},
 ): Promise<void> {
   try {
     const raw = await getStorage().readJSON<string>(cacheKey(festivalAddress, userAddress))
     if (!raw || typeof raw !== 'string') return
+    // Checked after the await on purpose. The pre boot paint must stand down
+    // the moment a real load owns the state, even mid read.
+    if (opts.onlyBeforeBoot && (festivalState.loading || festivalState.loaded)) return
     const cached = JSON.parse(raw, bigintReviver) as CachedShape
-    if (!cached || typeof cached !== 'object') return
-    festivalState.festival = cached.festival
-    festivalState.user = cached.user
-    festivalState.sessions = cached.sessions
-    festivalState.roles = cached.roles
+    if (!cached || typeof cached !== 'object' || cached.version !== CACHE_VERSION) return
+
+    if (cached.festival) {
+      const cur = festivalState.festival
+      festivalState.festival = cur
+        ? { ...cur, attendees: mergeAttendees(cached.festival.attendees, cur.attendees) }
+        : cached.festival
+    }
+    festivalState.sessions = mergeSessions(cached.sessions ?? [], festivalState.sessions)
+
+    // Only touch the user slot when it belongs to the current identity, or
+    // when none is set yet. A slow hydrate can land after a boot for another
+    // account started and must not overwrite it. For the same identity we
+    // merge per field so a stale cache cannot regress fresh reads.
+    const slotUser = (userAddress ?? cached.user.address)?.toLowerCase() ?? null
+    const curUser = festivalState.user.address?.toLowerCase() ?? null
+    if (curUser === null || curUser === slotUser) {
+      const cur = festivalState.user
+      festivalState.user = {
+        address: userAddress ?? cached.user.address,
+        ticketTokenId: keepPositive(cached.user.ticketTokenId, cur.ticketTokenId),
+        festivalPoaps: mergePoaps(cached.user.festivalPoaps, cur.festivalPoaps),
+        sessionPoaps: mergePoaps(cached.user.sessionPoaps, cur.sessionPoaps),
+        roles: cur.roles.length ? cur.roles : cached.user.roles,
+      }
+    }
   } catch {
     // Cache miss / parse error. Silently fall back to chain reads.
   }
@@ -246,6 +317,7 @@ export async function persistToCache(
 ): Promise<void> {
   try {
     const blob: CachedShape = {
+      version: CACHE_VERSION,
       festival: festivalState.festival,
       user: festivalState.user,
       sessions: festivalState.sessions,
@@ -253,7 +325,61 @@ export async function persistToCache(
     }
     const serialized = JSON.stringify(blob, bigintReplacer)
     await getStorage().writeJSON(cacheKey(festivalAddress, userAddress), serialized)
+    await getStorage().writeJSON(lastUserKey(festivalAddress), userAddress ?? 'anon')
   } catch (e) {
     console.warn('[festivalState] persistToCache failed:', e)
   }
+}
+
+/**
+ * Cache-first cold-boot paint, independent of the wallet. Reads the last-known
+ * user pointer and hydrates that slot, so the UI shows last-known state
+ * immediately even while (or if) wallet connection is still pending. Boot load
+ * re-hydrates and reconciles against the chain once the wallet resolves.
+ */
+export async function hydrateLastKnown(festivalAddress: `0x${string}`): Promise<void> {
+  try {
+    const last = await getStorage().readJSON<string>(lastUserKey(festivalAddress))
+    if (festivalState.loading || festivalState.loaded) return
+    const user = last && last !== 'anon' ? (last as `0x${string}`) : null
+    await hydrateFromCache(festivalAddress, user, { onlyBeforeBoot: true })
+  } catch {
+    // No pointer or read error. Nothing to paint, boot load fills state.
+  }
+}
+
+// ── Persist-on-mutation ──────────────────────────────────────────────────────
+//
+// Boot load persists on success, but live mutations (watcher events, optimistic
+// flips) used to reach the cache only on the next boot. A debounced deep watch
+// closes that gap: any mutation to the singleton is written back, so a cold
+// restart paints the last-known state regardless of which path produced it.
+
+let persistenceStarted = false
+let persistTimer: ReturnType<typeof setTimeout> | null = null
+const PERSIST_DEBOUNCE_MS = 1_000
+
+/**
+ * Start write back persistence. Call once at app boot, repeat calls no op.
+ * The watcher lives in its own detached scope because callers can be layouts
+ * that unmount, and it has to outlive them since the once flag blocks a
+ * second start.
+ */
+export function startCachePersistence(): void {
+  if (persistenceStarted || typeof window === 'undefined') return
+  persistenceStarted = true
+  effectScope(true).run(() => {
+    watch(
+      () => [festivalState.festival, festivalState.sessions, festivalState.user, festivalState.roles],
+      () => {
+        if (!festivalState.festival?.address || persistTimer !== null) return
+        persistTimer = setTimeout(() => {
+          persistTimer = null
+          const addr = festivalState.festival?.address
+          if (addr) void persistToCache(addr, festivalState.user.address)
+        }, PERSIST_DEBOUNCE_MS)
+      },
+      { deep: true },
+    )
+  })
 }

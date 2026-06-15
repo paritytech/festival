@@ -11,6 +11,8 @@ import { useFestival } from '~/composables/useFestival'
 import { useSubEvents } from '~/composables/useSubEvents'
 import { usePoaps } from '~/composables/usePoaps'
 import { bootLoadAttendee } from '~/composables/useBootLoad'
+import { startCachePersistence, hydrateLastKnown } from '@festival/shared/cache/festival-state'
+import { startPendingReconcile } from '@festival/shared/cache/pending'
 import { useFestivalWatcher } from '@festival/shared/cache/useFestivalWatcher'
 import { useVisibilityReconcile } from '@festival/shared/cache/visibility'
 import { useAnnouncements } from '~/composables/useAnnouncements'
@@ -42,6 +44,17 @@ const showAccountPicker = ref(false)
 // skip the initial fire when the wallet hasn't connected yet — the
 // `wallet.address` watcher below will run it once the user resolves,
 // avoiding a duplicate bootLoad (initial + on-connect).
+// Persist every festivalState mutation (watcher events, optimistic flips, boot
+// reads), not just boot-load success, so a cold restart paints last-known state.
+startCachePersistence()
+
+// Cache-first paint: hydrate last-known state immediately, before the wallet
+// resolves, so a slow or failed connection doesn't leave the UI blank.
+void hydrateLastKnown(FESTIVAL_ADDRESS)
+
+// Promote/GC optimistic pending entries as the confirmed tier catches up.
+startPendingReconcile()
+
 function fireBootLoad() {
   if (!wallet.isConnected) return
   const userH160 = walletAddressToH160(wallet.address)
@@ -57,18 +70,22 @@ const announcements = useAnnouncements()
 // race with our `ReviveApi.call` reads — bootLoad-first means at least the
 // initial state lands before the watcher's heavier follow-init might trip
 // the host's rate limiter.
-useFestivalWatcher(FESTIVAL_ADDRESS, {
+const watcher = useFestivalWatcher(FESTIVAL_ADDRESS, {
   deferWhileLoading: festival.isLoading,
   onChannelMetadataUpdated: () => { void announcements.reload() },
 })
 
 // Visibility change as safety net — catches events lost during WebSocket
-// suspension. Reconciliation runs the same bootLoad with `at: 'finalized'`
-// so we converge to ground-truth state.
-useVisibilityReconcile(() => {
+// suspension. Reads at best, like every other state source (watcher, tx
+// tracking): all festival state is monotonic, so a finalized read could only
+// regress fresher best-derived state (e.g. revert a just-landed check-in for
+// the length of the finality lag).
+useVisibilityReconcile(async () => {
   const userH160 = wallet.isConnected ? walletAddressToH160(wallet.address) : null
   void announcements.reloadIfChanged()
-  return bootLoadAttendee(userH160, { at: 'finalized' })
+  await bootLoadAttendee(userH160)
+  // The chainHead follow may have died silently while backgrounded; re-open it.
+  watcher?.restart()
 })
 
 function shortenAddr(addr: string) {
