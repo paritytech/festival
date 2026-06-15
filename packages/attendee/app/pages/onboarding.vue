@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { useRegistration } from "~/composables/useRegistration";
+import { useCheckInPoll } from "~/composables/useCheckInPoll";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
+
+// Attendees sit on this screen waiting to be scanned, so it can't rely solely
+// on the event watcher / boot load having succeeded. Poll-reconcile check-in
+// state (and retry a dead wallet connection) until checked in.
+useCheckInPoll();
 </script>
 
 <template>
@@ -43,6 +49,19 @@ const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
     </div>
 
     <HomePassport />
+
+    <div class="px-4 pb-4 text-center text-sm text-text-and-icons-secondary">
+      By continuing, you agree to the
+      <a
+        href="https://web3summit.com/cash-token-terms-and-conditions"
+        class="underline"
+        >CASH token Terms &amp; Conditions</a
+      >
+      and
+      <a href="https://web3summit.com/event-rules" class="underline"
+        >Event Rules</a
+      >
+    </div>
 
     <div class="flex-1 flex flex-col justify-start pt-[25px] pb-8">
       <HomeLocation />

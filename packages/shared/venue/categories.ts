@@ -72,6 +72,18 @@ export function getCategory(cat: MarkerCategory): CategorySpec {
   return CATEGORIES[cat]
 }
 
+/** Marker types that can be selected as a session location in the picker.
+ *  Tapping any other marker is treated as a blocked spot. */
+export const SESSION_LOCATION_ALLOWED_TYPES: ReadonlySet<MarkerType> = new Set<MarkerType>([
+  'room', 'stage', 'chill-zone',
+  'food', 'bar', 'coffee',
+  'star',
+])
+
+export function isMarkerAllowedAsSessionLocation(type: MarkerType): boolean {
+  return SESSION_LOCATION_ALLOWED_TYPES.has(type)
+}
+
 /** Coerce a possibly-undefined / legacy category string to a valid MarkerCategory. */
 export function normalizeCategory(cat: string | undefined | null): MarkerCategory {
   if (cat && cat in CATEGORIES) return cat as MarkerCategory

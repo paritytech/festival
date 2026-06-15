@@ -95,20 +95,9 @@ onUnmounted(teardown)
   <div class="-mx-4 flex flex-col min-h-[calc(100dvh-52px-var(--safe-bottom))] md:min-h-[100dvh]">
     <!-- Header -->
     <div class="px-4 pt-4 pb-3 flex items-center shrink-0">
-      <button class="w-10 h-10 flex items-center justify-center -ml-2" @click="router.push('/')">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-      </button>
-      <h1 class="flex-1 text-center text-base font-semibold text-white" data-testid="notifications-heading">Announcements</h1>
-      <button
-        class="w-10 h-10 flex items-center justify-center -mr-2"
-        aria-label="How to activate notifications"
-        data-testid="notifications-help"
-        @click="router.push('/my/notifications/how-to-activate')"
-      >
-        <img src="/help_outline.svg" alt="" width="24" height="24" />
-      </button>
+      <BackButton class="text-text-and-icons-primary" @click="router.push('/')" />
+      <h1 class="flex-1 text-center text-base font-semibold text-text-and-icons-primary" data-testid="notifications-heading">Announcements</h1>
+      <div class="w-10" />
     </div>
 
     <div v-if="isLoading && !channel" class="flex-1 flex items-center justify-center py-12">

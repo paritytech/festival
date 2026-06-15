@@ -11,7 +11,7 @@ import { TYPE_LABELS } from "./categories";
  *  but it does not belong to any VenueBlock. */
 export const VENUE_OUTDOOR_FLOOR: VenueFloor = {
   id: "venue",
-  label: "Venue",
+  label: "Outdoor",
   width: 3436,
   height: 5184,
 };

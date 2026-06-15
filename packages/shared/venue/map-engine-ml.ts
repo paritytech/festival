@@ -50,6 +50,11 @@ export interface VenueMapHandle {
   fitToFloor(): void;
   invalidateSize(): void;
   getZoneAt(svgX: number, svgY: number): string | null;
+  /** True when `(svgX, svgY)` falls inside a zone tagged `#forbidden` on the
+   *  current floor. Markers can legitimately exist outside any zone, so this
+   *  is a stricter "is this point specifically off-limits?" check than
+   *  `isPinDropAllowed`'s "is this point inside some non-forbidden zone?". */
+  isPointInForbiddenZone(svgX: number, svgY: number): boolean;
   setTransitioning(value: boolean): void;
   flyToBuildingBounds(opts?: {
     duration?: number;
@@ -821,10 +826,28 @@ export async function createVenueMap(
     return false;
   }
 
+  function isPointInForbiddenZone(svgX: number, svgY: number): boolean {
+    const [lng, lat] = svgPointToLngLat(svgX, svgY);
+    for (const feat of projected.features) {
+      const tags = feat.properties.tags ?? [];
+      if (!tags.includes("zone")) continue;
+      if (!tags.includes("forbidden")) continue;
+      const geom = feat.geometry;
+      if (geom.type === "Polygon") {
+        if (pointInPolygon(lng, lat, geom.coordinates as number[][][]))
+          return true;
+      } else if (geom.type === "MultiPolygon") {
+        for (const poly of geom.coordinates as number[][][][]) {
+          if (pointInPolygon(lng, lat, poly)) return true;
+        }
+      }
+    }
+    return false;
+  }
+
   function buildMarkerHtml(m: VenueMarker): string {
     const category = normalizeCategory(m.category);
     const type = normalizeType(category, m.type);
-    const spec = getCategory(category);
     const glyph = getMarkerIcon(category, type);
     if (!MARKER_ICONS[`${category}/${type}`]) {
       // Loud warning so missing icons surface in dev instead of silently
@@ -834,13 +857,8 @@ export async function createVenueMap(
         `[venue map] no MARKER_ICONS entry for ${category}/${type} — using base/room fallback`,
       );
     }
-    const labelHtml =
-      spec.hasLabel && m.label
-        ? `<span class="vmarker__label">${escapeHtml(m.label)}</span>`
-        : "";
     return `<div class="vmarker" data-category="${category}" data-type="${type}" data-marker-id="${escapeHtml(m.id)}">
       <span class="vmarker__icon" aria-hidden="true">${glyph}</span>
-      ${labelHtml}
     </div>`;
   }
 
@@ -1419,6 +1437,11 @@ export async function createVenueMap(
 
     invalidateSize() {
       map.resize();
+    },
+
+    isPointInForbiddenZone(svgX, svgY) {
+      if (!currentFloor) return false;
+      return isPointInForbiddenZone(svgX, svgY);
     },
 
     getZoneAt(svgX, svgY) {

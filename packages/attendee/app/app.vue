@@ -5,7 +5,7 @@ import SuccessToast from '~/components/SuccessToast.vue'
 import { useBookmarks } from '~/composables/useBookmarks'
 import { bootApp } from '@festival/shared/host/boot'
 import { useWalletStore } from '@festival/shared/host/wallet'
-import { walletAddressToH160 } from '@festival/shared/utils/address'
+import { walletAddressToH160, ss58ToH160, isValidEvmAddress } from '@festival/shared/utils/address'
 import { useRegistration } from '~/composables/useRegistration'
 import { useFestival } from '~/composables/useFestival'
 import { useSubEvents } from '~/composables/useSubEvents'
@@ -14,7 +14,10 @@ import { bootLoadAttendee } from '~/composables/useBootLoad'
 import { useFestivalWatcher } from '@festival/shared/cache/useFestivalWatcher'
 import { useVisibilityReconcile } from '@festival/shared/cache/visibility'
 import { useAnnouncements } from '~/composables/useAnnouncements'
+import { useFestivalPass } from '~/composables/useFestivalPass'
 import { APP_SCROLLER_KEY } from '~/composables/appScroller'
+import FestivalPassScreen from '~/components/FestivalPassScreen.vue'
+import BadgeEarnedFestivalScreen from '~/components/BadgeEarnedFestivalScreen.vue'
 import { FESTIVAL_ADDRESS } from '@festival/shared/contracts/addresses'
 import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 
@@ -24,6 +27,7 @@ const isConfigured = hasDeployedContracts()
 const registration = useRegistration(FESTIVAL_ADDRESS)
 const { isRegistered } = registration
 const festival = useFestival()
+const { metadata: festivalMetadata } = festival
 // Mounted for their reactive side effects (watchers, image resolvers).
 useSubEvents()
 usePoaps()
@@ -37,6 +41,29 @@ if (buildHash) {
 }
 const wallet = useWalletStore()
 const showAccountPicker = ref(false)
+
+// Festival Pass + Badge overlays live at the shell so they aren't tied to
+// <KeepAlive>'d page state. The composable's overlayGate also requires
+// route.path === '/' — together, the overlay can only exist while the user
+// is actually on home.
+const {
+  shouldShowPass,
+  shouldShowBadge,
+  isActivating: isPassActivating,
+  isExploding: isPassExploding,
+  activatedAtMs,
+  allocationWarning,
+  activate: onActivatePass,
+  dismissBadge: onBadgeNext,
+} = useFestivalPass()
+
+const userH160 = computed(() => {
+  if (!wallet.isConnected) return null
+  if (!hasDeployedContracts()) return '0x' + '0'.repeat(39) + '1'
+  return isValidEvmAddress(wallet.address)
+    ? wallet.address.toLowerCase()
+    : ss58ToH160(wallet.address).toLowerCase()
+})
 
 // Cold-load the entire festival state in two Multicall round-trips. We
 // skip the initial fire when the wallet hasn't connected yet — the
@@ -63,12 +90,14 @@ useFestivalWatcher(FESTIVAL_ADDRESS, {
 })
 
 // Visibility change as safety net — catches events lost during WebSocket
-// suspension. Reconciliation runs the same bootLoad with `at: 'finalized'`
-// so we converge to ground-truth state.
+// suspension. Reads at best, like every other state source (watcher, tx
+// tracking): all festival state is monotonic, so a finalized read could only
+// regress fresher best-derived state (e.g. revert a just-landed check-in for
+// the length of the finality lag).
 useVisibilityReconcile(() => {
   const userH160 = wallet.isConnected ? walletAddressToH160(wallet.address) : null
   void announcements.reloadIfChanged()
-  return bootLoadAttendee(userH160, { at: 'finalized' })
+  return bootLoadAttendee(userH160)
 })
 
 function shortenAddr(addr: string) {
@@ -309,4 +338,33 @@ const bookmarkAlertMessage = computed(() => {
     v-if="showSplash && (allowed || isDev) && isConfigured"
     @done="onSplashDone"
   />
+
+  <!-- Festival Pass + Badge overlays. Gated to route.path === '/' inside the
+       composable's overlayGate — they cannot paint on any other route. -->
+  <FestivalPassScreen
+    v-if="shouldShowPass"
+    :address="userH160 ?? ''"
+    :is-activating="isPassActivating"
+    :is-exploding="isPassExploding"
+    @activate="onActivatePass"
+  />
+  <BadgeEarnedFestivalScreen
+    v-if="shouldShowBadge"
+    :address="userH160 ?? ''"
+    :festival-name="festivalMetadata?.name || 'Web3 Summit'"
+    :received-at-ms="activatedAtMs ?? undefined"
+    @next="onBadgeNext"
+  />
+  <Teleport to="body">
+    <div
+      class="fixed bottom-28 left-4 right-4 md:left-[calc(var(--col-l)+1rem)] md:right-[calc(var(--col-r)+1rem)] z-[2120] pointer-events-none"
+    >
+      <SuccessToast
+        :visible="!!allocationWarning"
+        variant="star"
+        :message="allocationWarning ?? ''"
+        @hide="allocationWarning = null"
+      />
+    </div>
+  </Teleport>
 </template>

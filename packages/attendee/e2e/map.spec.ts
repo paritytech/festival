@@ -107,9 +107,11 @@ test.describe('Venue map', () => {
     await expect(frame.locator('[data-testid="map-empty-prompt"]')).toBeVisible()
     await (await firstInteractiveMarker(frame)).click()
     await expect(card).toBeVisible()
-    // Tapping away (map / blocked / void paths) closes the card instead of
-    // dropping a pin.
-    await frame.locator('[data-testid="venue-map"]').click({ position: { x: 30, y: 30 } })
+    const mapBox = await frame.locator('[data-testid="venue-map"]').boundingBox()
+    if (!mapBox) throw new Error('venue-map has no bounding box')
+    await frame.locator('[data-testid="venue-map"]').click({
+      position: { x: mapBox.width - 20, y: 20 },
+    })
     await expect(card).toHaveCount(0)
   })
 
@@ -119,13 +121,19 @@ test.describe('Venue map', () => {
     await (await navLink(frame, 'map')).click()
     await tapBuilding(frame)
 
-    // The control is icon-only. The active floor is reflected in the
-    // "Switch to <other floor>" aria-label, which flips after toggling.
+    // Stack-variant control: each floor is a tab pill with aria-selected.
+    // Click an inactive indoor pill (skipping the outdoor pseudo-floor, which
+    // would trigger exit-to-outdoor instead of a floor swap) and assert the
+    // selection moves to it.
     const floorControl = frame.locator('[data-testid="floor-control"]')
     await expect(floorControl).toBeVisible()
-    const labelBefore = await floorControl.getAttribute('aria-label')
-    expect(labelBefore).toBeTruthy()
-    await floorControl.click()
-    await expect(floorControl).not.toHaveAttribute('aria-label', labelBefore!)
+    const otherPill = floorControl
+      .locator('[role="tab"][aria-selected="false"]:not([data-testid="floor-control-pill-venue"])')
+      .first()
+    await expect(otherPill).toBeVisible()
+    const otherTestId = await otherPill.getAttribute('data-testid')
+    expect(otherTestId).toBeTruthy()
+    await otherPill.click()
+    await expect(frame.locator(`[data-testid="${otherTestId}"]`)).toHaveAttribute('aria-selected', 'true')
   })
 })
