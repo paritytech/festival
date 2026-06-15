@@ -44,22 +44,21 @@ const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
 
     <HomePassport />
 
-    <div class="flex-1 flex flex-col justify-start pt-[25px] pb-8">
-      <HomeLocation />
-    </div>
-    <div
-      class="mt-[10px] px-4 pb-8 text-center text-sm text-text-and-icons-secondary"
-    >
+    <div class="px-4 pb-4 text-center text-sm text-text-and-icons-secondary">
       By continuing, you agree to the
       <a
         href="https://web3summit.com/cash-token-terms-and-conditions"
         class="underline"
-        >Terms &amp; Conditions</a
+        >CASH token Terms &amp; Conditions</a
       >
       and
       <a href="https://web3summit.com/event-rules" class="underline"
         >Event Rules</a
       >
+    </div>
+
+    <div class="flex-1 flex flex-col justify-start pt-[25px] pb-8">
+      <HomeLocation />
     </div>
   </div>
 </template>
