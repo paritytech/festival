@@ -12,8 +12,6 @@ import {
   parseCoordLocation,
 } from '@festival/shared/venue/floors'
 import { DEFAULT_ZONES } from '@festival/shared/venue/zones'
-import { MOCK_VENUE_MAP, createLiveSchedule } from '@festival/shared/mocks'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { parseFestivalDate } from '@festival/shared/utils/time'
 import type { UserSpot } from '@festival/shared/venue/map-engine-ml'
 import { useFestival } from './useFestival'
@@ -43,28 +41,11 @@ export function useAttendeeMap() {
   const { metadata } = useFestival()
   const { subEvents } = useSubEvents()
 
-  const markers = computed<VenueMarker[]>(() => {
-    if (hasDeployedContracts() && metadata.value?.venueMap?.markers?.length) {
-      return metadata.value.venueMap.markers
-    }
-    return MOCK_VENUE_MAP.markers
-  })
+  const markers = computed<VenueMarker[]>(() => metadata.value?.venueMap?.markers ?? [])
 
-  const zones = computed<VenueZone[]>(() => {
-    if (hasDeployedContracts() && metadata.value?.venueMap?.zones?.length) {
-      return metadata.value.venueMap.zones
-    }
-    return DEFAULT_ZONES
-  })
+  const zones = computed<VenueZone[]>(() => metadata.value?.venueMap?.zones ?? DEFAULT_ZONES)
 
-  const schedule = computed<ScheduleEntry[]>(() => {
-    if (hasDeployedContracts() && metadata.value?.schedule?.length) {
-      return metadata.value.schedule
-    }
-    // Same fallback as useSchedule (program page) so the map's session
-    // strips and the program list always agree on mock data.
-    return createLiveSchedule()
-  })
+  const schedule = computed<ScheduleEntry[]>(() => metadata.value?.schedule ?? [])
 
   const blocks = computed(() => VENUE_BLOCKS)
 
@@ -84,12 +65,8 @@ export function useAttendeeMap() {
     markers.value.find(m => m.id === _selectedMarkerId.value) ?? null,
   )
 
-  // True once the marker set is final (mock mode, or festival metadata
-  // resolved). Consumed by e2e to avoid selecting a mock marker that the real
-  // metadata then replaces, dropping the selection.
-  const markersReady = computed(
-    () => !hasDeployedContracts() || metadata.value !== null,
-  )
+  // True once the festival metadata has resolved (so the marker set is final).
+  const markersReady = computed(() => metadata.value !== null)
 
   function select(marker: VenueMarker) {
     _userSpot.value = null
@@ -142,12 +119,10 @@ export function useAttendeeMap() {
 
   /** True when a community session's `metadata.location` belongs to the
    *  given marker. Cascade: exact marker id → coord whose nearest marker
-   *  (150px) is this one → coord inside the marker's zone (needs the
-   *  engine-backed `zoneAt` hit-test; silently skipped when absent). */
+   *  (150px) is this one → coord whose persisted zone matches the marker's. */
   function sessionMatchesMarker(
     location: string,
     marker: VenueMarker,
-    zoneAt?: (x: number, y: number, floorId: string) => string | null,
   ): boolean {
     if (!location) return false
     if (location === marker.id) return true
@@ -155,8 +130,7 @@ export function useAttendeeMap() {
     if (!coord || coord.floorId !== marker.floorId) return false
     const nearest = findNearestMarker(coord.x, coord.y, coord.floorId, markers.value)
     if (nearest) return nearest.id === marker.id
-    if (marker.zoneId && zoneAt) return zoneAt(coord.x, coord.y, coord.floorId) === marker.zoneId
-    return false
+    return marker.zoneId != null && coord.zoneId === marker.zoneId
   }
 
   /** The most-imminent program entry or community session tied to a marker.
@@ -164,7 +138,6 @@ export function useAttendeeMap() {
    *  most one strip across both sources, or null. */
   function getSessionStripFor(
     markerId: string,
-    opts?: { zoneAt?: (x: number, y: number, floorId: string) => string | null },
   ): MapSessionStripData | null {
     const marker = markers.value.find(m => m.id === markerId)
     if (!marker) return null
@@ -187,7 +160,7 @@ export function useAttendeeMap() {
     }
 
     for (const se of subEvents.value) {
-      if (!sessionMatchesMarker(se.metadata.location, marker, opts?.zoneAt)) continue
+      if (!sessionMatchesMarker(se.metadata.location, marker)) continue
       candidates.push({
         source: 'community',
         title: se.metadata.name,

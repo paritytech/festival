@@ -2,7 +2,7 @@ import { onUnmounted, getCurrentInstance, watch, type Ref, type WatchStopHandle 
 import type { FestivalMetadata, SubEventMetadata } from '../metadata/schemas'
 import { hydrateSubEventMetadata } from '../metadata/schemas'
 import { useBulletinStorage } from '../metadata/bulletin'
-import { hasDeployedContracts, isNonZeroCid } from '../contracts/festival-reads'
+import { isNonZeroCid } from '../contracts/festival-reads'
 import { watchFestivalEvents } from './event-watcher'
 import {
   festivalState,
@@ -37,8 +37,6 @@ export function useFestivalWatcher(
   festivalAddress: `0x${string}`,
   options: FestivalWatcherOptions = {},
 ) {
-  if (!hasDeployedContracts()) return
-
   const instance = getCurrentInstance()
   if (!instance) {
     console.error(`[FestivalWatcher] useFestivalWatcher: called OUTSIDE setup — cleanup cannot register. This is a bug: move the call to script-setup top level and pass deferWhileLoading instead.`)

@@ -1,58 +1,69 @@
 /**
- * Fesival Announcements — Polkadot chat extension (Worker entry).
+ * Festival Announcements — Polkadot chat extension (worker entry).
  *
- * The worker modality of web3summit.dot. On a timer it reads the Festival
- * contract's on-chain `channelMetadataCid`, resolves the channel doc + any new
- * announcement bodies from Bulletin (all reads host-routed — see chain.ts), and
- * posts them into the host chat as plain Text. Posted body CIDs persist in
- * hostLocalStorage so each body posts exactly once.
- *
- * Slash commands (delivered by the host as first-class Command actions):
- *   /announcements — list the whole channel on demand
- *   /agenda        — today's festival sessions
- *   /help          — list the commands
- *
- * Chat APIs work only from the Worker (never the App webview) — this is the
- * Worker. v1 is Text-only; rich custom-rendered cards are a later styling pass.
+ * The worker modality of the festival product. It renders interactive cards in
+ * the host chat, routes user text (slash commands + free-text intents) to cards,
+ * and — behind one opt-in toggle — broadcasts new on-chain announcements as they
+ * land. All reads are host-routed (see chain.ts). No host emits Command actions
+ * or intercepts "/", so commands are parsed out of plain Text here.
  */
 
 import {
   createProductChatManager,
   hostLocalStorage,
+  matchChatCustomRenderers,
 } from "@novasamatech/host-api-wrapper";
 import {
   type AnnouncementBody,
   BOT_ID,
   BOT_NAME,
+  BROADCASTS_KEY,
   type ChannelMetadata,
-  type FestivalMetadata,
-  POLL_INTERVAL_MS,
   ROOM_ID,
-  type ScheduleEntry,
   SEEN_CIDS_KEY,
 } from "./config";
+import { bytes32ToCid, isZeroCid, readChannelMetadataCid, retrieveJson } from "./chain";
 import {
-  bytes32ToCid,
-  isZeroCid,
-  readChannelMetadataCid,
-  readMetadataCid,
-  retrieveJson,
-} from "./chain";
+  CARD_MESSAGE_TYPE,
+  type CardKind,
+  type CardPayload,
+  createCardController,
+  encodeCardPayload,
+} from "./controller";
+import { type EventKind } from "./events";
+import { refreshCardData } from "./snapshot";
+import { startWatcher, stopWatcher } from "./watcher";
+import { parseComposer, parseTimeQuery, withTimeout } from "./time";
 
 const TAG = "[w3s-announcements]";
 console.log(TAG, "worker loaded");
 
-const HELP_TEXT = [
-  "Festival Announcements",
-  "",
-  "/announcements — list every announcement so far",
-  "/agenda — today's sessions",
-  "/help — show this message",
-  "",
-  "New announcements post here automatically as they go out.",
-].join("\n");
-
 const chat = createProductChatManager();
+
+async function postCard(payload: CardPayload): Promise<string | null> {
+  try {
+    const { messageId } = await chat.sendMessage(ROOM_ID, {
+      tag: "Custom",
+      value: { messageType: CARD_MESSAGE_TYPE, payload: encodeCardPayload(payload) },
+    });
+    return messageId;
+  } catch (err) {
+    console.error(TAG, "postCard failed", payload.kind, err);
+    return null;
+  }
+}
+
+const controller = createCardController({
+  launchCard: (payload) => void postCard(payload),
+  sendText: (text) => void safeSend(text),
+  broadcastsOn: () => broadcastsOn,
+  setBroadcasts,
+  onResume,
+});
+
+chat.onCustomMessageRenderingRequest(
+  matchChatCustomRenderers({ [CARD_MESSAGE_TYPE]: controller.renderer }),
+);
 
 // 1. Register bot (fire-and-forget; idempotent).
 chat
@@ -60,96 +71,219 @@ chat
   .then((status) => console.log(TAG, "registerBot", status))
   .catch((err) => console.error(TAG, "registerBot failed", err));
 
-// 2. Register room + welcome once, then start polling.
+// 2. Register room, boot the broadcast machinery, then welcome on first creation.
 chat
   .registerRoom({ roomId: ROOM_ID, name: BOT_NAME, icon: "" })
   .then(async (status) => {
     console.log(TAG, "registerRoom", status);
-    if (status === "New") {
-      await safeSend(
-        "Welcome to the Festival! Here you'll find key information about the event.\n\n" +
-          "Type /help for help, /announcements to stay informed, and /agenda to see what's coming up next.",
-      );
-    }
-    startPollLoop();
+    await boot();
+    if (status === "New") await postCard({ kind: "welcome" });
   })
   .catch((err) => console.error(TAG, "registerRoom failed", err));
 
-// 3. Slash commands. This host (Polkadot Desktop @ 19ea0a13) does NOT emit a
-// `Command` chat action for product workers — it only delivers `MessagePosted`
-// (user text) and `ActionTriggered`, and it does NOT intercept "/". So a typed
-// "/announcements" arrives as plain Text, and we parse the command out of it.
-// Both "/" and "!" prefixes are accepted ("/" is the one we advertise).
-// (Bot replies never start with "/" or "!", so this can't react to its own
-// output even if the host echoed it — which it doesn't at this rev.)
+// 3. Incoming user text → intents.
 chat.subscribeAction((action) => {
   if (action.payload.tag !== "MessagePosted") return;
   if (action.roomId !== ROOM_ID) return;
   if (action.payload.value.tag !== "Text") return;
-  const text = action.payload.value.value.trim();
-  if (!text.startsWith("/") && !text.startsWith("!")) return;
-  const command =
-    text.slice(1).trimStart().split(/\s+/)[0]?.toLowerCase() ?? "";
-  if (command === "" || command === "help") {
-    void sendHelp();
-  } else if (command.startsWith("annou")) {
-    void listAllAnnouncements();
-  } else if (command === "agenda") {
-    void sendAgenda();
-  } else {
-    void safeSend("Unknown command. Send /help to see what I can do.");
-  }
+  void handleText(action.payload.value.value.trim());
 });
 
-let isProcessing = false;
+const SLASH_CARD: Record<string, CardKind> = {
+  announcements: "announcements",
+  agenda: "talks",
+  talks: "talks",
+  sessions: "sessions",
+};
 
-function startPollLoop(): void {
-  void tick(); // immediate first tick
-  setInterval(() => void tick(), POLL_INTERVAL_MS);
+/** On-theme replies for input we can't route, then the menu re-appears. */
+const ROASTS = [
+  "Decentralized I am, but a mind-reader I am not. Try one of these:",
+  "Not your keys, not your command. I don’t hold that one, pick from the menu:",
+  "I ran that through zero-knowledge and proved exactly nothing. Here’s what I do know:",
+  "Sovereign individuals still need a valid input. Here are your options:",
+  "Couldn’t reach consensus on what you meant. Forking to the menu:",
+  "Cypherpunks write code; I read commands. Here’s the set I accept:",
+];
+let roastIndex = 0;
+function nextRoast(): string {
+  const line = ROASTS[roastIndex % ROASTS.length];
+  roastIndex += 1;
+  return line;
 }
 
-async function tick(): Promise<void> {
-  if (isProcessing) return; // guard against overlapping ticks
-  isProcessing = true;
+async function handleText(text: string): Promise<void> {
+  if (!text) return;
+
+  if (text.startsWith("/") || text.startsWith("!")) {
+    const command = text.slice(1).trimStart().split(/\s+/)[0]?.toLowerCase() ?? "";
+    const match = Object.keys(SLASH_CARD).find((k) => k.startsWith(command) && command !== "");
+    if (match) {
+      await postCard({ kind: SLASH_CARD[match] });
+    } else {
+      const min = parseTimeQuery(text);
+      if (min != null) await postCard({ kind: "timeQuery", min });
+      else await fallback();
+    }
+    return;
+  }
+
+  const intent = parseComposer(text);
+  if (intent.kind === "timeQuery") {
+    await postCard({ kind: "timeQuery", min: intent.min });
+  } else if (intent.kind === "more") {
+    // Typed "see more": continue the last schedule card on a fresh message.
+    const last = controller.lastSchedule();
+    const id = await postCard({ kind: last?.kind ?? "talks" });
+    if (id && last) controller.seedPage(id, last.page + 1);
+  } else if (intent.kind === "fallback") {
+    await fallback();
+  } else {
+    await postCard({ kind: intent.kind });
+  }
+}
+
+async function fallback(): Promise<void> {
+  await safeSend(nextRoast());
+  await postCard({ kind: "welcome" });
+}
+
+// ── broadcasts: "Keep me posted" toggle → live watcher + catch-up-on-open ──
+
+/** Bound on host-routed reads so a hung read can't pin the in-flight guard. */
+const TICK_TIMEOUT_MS = 25_000;
+
+/** Coalesce the burst of render requests when a chat opens into one refresh. */
+const RESUME_DEBOUNCE_MS = 8_000;
+
+/** In-memory mirror of BROADCASTS_KEY, the source of truth for every gate. */
+let broadcastsOn = false;
+let catchingUp = false;
+let lastResume = 0;
+
+/**
+ * Boot: load the toggle, warm the snapshot, and (if subscribed) start the
+ * watcher + run the first catch-up. Runs before the welcome card so its toggle
+ * label is right.
+ */
+async function boot(): Promise<void> {
+  broadcastsOn = await loadBroadcasts();
+  console.log(TAG, "boot — broadcasts", broadcastsOn ? "on" : "off");
+  void refreshCardData().catch(() => {});
+  if (broadcastsOn) {
+    startWatcher(onChainEvent);
+    void catchUp();
+  }
+}
+
+/** Toggle handler from the welcome card. Synchronous flag flip, async rest. */
+function setBroadcasts(on: boolean): void {
+  if (on === broadcastsOn) return;
+  broadcastsOn = on;
+  void persistBroadcasts(on);
+  if (on) {
+    void safeSend(
+      "You're in the loop. New announcements will land here the moment they are made by the team.",
+    );
+    // Start clean: baseline = current history so subscribing never dumps the
+    // backlog. Only then open the watcher + catch up.
+    void startClean().then(() => {
+      startWatcher(onChainEvent);
+      void catchUp();
+    });
+  } else {
+    void safeSend(
+      "Going dark, no more auto-posts. Pull the latest from the menu anytime, or subscribe again whenever you like.",
+    );
+    stopWatcher();
+  }
+}
+
+/** A watched event → refresh the affected snapshot slice (+ catch up). */
+function onChainEvent(kind: EventKind): void {
+  if (kind === "channel") void catchUp();
+  void refreshCardData().catch(() => {});
+}
+
+/**
+ * Chat (re)opened: connections are briefly alive, so refresh the snapshot and,
+ * if subscribed, post anything missed. Debounced so a mount-storm fires once.
+ */
+function onResume(): void {
+  const now = Date.now();
+  if (now - lastResume < RESUME_DEBOUNCE_MS) return;
+  lastResume = now;
+  void refreshCardData().catch(() => {});
+  if (broadcastsOn) void catchUp();
+}
+
+/** Set the seen baseline to the full current history (no backlog on subscribe). */
+async function startClean(): Promise<void> {
   try {
-    const channel = await loadChannel();
-    if (!channel) return;
-    const announcements = channel.announcements ?? [];
-    const seen = await readSeen();
-
-    // First run (no persisted state): adopt the current history as the baseline
-    // and don't backfill — only announcements posted after install will notify.
-    if (seen === null) {
-      await writeSeen(announcements);
-      console.log(
-        TAG,
-        `baseline set: ${announcements.length} existing announcement(s)`,
-      );
-      return;
-    }
-
-    const seenSet = new Set(seen);
-    const fresh = announcements.filter((cid) => !seenSet.has(cid));
-    if (fresh.length === 0) return;
-
-    console.log(TAG, `${fresh.length} new announcement(s)`);
-    for (const cid of fresh) {
-      try {
-        await safeSend(
-          formatAnnouncement(await retrieveJson<AnnouncementBody>(cid)),
-        );
-      } catch (err) {
-        console.warn(TAG, "failed to fetch/post announcement", cid, err);
-      }
-      // Mark seen regardless: a permanently-missing body must not wedge the loop
-      // into re-posting everything after it on every tick.
-      seenSet.add(cid);
-    }
-    await writeSeen([...seenSet]);
+    const channel = await withTimeout(loadChannel(), TICK_TIMEOUT_MS, "start-clean");
+    await writeSeen(channel?.announcements ?? []);
   } catch (err) {
-    console.error(TAG, "tick failed", err);
+    console.warn(TAG, "start-clean baseline failed", err);
+  }
+}
+
+/** Post every announcement newer than the seen set, oldest-first. Idempotent. */
+async function catchUp(): Promise<void> {
+  if (!broadcastsOn || catchingUp) return;
+  catchingUp = true;
+  try {
+    await withTimeout(postUnseen(), TICK_TIMEOUT_MS, "catch-up");
+  } catch (err) {
+    console.error(TAG, "catch-up failed", err);
   } finally {
-    isProcessing = false;
+    catchingUp = false;
+  }
+}
+
+async function postUnseen(): Promise<void> {
+  const channel = await loadChannel();
+  if (!channel) return;
+  const announcements = channel.announcements ?? [];
+  const seen = await readSeen();
+
+  // Subscribed but no baseline (storage cleared) → adopt the current history
+  // rather than dumping it all into the chat.
+  if (seen === null) {
+    await writeSeen(announcements);
+    return;
+  }
+
+  const seenSet = new Set(seen);
+  const fresh = announcements.filter((cid) => !seenSet.has(cid));
+  if (fresh.length === 0) return;
+
+  console.log(TAG, `${fresh.length} new announcement(s) to post`);
+  for (const cid of fresh) {
+    try {
+      const body = await retrieveJson<AnnouncementBody>(cid);
+      await postCard({ kind: "announcement", cid, body });
+    } catch (err) {
+      console.warn(TAG, "failed to fetch/post announcement", cid, err);
+    }
+    // Mark seen regardless: a permanently-missing body must not wedge catch-up.
+    seenSet.add(cid);
+  }
+  await writeSeen([...seenSet]);
+}
+
+async function loadBroadcasts(): Promise<boolean> {
+  try {
+    return (await hostLocalStorage.readJSON(BROADCASTS_KEY)) === true;
+  } catch {
+    return false;
+  }
+}
+
+async function persistBroadcasts(on: boolean): Promise<void> {
+  try {
+    await hostLocalStorage.writeJSON(BROADCASTS_KEY, on);
+  } catch (err) {
+    console.warn(TAG, "persist broadcasts flag failed", err);
   }
 }
 
@@ -161,97 +295,6 @@ async function loadChannel(): Promise<ChannelMetadata | null> {
     return null;
   }
   return retrieveJson<ChannelMetadata>(bytes32ToCid(pointer));
-}
-
-function formatAnnouncement(body: AnnouncementBody): string {
-  const who = body.senderName?.trim() || "Festival";
-  const when = Number.isFinite(body.timestamp)
-    ? new Date(body.timestamp).toLocaleString()
-    : "";
-  const header = when ? `📢 ${who} · ${when}` : `📢 ${who}`;
-  return `${header}\n\n${body.content}`;
-}
-
-function sendHelp(): Promise<void> {
-  return safeSend(HELP_TEXT);
-}
-
-/** Post every announcement currently in the channel, on demand (/announcements). */
-async function listAllAnnouncements(): Promise<void> {
-  try {
-    const channel = await loadChannel();
-    const cids = channel?.announcements ?? [];
-    if (cids.length === 0) {
-      await safeSend("📭 No announcements have been posted yet.");
-      return;
-    }
-    await safeSend(
-      `📋 ${cids.length} announcement${cids.length === 1 ? "" : "s"}:`,
-    );
-    for (const cid of cids) {
-      try {
-        await safeSend(
-          formatAnnouncement(await retrieveJson<AnnouncementBody>(cid)),
-        );
-      } catch (err) {
-        console.warn(TAG, "list: fetch failed", cid, err);
-        await safeSend(
-          `⚠️ Couldn't load one announcement (${cid.slice(0, 14)}…).`,
-        );
-      }
-    }
-  } catch (err) {
-    console.error(TAG, "/announcements failed", err);
-    await safeSend(
-      `⚠️ Couldn't read the channel: ${err instanceof Error ? err.message : String(err)}`,
-    );
-  }
-}
-
-/** Read the festival schedule (host-routed) and post today's sessions (/agenda). */
-async function sendAgenda(): Promise<void> {
-  try {
-    const pointer = await readMetadataCid();
-    if (isZeroCid(pointer)) {
-      await safeSend("📭 No festival schedule has been published yet.");
-      return;
-    }
-    const meta = await retrieveJson<FestivalMetadata>(bytes32ToCid(pointer));
-    // "Today" is the user's local calendar day — attendees are on-site, so the
-    // device clock matches the festival's day.
-    const today = (meta.schedule ?? [])
-      .filter((e) => isToday(e.start))
-      .sort(
-        (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
-      );
-    if (today.length === 0) {
-      await safeSend("📅 Nothing on the agenda for today.");
-      return;
-    }
-    const lines = today.map(formatScheduleEntry).join("\n\n");
-    await safeSend(
-      `Today's agenda (${today.length} session${today.length === 1 ? "" : "s"}):\n\n${lines}`,
-    );
-  } catch (err) {
-    console.error(TAG, "/agenda failed", err);
-    await safeSend(
-      `Couldn't read the schedule: ${err instanceof Error ? err.message : String(err)}`,
-    );
-  }
-}
-
-/** True if an ISO-8601 timestamp falls on the user's local calendar day. */
-function isToday(iso: string): boolean {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return false;
-  return d.toDateString() === new Date().toDateString();
-}
-
-function formatScheduleEntry(e: ScheduleEntry): string {
-  const d = new Date(e.start);
-  const hhmm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  const who = e.speakers?.length ? `\n  ${e.speakers.join(", ")}` : "";
-  return `${hhmm} — ${e.title}${who}`;
 }
 
 async function readSeen(): Promise<string[] | null> {

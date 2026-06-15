@@ -1,7 +1,5 @@
 import { ref, computed, watch } from 'vue'
-import { generateBadge } from '@festival/shared/utils/badge'
 import { FESTIVAL_ADDRESS } from '@festival/shared/contracts/addresses'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { walletAddressToH160 } from '@festival/shared/utils/address'
 import { getCachedMetadata, setCachedMetadata } from '@festival/shared/cache/cid-cache'
@@ -20,38 +18,6 @@ export interface PoapToken {
   poapImageUrl?: string
   type: 'festival' | 'sub-event'
 }
-
-const MOCK_FESTIVAL_POAP: PoapToken = {
-  tokenId: 1,
-  poapContract: '0xfestpoap' + '0'.repeat(30),
-  sourceContract: '0x1234567890abcdef1234567890abcdef12345678',
-  sourceName: 'Web3 Summit 2026',
-  attendee: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
-  issuedAt: Math.floor(new Date('2026-06-15T10:00:00Z').getTime() / 1000),
-  type: 'festival',
-}
-const MOCK_SUB_POAPS: PoapToken[] = [
-  {
-    tokenId: 5,
-    poapContract: '0xsubpoap' + '0'.repeat(32),
-    sourceContract: '0xsub1' + '0'.repeat(34),
-    sourceName: 'Parachain Workshop',
-    attendee: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
-    issuedAt: Math.floor(new Date('2026-06-15T12:00:00Z').getTime() / 1000),
-    badgePixels: generateBadge('Parachain Workshop', 'workshop'),
-    type: 'sub-event',
-  },
-  {
-    tokenId: 12,
-    poapContract: '0xsubpoap' + '0'.repeat(32),
-    sourceContract: '0xsub2' + '0'.repeat(34),
-    sourceName: 'Closing Party',
-    attendee: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
-    issuedAt: Math.floor(new Date('2026-06-20T23:00:00Z').getTime() / 1000),
-    badgePixels: generateBadge('Closing Party', 'social'),
-    type: 'sub-event',
-  },
-]
 
 // Per-festival image URL cache (resolved off-chain via Bulletin/IPFS).
 // Tracked separately from chain state because the resolution is async and
@@ -145,9 +111,6 @@ export function usePoaps() {
   installFestivalImageWatcher()
 
   const poaps = computed<PoapToken[]>(() => {
-    if (!hasDeployedContracts()) {
-      return [MOCK_FESTIVAL_POAP, ...MOCK_SUB_POAPS]
-    }
     const festName = festivalState.festival?.metadata?.name || 'Festival'
     const userAddress = festivalState.user.address ?? ''
 

@@ -181,28 +181,10 @@
   display: block;
 }
 
-.vmarker__label {
-  padding: 2px 8px;
-  background: #ffffff;
-  color: #0f0f0f;
-  border-radius: 9999px;
-  font-size: 11px;
-  line-height: 1.3;
-  font-weight: 500;
-  white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-}
-
-/* Hide labels on service/emergency/scenery entirely — icon-only categories. */
-.vmarker[data-category="service"] .vmarker__label,
-.vmarker[data-category="emergency"] .vmarker__label,
-.vmarker[data-category="scenery"] .vmarker__label { display: none; }
-
 /* Scenery: map ornaments, not destinations. Don't suggest interactivity. */
 .vmarker[data-category="scenery"] { cursor: default; }
 
 /* ── Zoom tier sizing ── */
-/* Tier 3 = base reveal; labels visible on labeled categories. */
 .venue-map[data-zoom-tier="3"] .vmarker[data-category="base"],
 .venue-map[data-zoom-tier="3"] .vmarker[data-category="food"],
 .venue-map[data-zoom-tier="3"] .vmarker[data-category="activations"] { --vmarker-icon-size: 28px; }
@@ -210,10 +192,6 @@
 .venue-map[data-zoom-tier="4"] .vmarker[data-category="base"],
 .venue-map[data-zoom-tier="4"] .vmarker[data-category="food"],
 .venue-map[data-zoom-tier="4"] .vmarker[data-category="activations"] { --vmarker-icon-size: 32px; }
-
-.venue-map[data-zoom-tier="4"] .vmarker[data-category="base"] .vmarker__label,
-.venue-map[data-zoom-tier="4"] .vmarker[data-category="food"] .vmarker__label,
-.venue-map[data-zoom-tier="4"] .vmarker[data-category="activations"] .vmarker__label { font-size: 12px; }
 
 .venue-map[data-zoom-tier="3"] .vmarker[data-category="service"],
 .venue-map[data-zoom-tier="3"] .vmarker[data-category="emergency"] { --vmarker-icon-size: 18px; }
@@ -229,17 +207,16 @@
 .venue-map[data-zoom-tier="4"] .vmarker[data-category="scenery"] { --vmarker-icon-size: 22px; }
 
 /* ── Zoom tier reveal (progressive visibility) ──
- * Tier 0 (default fit): stages (with labels) + food (icon-only, smaller)
- * Tier 1+: + activations + other base types + food labels
+ * Tier 0 (default fit): stages + food (smaller)
+ * Tier 1+: + activations + other base types
  * Tier 4: + service + emergency
  */
 /* Tier 0: hide non-stage base + activations. */
 .venue-map[data-zoom-tier="0"] .vmarker[data-category="base"]:not([data-type="stage"]),
 .venue-map[data-zoom-tier="0"] .vmarker[data-category="activations"] { opacity: 0; pointer-events: none; }
 
-/* Tier 0: food shows icon only, slightly smaller. */
+/* Tier 0: food shows slightly smaller. */
 .venue-map[data-zoom-tier="0"] .vmarker[data-category="food"] { --vmarker-icon-size: 22px; }
-.venue-map[data-zoom-tier="0"] .vmarker[data-category="food"] .vmarker__label { display: none; }
 
 /* Service + emergency hidden until tier 4. */
 .venue-map[data-zoom-tier="0"] .vmarker[data-category="service"],

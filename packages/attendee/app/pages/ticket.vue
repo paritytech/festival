@@ -2,7 +2,6 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { useFestival } from '~/composables/useFestival'
 import { useRegistration } from '~/composables/useRegistration'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { createCheckInChallenge } from '@festival/shared/checkin/sign'
 import { encodeCheckInQR } from '@festival/shared/checkin/qr'
 import { generateQRDataUrl } from '@festival/shared/scanner/useQRImage'
@@ -25,28 +24,13 @@ async function revealTicket() {
   qrError.value = null
 
   try {
-    let qrString: string
-
-    if (!hasDeployedContracts()) {
-      qrString = encodeCheckInQR(
-        {
-          type: 'check-in',
-          festivalAddress,
-          ticketTokenId: ticketTokenId.value,
-          attendeeAddress: wallet.address || '5MockAddress',
-          timestamp: Date.now(),
-        },
-        '0xmocksignature',
-      )
-    } else {
-      const { payload, signature } = await createCheckInChallenge(
-        festivalAddress,
-        ticketTokenId.value,
-        wallet.address,
-        wallet.signRaw,
-      )
-      qrString = encodeCheckInQR(payload, signature)
-    }
+    const { payload, signature } = await createCheckInChallenge(
+      festivalAddress,
+      ticketTokenId.value,
+      wallet.address,
+      wallet.signRaw,
+    )
+    const qrString = encodeCheckInQR(payload, signature)
 
     qrDataUrl.value = await generateQRDataUrl(qrString)
     timeRemaining.value = REFRESH_INTERVAL

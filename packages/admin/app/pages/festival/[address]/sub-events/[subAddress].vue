@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { useSubEvents } from '~/composables/useSubEvents'
 import { usePermissions, type FestivalRole } from '~/composables/usePermissions'
 import { loadUserRoles } from '@festival/shared/contracts/role-helpers'
-import { readSessionAttendees, readIsCheckedIn, hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
+import { readSessionAttendees, readIsCheckedIn } from '@festival/shared/contracts/festival-reads'
 import { writeContract } from '@festival/shared/contracts/write'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { FestivalSessionABI } from '@festival/shared/contracts/abis'
@@ -103,11 +103,6 @@ async function lookupAttendee() {
     resolvedAttendeeH160.value = h160
     resolvedAttendeeSs58.value = h160ToSs58(h160)
 
-    if (!hasDeployedContracts()) {
-      lookupState.value = 'ready'
-      return
-    }
-
     const checkedIn = await readIsCheckedIn(address as `0x${string}`, h160)
     lookupState.value = checkedIn ? 'ready' : 'not-festival-checked-in'
   } catch (e: any) {
@@ -123,14 +118,6 @@ async function performSessionCheckIn() {
   checkInTxStatus.value = 'preparing'
 
   try {
-    if (!hasDeployedContracts()) {
-      await new Promise((r) => setTimeout(r, 800))
-      checkInTxStatus.value = 'finalized'
-      checkInInput.value = ''
-      resetLookup()
-      return
-    }
-
     const wallet = useWalletStore()
     await writeContract({
       address: subAddress as `0x${string}`,

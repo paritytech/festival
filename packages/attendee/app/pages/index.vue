@@ -16,16 +16,8 @@ import {
 import type { TimelineItem } from "~/composables/useProgramTimeline";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { useFestivalPass } from "~/composables/useFestivalPass";
-import FestivalPassScreen from "~/components/FestivalPassScreen.vue";
-import BadgeEarnedFestivalScreen from "~/components/BadgeEarnedFestivalScreen.vue";
-import SuccessToast from "~/components/SuccessToast.vue";
-import {
-  getMarkerLocationLabel,
-  resolveLocationLabel,
-} from "@festival/shared/venue/floors";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
+import { resolveShortLocationLabel } from "@festival/shared/venue/floors";
+import { useVenueMap } from "~/composables/useVenueMap";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import { formatTimeBerlin } from "@festival/shared/utils/time";
 
@@ -46,36 +38,17 @@ const hostSessionTo = computed(() =>
 );
 const { myList } = useProgramTimeline();
 const wallet = useWalletStore();
-const {
-  shouldShowPass,
-  shouldShowBadge,
-  isActivating: isPassActivating,
-  isExploding: isPassExploding,
-  activatedAtMs,
-  allocationWarning,
-  activate: onActivatePass,
-  dismissBadge: onBadgeNext,
-} = useFestivalPass();
 
 // ── Reactive clock (shared singleton). Drives EventReminder + My List ──
 const nowDate = useNow();
 const now = computed(() => nowDate.value.getTime());
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
+const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 // ── Section 4: Host your own session / My session card ──
 
 const userH160 = computed(() => {
   if (!wallet.isConnected) return null;
-  if (!hasDeployedContracts()) return "0x" + "0".repeat(39) + "1";
   return isValidEvmAddress(wallet.address)
     ? wallet.address.toLowerCase()
     : ss58ToH160(wallet.address).toLowerCase();
@@ -151,12 +124,17 @@ function getMyListTimeLabel(item: TimelineItem): string {
 function getMyListLocation(item: TimelineItem): string {
   if (!venueMarkers.value.length) return "";
   if (item.type === "official" && item.entry.venueMarkerId) {
-    return getMarkerLocationLabel(item.entry.venueMarkerId, venueMarkers.value);
+    return resolveShortLocationLabel(
+      item.entry.venueMarkerId,
+      venueMarkers.value,
+      venueZones.value,
+    );
   }
   if (item.type === "community" && item.subEvent.metadata.location) {
-    return resolveLocationLabel(
+    return resolveShortLocationLabel(
       item.subEvent.metadata.location,
       venueMarkers.value,
+      venueZones.value,
     );
   }
   return "";
@@ -185,6 +163,7 @@ function getMyListRoute(item: TimelineItem): string {
     <EventReminder
       :entries="scheduleEntries"
       :venue-markers="venueMarkers"
+      :venue-zones="venueZones"
       :now="now"
       :festival-name="festivalMetadata?.name || 'Web3 Summit'"
     />
@@ -538,35 +517,4 @@ function getMyListRoute(item: TimelineItem): string {
       <HomeLocation />
     </template>
   </div>
-
-  <!-- Festival Pass + Badge overlays. shouldShow*/visibility is owned by
-       useFestivalPass; gates collapse in standalone / pre-checkin / disconnect. -->
-  <FestivalPassScreen
-    v-if="shouldShowPass"
-    :address="userH160 ?? ''"
-    :is-activating="isPassActivating"
-    :is-exploding="isPassExploding"
-    @activate="onActivatePass"
-  />
-  <BadgeEarnedFestivalScreen
-    v-if="shouldShowBadge"
-    :address="userH160 ?? ''"
-    :festival-name="festivalMetadata?.name || 'Web3 Summit'"
-    :received-at-ms="activatedAtMs ?? undefined"
-    @next="onBadgeNext"
-  />
-  <!-- Partial-allocation warning. SuccessToast auto-hides; activate() clears
-       it on the next attempt. -->
-  <Teleport to="body">
-    <div
-      class="fixed bottom-28 left-4 right-4 md:left-[calc(var(--col-l)+1rem)] md:right-[calc(var(--col-r)+1rem)] z-[2120] pointer-events-none"
-    >
-      <SuccessToast
-        :visible="!!allocationWarning"
-        variant="star"
-        :message="allocationWarning ?? ''"
-        @hide="allocationWarning = null"
-      />
-    </div>
-  </Teleport>
 </template>

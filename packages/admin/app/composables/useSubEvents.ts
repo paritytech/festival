@@ -3,7 +3,6 @@ import type { SubEventMetadata } from '@festival/shared/metadata/schemas'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { writeContract } from '@festival/shared/contracts/write'
 import { FestivalABI } from '@festival/shared/contracts/abis'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { walletAddressToH160 } from '@festival/shared/utils/address'
@@ -124,13 +123,6 @@ export function useSubEvents(_festivalAddress: string) {
   async function cancelSession(sessionAddress: string): Promise<void> {
     txStatus.value = 'preparing'
     try {
-      if (!hasDeployedContracts()) {
-        await new Promise((r) => setTimeout(r, 800))
-        txStatus.value = 'finalized'
-        addPending('cancelSession', sessionAddress)
-        return
-      }
-
       const wallet = useWalletStore()
       await writeContract({
         address: _festivalAddress as `0x${string}`,

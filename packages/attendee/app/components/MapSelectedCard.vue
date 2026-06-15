@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { VenueMarker } from '@festival/shared/metadata/schemas'
-import { getCategory, TYPE_LABELS } from '@festival/shared/venue/categories'
+import { getCategory } from '@festival/shared/venue/categories'
 import { getMarkerIcon } from '@festival/shared/venue/icons'
 
 const props = defineProps<{
-  // Either a typed marker is selected, or a user spot. One of these is non-null.
   marker?: VenueMarker | null
-  spotBreadcrumb?: string // breadcrumb text for a user-placed spot
-  primaryLabel?: string // primary title for a spot (e.g., "Pinned location")
-  breadcrumb: string // "1st Floor"
+  headline: string
+  sub: string
 }>()
 
 defineEmits<{
@@ -18,23 +16,12 @@ defineEmits<{
 }>()
 
 const mode = computed<'marker' | 'spot'>(() => (props.marker ? 'marker' : 'spot'))
-const iconHtml = computed(() => {
-  if (props.marker) return getMarkerIcon(props.marker.category, props.marker.type)
-  return null
-})
-const categoryColor = computed(() => {
-  if (!props.marker) return undefined
-  return getCategory(props.marker.category).color
-})
-// Icon-only categories (service / emergency / scenery / money) save with
-// an empty label by design. Fall back to the type label (e.g. "Currency
-// Exchange") so the card never shows a blank line.
-const primary = computed(() => {
-  if (props.marker) {
-    return props.marker.label || TYPE_LABELS[props.marker.type] || '(unnamed)'
-  }
-  return props.primaryLabel ?? 'Pinned location'
-})
+const iconHtml = computed(() =>
+  props.marker ? getMarkerIcon(props.marker.category, props.marker.type) : null,
+)
+const categoryColor = computed(() =>
+  props.marker ? getCategory(props.marker.category).color : undefined,
+)
 </script>
 
 <template>
@@ -66,8 +53,8 @@ const primary = computed(() => {
       </div>
 
       <div class="sel-card__text">
-        <div class="sel-card__breadcrumb">{{ breadcrumb }}</div>
-        <div class="sel-card__primary">{{ primary }}</div>
+        <div class="sel-card__breadcrumb">{{ sub }}</div>
+        <div class="sel-card__primary">{{ headline }}</div>
       </div>
 
       <div class="sel-card__actions">

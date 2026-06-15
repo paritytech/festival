@@ -97,6 +97,3 @@ export {
 export type {
   FestivalDay, SessionTimeRange, SessionTimeValidation, SessionTimeValidationFailReason,
 } from './sessions/timeWindow'
-
-// Mocks (dev only)
-export * from './mocks'

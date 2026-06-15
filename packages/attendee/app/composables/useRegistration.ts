@@ -37,21 +37,18 @@ export function useRegistration(_festivalAddress: string) {
   }
 
   const isRegistered = computed<boolean>(() => {
-    if (!hasDeployedContracts()) return true
     const ul = userLower()
     if (ul && hasPending('register', ul)) return true
     return Boolean(findUserAttendee()) || festivalState.user.ticketTokenId > 0n
   })
 
   const isCheckedIn = computed<boolean>(() => {
-    if (!hasDeployedContracts()) return false
     const ul = userLower()
     if (ul && hasPending('checkin', ul)) return true
     return findUserAttendee()?.isCheckedIn ?? false
   })
 
   const ticketTokenId = computed<number | null>(() => {
-    if (!hasDeployedContracts()) return 42
     const t = festivalState.user.ticketTokenId
     return t > 0n ? Number(t) : null
   })
@@ -65,14 +62,6 @@ export function useRegistration(_festivalAddress: string) {
         ? walletAddressToH160(wallet.address)
         : null
     try {
-      if (!hasDeployedContracts()) {
-        // Mock mode: isRegistered is pinned true; only the tx status animates.
-        await new Promise((r) => setTimeout(r, 1200))
-        txStatus.value = 'finalized'
-        setTimeout(() => { txStatus.value = 'idle' }, 2000)
-        return
-      }
-
       await writeContract({
         address: FESTIVAL_ADDRESS as `0x${string}`,
         abi: FestivalABI,
