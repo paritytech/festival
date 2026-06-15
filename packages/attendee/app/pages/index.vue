@@ -19,7 +19,6 @@ import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { useFestivalPass } from "~/composables/useFestivalPass";
 import FestivalPassScreen from "~/components/FestivalPassScreen.vue";
 import BadgeEarnedFestivalScreen from "~/components/BadgeEarnedFestivalScreen.vue";
-import NotificationActivationScreen from "~/components/NotificationActivationScreen.vue";
 import SuccessToast from "~/components/SuccessToast.vue";
 import { resolveShortLocationLabel } from "@festival/shared/venue/floors";
 import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
@@ -47,14 +46,12 @@ const wallet = useWalletStore();
 const {
   shouldShowPass,
   shouldShowBadge,
-  shouldShowNotifications,
   isActivating: isPassActivating,
   isExploding: isPassExploding,
   activatedAtMs,
   allocationWarning,
   activate: onActivatePass,
-  advanceToNotifications: onBadgeNext,
-  dismissNotifications: onDismissNotifications,
+  dismissBadge: onBadgeNext,
 } = useFestivalPass();
 
 // ── Reactive clock (shared singleton). Drives EventReminder + My List ──
@@ -329,23 +326,9 @@ function getMyListRoute(item: TimelineItem): string {
         <h3 class="text-lg font-semibold text-text-and-icons-primary">My List</h3>
         <NuxtLink
           to="/program?tab=mylist"
-          class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center"
+          class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-and-icons-primary"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="text-text-and-icons-primary"
-          >
-            <line x1="5" y1="12" x2="19" y2="12" />
-            <polyline points="12 5 19 12 12 19" />
-          </svg>
+          <ArrowRightIcon />
         </NuxtLink>
       </div>
       <div
@@ -544,7 +527,9 @@ function getMyListRoute(item: TimelineItem): string {
       </NuxtLink>
 
       </div>
-      <!-- 8. Location (moves to bottom once the user is checked in) -->
+      <!-- 8. Festival chat -->
+      <HomeFestivalChat />
+      <!-- 9. Location (moves to bottom once the user is checked in) -->
       <HomeLocation />
     </template>
   </div>
@@ -565,11 +550,6 @@ function getMyListRoute(item: TimelineItem): string {
     :received-at-ms="activatedAtMs ?? undefined"
     @next="onBadgeNext"
   />
-  <NotificationActivationScreen
-    v-if="shouldShowNotifications"
-    @dismiss="onDismissNotifications"
-  />
-
   <!-- Partial-allocation warning. SuccessToast auto-hides; activate() clears
        it on the next attempt. -->
   <Teleport to="body">
