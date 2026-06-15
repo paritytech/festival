@@ -182,6 +182,9 @@ function setBroadcasts(on: boolean): void {
   broadcastsOn = on;
   void persistBroadcasts(on);
   if (on) {
+    void safeSend(
+      "You're in the loop. New announcements will land here the moment they are made by the team.",
+    );
     // Start clean: baseline = current history so subscribing never dumps the
     // backlog. Only then open the watcher + catch up.
     void startClean().then(() => {
@@ -189,6 +192,9 @@ function setBroadcasts(on: boolean): void {
       void catchUp();
     });
   } else {
+    void safeSend(
+      "Going dark, no more auto-posts. Pull the latest from the menu anytime, or subscribe again whenever you like.",
+    );
     stopWatcher();
   }
 }
