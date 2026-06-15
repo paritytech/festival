@@ -10,7 +10,6 @@ import {
   VENUE_OUTDOOR_FLOOR,
   VENUE_BLOCKS,
 } from '@festival/shared/venue/floors'
-import { TYPE_LABELS } from '@festival/shared/venue/categories'
 import { useAttendeeMap } from '~/composables/useAttendeeMap'
 import FloorControl from '~/components/FloorControl.vue'
 import VenueMap from '~/components/VenueMap.vue'
@@ -77,14 +76,10 @@ const isIndoor = computed(() => mode.value === 'indoor')
 // Headline + sub-label for the bottom selected-card. Marker selected →
 // "marker name" + "Floor · Zone". User-dropped pin → "Pinned location" + Floor.
 const selectedChip = computed(() => {
+  // Marker → "marker name" + "Floor · Zone". formatChipFromMarker falls back to
+  // the type label for icon-only markers that save with an empty label.
   if (selectedMarker.value) {
-    const chip = formatChipFromMarker(selectedMarker.value, zones.value)
-    // Icon-only categories may save with an empty label; fall back to the
-    // type label (e.g. "Restroom") so the headline is never blank.
-    if (!chip.headline) {
-      chip.headline = TYPE_LABELS[selectedMarker.value.type] || '(unnamed)'
-    }
-    return chip
+    return formatChipFromMarker(selectedMarker.value, zones.value)
   }
   if (userSpot.value) {
     return {
