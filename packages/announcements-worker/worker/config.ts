@@ -70,15 +70,17 @@ export interface AnnouncementBody {
 
 /**
  * Festival schedule entry — the subset of `@festival/shared`'s `ScheduleEntry`
- * that `/agenda` renders. `start`/`end` are ISO 8601. Source of truth:
+ * the cards render. `start`/`end` are ISO 8601. Source of truth:
  * packages/shared/metadata/schemas.ts.
  */
 export interface ScheduleEntry {
+  id: string;
   start: string;
   end: string;
   title: string;
   speakers: string[];
-  category?: string;
+  /** Links to a VenueMarker.id on the festival venue map. */
+  venueMarkerId?: string;
 }
 
 /**
