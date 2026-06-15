@@ -4,9 +4,10 @@ import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { useRegistration } from './useRegistration'
 
-// Slow enough to stay inside the host's read-rate budget alongside the event
-// watcher; fast enough that a door check-in flips the screen within one cycle.
-const POLL_INTERVAL_MS = 20_000
+// Each tick is one cheap read and only fires for the not-yet-checked-in
+// attendee on a visible screen, so a short interval stays inside the host's
+// read-rate budget while a door check-in still flips the screen within a cycle.
+const POLL_INTERVAL_MS = 10_000
 
 /**
  * Self-healing check-in watch for screens that render off `isCheckedIn`.
