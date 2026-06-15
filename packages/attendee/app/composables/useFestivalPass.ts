@@ -276,11 +276,19 @@ export function useFestivalPass() {
 
   // ── Exposed surface ──────────────────────────────────────────────────────
 
-  // Every overlay phase requires the user still in host + connected + checked-in;
-  // disconnect mid-flow drops the overlay rather than re-coloring it against
-  // an empty address.
+  // Every overlay phase requires the user still in host + connected + checked-in
+  // AND that we are actually on the home route. The route gate is a hard
+  // backstop: FestivalPassScreen teleports to <body>, so without this gate a
+  // stale composable instance (e.g. one anchored in a kept-alive page) could
+  // paint the overlay over /onboarding or any other route.
+  const route = useRoute()
   const overlayGate = computed(
-    () => isInHost() && isConnected.value && isCheckedIn.value && !!address.value,
+    () =>
+      isInHost() &&
+      isConnected.value &&
+      isCheckedIn.value &&
+      !!address.value &&
+      route.path === '/',
   )
 
   const shouldShowPass = computed(
