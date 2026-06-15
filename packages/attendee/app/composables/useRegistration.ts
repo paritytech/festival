@@ -4,6 +4,7 @@ import { writeContract } from '@festival/shared/contracts/write'
 import { FestivalABI } from '@festival/shared/contracts/abis'
 import { FESTIVAL_ADDRESS } from '@festival/shared/contracts/addresses'
 import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
+import { batchRead } from '@festival/shared/contracts/multicall'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { walletAddressToH160 } from '@festival/shared/utils/address'
@@ -103,5 +104,39 @@ export function useRegistration(_festivalAddress: string) {
     return bootLoadAttendee(userH160)
   }
 
-  return { isRegistered, ticketTokenId, isCheckedIn, txStatus, error, register, reload }
+  /**
+   * Light chain reconcile of the user's registration/check-in status — two
+   * constant-size reads in one multicall (isCheckedIn + ticketOf), so it's
+   * cheap enough to poll. Safety net for screens gated on `isCheckedIn` when
+   * the event watcher missed a CheckedIn event or a boot load failed. On
+   * drift (or when no festival state has landed yet) it runs a full bootLoad:
+   * a missed check-in implies more than the flag changed (attendee row,
+   * registeredCount, the festival POAP minted by checkIn), and bootLoad
+   * refreshes and persists all of it consistently.
+   */
+  async function reconcileCheckInStatus(): Promise<void> {
+    if (!hasDeployedContracts()) return
+    const wallet = useWalletStore()
+    if (!wallet.isConnected) return
+    const userH160 = walletAddressToH160(wallet.address)
+
+    if (!festivalState.festival) {
+      return bootLoadAttendee(userH160)
+    }
+
+    const [chainCheckedIn, chainTicket] = (await batchRead([
+      { address: FESTIVAL_ADDRESS, abi: FestivalABI, functionName: 'isCheckedIn', args: [userH160] },
+      { address: FESTIVAL_ADDRESS, abi: FestivalABI, functionName: 'ticketOf', args: [userH160] },
+    ])) as [boolean, bigint]
+
+    const drifted =
+      chainCheckedIn !== isCheckedIn.value ||
+      (chainTicket > 0n) !== isRegistered.value
+
+    if (drifted) {
+      await bootLoadAttendee(userH160)
+    }
+  }
+
+  return { isRegistered, ticketTokenId, isCheckedIn, txStatus, error, register, reload, reconcileCheckInStatus }
 }
