@@ -53,6 +53,9 @@ export default defineNuxtConfig({
     plugins: [
       import('@tailwindcss/vite').then((m) => m.default()),
     ],
+    server: {
+      allowedHosts: ['.ts.net'],
+    },
   },
 
   nitro: {

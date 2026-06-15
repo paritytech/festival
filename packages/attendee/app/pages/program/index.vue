@@ -12,8 +12,6 @@ import { useRegistration } from "~/composables/useRegistration";
 import { useSavedItems } from "~/composables/useSavedItems";
 import { useOnboardingSeen } from "~/composables/useOnboardingSeen";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
 import { toBerlinDateKey, berlinHourOf } from "@festival/shared/utils/time";
 import type {
   TimelineDay,
@@ -130,12 +128,9 @@ const activeDays = computed<TimelineDay[]>(() =>
   activeTab.value === "program" ? days.value : myListDays.value,
 );
 
-const venueMarkers = computed(() => {
-  if (hasDeployedContracts() && metadata.value?.venueMap?.markers?.length) {
-    return metadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
+const venueMarkers = computed(
+  () => metadata.value?.venueMap?.markers ?? [],
+);
 
 function onScroll() {
   const y = scroller.value?.scrollTop ?? 0;
@@ -287,12 +282,7 @@ watch(
   { immediate: true },
 );
 
-const subEventsEnabled = computed(() => {
-  if (hasDeployedContracts() && metadata.value) {
-    return metadata.value.subEventsEnabled !== false;
-  }
-  return true;
-});
+const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== false);
 </script>
 
 <template>

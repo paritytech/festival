@@ -2,7 +2,6 @@ import { ref, computed } from 'vue'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { writeContract } from '@festival/shared/contracts/write'
 import { FestivalABI } from '@festival/shared/contracts/abis'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { ss58ToH160, isValidSs58, isValidEvmAddress, walletAddressToH160 } from '@festival/shared/utils/address'
@@ -26,12 +25,6 @@ export function useRoles(festivalAddress: string) {
   const txStatus = ref<TxStatus>('idle')
 
   const holders = computed<RoleHolder[]>(() => {
-    if (!hasDeployedContracts()) {
-      return [{
-        address: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
-        roles: ['Admin', 'Manager', 'Check-In', 'Treasurer'],
-      }]
-    }
     // Build address → roles map from festivalState.roles (per-role members).
     const map = new Map<string, string[]>()
     for (const { role, members } of festivalState.roles) {
@@ -78,20 +71,15 @@ export function useRoles(festivalAddress: string) {
         ? address as `0x${string}`
         : isValidSs58(address) ? ss58ToH160(address) : address as `0x${string}`
 
-      if (!hasDeployedContracts()) {
-        await new Promise((r) => setTimeout(r, 800))
-        txStatus.value = 'finalized'
-      } else {
-        await writeContract({
-          address: festivalAddress as `0x${string}`,
-          abi: FestivalABI,
-          functionName: 'grantRole',
-          args: [role, targetH160],
-          signer: wallet.getSigner(),
-          walletAddress: wallet.address,
-          onStatus: (s) => { txStatus.value = s },
-        })
-      }
+      await writeContract({
+        address: festivalAddress as `0x${string}`,
+        abi: FestivalABI,
+        functionName: 'grantRole',
+        args: [role, targetH160],
+        signer: wallet.getSigner(),
+        walletAddress: wallet.address,
+        onStatus: (s) => { txStatus.value = s },
+      })
 
       const roleName = ROLE_OPTIONS.find((o) => o.value === role)?.label || 'Unknown'
       applyHolderUpdate(targetH160, roleName, 'add')
@@ -109,13 +97,6 @@ export function useRoles(festivalAddress: string) {
         ? address as `0x${string}`
         : isValidSs58(address) ? ss58ToH160(address) : address as `0x${string}`
       const roleName = ROLE_OPTIONS.find((o) => o.value === role)?.label || 'Unknown'
-
-      if (!hasDeployedContracts()) {
-        await new Promise((r) => setTimeout(r, 800))
-        txStatus.value = 'finalized'
-        applyHolderUpdate(targetH160, roleName, 'remove')
-        return
-      }
 
       await writeContract({
         address: festivalAddress as `0x${string}`,

@@ -12,8 +12,6 @@ import {
   parseCoordLocation,
 } from '@festival/shared/venue/floors'
 import { DEFAULT_ZONES } from '@festival/shared/venue/zones'
-import { MOCK_VENUE_MAP, createLiveSchedule } from '@festival/shared/mocks'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { parseFestivalDate } from '@festival/shared/utils/time'
 import type { UserSpot } from '@festival/shared/venue/map-engine-ml'
 import { useFestival } from './useFestival'
@@ -43,28 +41,11 @@ export function useAttendeeMap() {
   const { metadata } = useFestival()
   const { subEvents } = useSubEvents()
 
-  const markers = computed<VenueMarker[]>(() => {
-    if (hasDeployedContracts() && metadata.value?.venueMap?.markers?.length) {
-      return metadata.value.venueMap.markers
-    }
-    return MOCK_VENUE_MAP.markers
-  })
+  const markers = computed<VenueMarker[]>(() => metadata.value?.venueMap?.markers ?? [])
 
-  const zones = computed<VenueZone[]>(() => {
-    if (hasDeployedContracts() && metadata.value?.venueMap?.zones?.length) {
-      return metadata.value.venueMap.zones
-    }
-    return DEFAULT_ZONES
-  })
+  const zones = computed<VenueZone[]>(() => metadata.value?.venueMap?.zones ?? DEFAULT_ZONES)
 
-  const schedule = computed<ScheduleEntry[]>(() => {
-    if (hasDeployedContracts() && metadata.value?.schedule?.length) {
-      return metadata.value.schedule
-    }
-    // Same fallback as useSchedule (program page) so the map's session
-    // strips and the program list always agree on mock data.
-    return createLiveSchedule()
-  })
+  const schedule = computed<ScheduleEntry[]>(() => metadata.value?.schedule ?? [])
 
   const blocks = computed(() => VENUE_BLOCKS)
 
@@ -84,12 +65,8 @@ export function useAttendeeMap() {
     markers.value.find(m => m.id === _selectedMarkerId.value) ?? null,
   )
 
-  // True once the marker set is final (mock mode, or festival metadata
-  // resolved). Consumed by e2e to avoid selecting a mock marker that the real
-  // metadata then replaces, dropping the selection.
-  const markersReady = computed(
-    () => !hasDeployedContracts() || metadata.value !== null,
-  )
+  // True once the festival metadata has resolved (so the marker set is final).
+  const markersReady = computed(() => metadata.value !== null)
 
   function select(marker: VenueMarker) {
     _userSpot.value = null

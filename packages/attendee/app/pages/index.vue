@@ -24,8 +24,6 @@ import {
   getMarkerLocationLabel,
   resolveLocationLabel,
 } from "@festival/shared/venue/floors";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import { formatTimeBerlin } from "@festival/shared/utils/time";
 
@@ -61,21 +59,14 @@ const {
 const nowDate = useNow();
 const now = computed(() => nowDate.value.getTime());
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
+const venueMarkers = computed(
+  () => festivalMetadata.value?.venueMap?.markers ?? [],
+);
 
 // ── Section 4: Host your own session / My session card ──
 
 const userH160 = computed(() => {
   if (!wallet.isConnected) return null;
-  if (!hasDeployedContracts()) return "0x" + "0".repeat(39) + "1";
   return isValidEvmAddress(wallet.address)
     ? wallet.address.toLowerCase()
     : ss58ToH160(wallet.address).toLowerCase();

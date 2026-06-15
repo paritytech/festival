@@ -1,10 +1,7 @@
 import { batchRead } from '@festival/shared/contracts/multicall'
 import { FestivalABI, FestivalSessionABI, AttendancePOAPABI } from '@festival/shared/contracts/abis'
 import { FESTIVAL_POAP_ADDRESS } from '@festival/shared/contracts/addresses'
-import {
-  hasDeployedContracts,
-  isNonZeroCid,
-} from '@festival/shared/contracts/festival-reads'
+import { isNonZeroCid } from '@festival/shared/contracts/festival-reads'
 import { ROLES } from '@festival/shared/contracts/types'
 import type { FestivalDetails, SessionDetails, POAPData } from '@festival/shared/contracts/types'
 import type { FestivalMetadata, SubEventMetadata } from '@festival/shared/metadata/schemas'
@@ -42,8 +39,6 @@ export async function bootLoadAdmin(
   userAddress: `0x${string}` | null,
   options: BootLoadOptions = {},
 ): Promise<void> {
-  if (!hasDeployedContracts()) return
-
   festivalState.loading = true
   festivalState.error = null
   festivalState.user.address = userAddress

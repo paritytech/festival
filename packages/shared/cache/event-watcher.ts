@@ -1,7 +1,6 @@
 import { AbiEvent } from 'ox'
 import { useMainClient } from '../host/client'
 import { FestivalABI } from '../contracts/abis'
-import { hasDeployedContracts } from '../contracts/festival-reads'
 
 function bytesToHex(bytes: Uint8Array): `0x${string}` {
   let hex = '0x'
@@ -63,10 +62,6 @@ export function watchFestivalEvents(
   festivalAddress: `0x${string}`,
   handlers: FestivalEventHandlers,
 ): { unsubscribe: () => void } {
-  if (!hasDeployedContracts()) {
-    return { unsubscribe: () => {} }
-  }
-
   const { api } = useMainClient()
   const normalizedAddress = festivalAddress.toLowerCase()
   let subscription: { unsubscribe: () => void } | null = null

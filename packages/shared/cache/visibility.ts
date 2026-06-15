@@ -1,5 +1,4 @@
 import { onUnmounted } from 'vue'
-import { hasDeployedContracts } from '../contracts/festival-reads'
 
 /**
  * Watch for visibility changes (tab/app returning to foreground) and run
@@ -12,10 +11,6 @@ import { hasDeployedContracts } from '../contracts/festival-reads'
 export function useVisibilityReconcile(
   onVisible: () => Promise<void> | void,
 ): { stop: () => void } {
-  if (!hasDeployedContracts()) {
-    return { stop: () => {} }
-  }
-
   let reconciling = false
 
   async function handler() {
