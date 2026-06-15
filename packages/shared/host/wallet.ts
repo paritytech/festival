@@ -189,18 +189,33 @@ export const useWalletStore = defineStore('wallet', () => {
     isReady.value = true
   }
 
-  async function init() {
-    if (typeof window === 'undefined') return
+  // Re-entrant init. Account setup can fail transiently (host account
+  // provisioning interrupted by backgrounding, getProductAccount timeout),
+  // so callers (visibility handlers, check-in polls) retry by calling init()
+  // again. Concurrent calls share the in-flight attempt; a connected wallet
+  // makes it a no-op.
+  let initPromise: Promise<void> | null = null
 
-    try {
-      if (isInHost()) {
-        await initHost()
-      } else {
-        await initStandalone()
+  function init(): Promise<void> {
+    if (typeof window === 'undefined' || isConnected.value) return Promise.resolve()
+    if (initPromise) return initPromise
+
+    isInitializing.value = true
+    initPromise = (async () => {
+      try {
+        if (isInHost()) {
+          await initHost()
+        } else {
+          await initStandalone()
+        }
+      } catch (error) {
+        console.error('[Wallet] Initialization error:', error)
       }
-    } catch (error) {
-      console.error('[Wallet] Initialization error:', error)
-    }
+    })().finally(() => {
+      isInitializing.value = false
+      initPromise = null
+    })
+    return initPromise
   }
 
   function selectAccount(account: WalletAccount) {
@@ -295,11 +310,9 @@ export const useWalletStore = defineStore('wallet', () => {
     }
   }
 
-  // Initialize wallet. Always attempt, then mark init done
+  // Initialize wallet. Always attempt; init() manages isInitializing.
   if (typeof window !== 'undefined') {
-    init().finally(() => {
-      isInitializing.value = false
-    })
+    void init()
   }
 
   return {

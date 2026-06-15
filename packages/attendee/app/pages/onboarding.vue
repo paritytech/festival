@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { useRegistration } from "~/composables/useRegistration";
+import { useCheckInPoll } from "~/composables/useCheckInPoll";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
+
+// Attendees sit on this screen waiting to be scanned, so it can't rely solely
+// on the event watcher / boot load having succeeded. Poll-reconcile check-in
+// state (and retry a dead wallet connection) until checked in.
+useCheckInPoll();
 </script>
 
 <template>

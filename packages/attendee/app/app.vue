@@ -90,12 +90,14 @@ useFestivalWatcher(FESTIVAL_ADDRESS, {
 })
 
 // Visibility change as safety net — catches events lost during WebSocket
-// suspension. Reconciliation runs the same bootLoad with `at: 'finalized'`
-// so we converge to ground-truth state.
+// suspension. Reads at best, like every other state source (watcher, tx
+// tracking): all festival state is monotonic, so a finalized read could only
+// regress fresher best-derived state (e.g. revert a just-landed check-in for
+// the length of the finality lag).
 useVisibilityReconcile(() => {
   const userH160 = wallet.isConnected ? walletAddressToH160(wallet.address) : null
   void announcements.reloadIfChanged()
-  return bootLoadAttendee(userH160, { at: 'finalized' })
+  return bootLoadAttendee(userH160)
 })
 
 function shortenAddr(addr: string) {
