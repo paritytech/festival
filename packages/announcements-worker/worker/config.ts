@@ -47,10 +47,7 @@ export const READ_ONLY_ORIGIN =
 /** Bot + room identity surfaced in the host contact list / chat. */
 export const BOT_ID = "festival-announcements-bot";
 export const ROOM_ID = "festival-announcements-room";
-export const BOT_NAME = "Festival Announcements";
-
-/** Poll cadence for new announcements. Only ticks while the host is open. */
-export const POLL_INTERVAL_MS = 30_000;
+export const BOT_NAME = "Web3 Summit";
 
 /** hostLocalStorage key holding the body CIDs already posted to chat. */
 export const SEEN_CIDS_KEY = "festival-announcements:seen-cids";
