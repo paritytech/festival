@@ -4,9 +4,6 @@ import { useSubEventManage } from "~/composables/useSubEventManage";
 import { useSubEvents } from "~/composables/useSubEvents";
 import { useFestival } from "~/composables/useFestival";
 import { useNow } from "~/composables/useNow";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
-import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
 import type { SubEventMetadata } from "@festival/shared/metadata/schemas";
 import { randomAnonymousSpeakerName } from "@festival/shared/metadata/anonymousSpeaker";
 import { isValidEvmAddress } from "@festival/shared/utils/address";
@@ -98,25 +95,13 @@ const festivalDays = computed(() => {
 
 // ── Venue markers ──
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
+const venueMarkers = computed(
+  () => festivalMetadata.value?.venueMap?.markers ?? [],
+);
 
-const venueZones = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.zones?.length
-  ) {
-    return festivalMetadata.value.venueMap.zones;
-  }
-  return DEFAULT_ZONES;
-});
+const venueZones = computed(
+  () => festivalMetadata.value?.venueMap?.zones ?? [],
+);
 
 const badgePixels = computed(() => {
   const hex = metadata.value?.badgeHex;

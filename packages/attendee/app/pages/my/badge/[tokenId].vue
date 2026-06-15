@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { MOCK_VENUE_MAP } from '@festival/shared/mocks'
 import { usePoaps } from '~/composables/usePoaps'
 import { useSubEvents } from '~/composables/useSubEvents'
 import { useFestival } from '~/composables/useFestival'
@@ -9,7 +8,6 @@ import { deriveFestivalColor } from '@festival/shared/utils/festivalColor'
 import { shortenAddress } from '@festival/shared/utils/address'
 import FestivalPoapBadge from '~/components/FestivalPoapBadge.vue'
 import { resolveLocationLabel } from '@festival/shared/venue/floors'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { formatTimeBerlin, formatDateBerlin } from '@festival/shared/utils/time'
 import {
   createBadge3D, generateEdgeColors, hexToRgb, darkenRgb,
@@ -51,12 +49,9 @@ const subEvent = computed(() => {
   ) || null
 })
 
-const venueMarkers = computed(() => {
-  if (hasDeployedContracts() && festivalMetadata.value?.venueMap?.markers?.length) {
-    return festivalMetadata.value.venueMap.markers
-  }
-  return MOCK_VENUE_MAP.markers
-})
+const venueMarkers = computed(
+  () => festivalMetadata.value?.venueMap?.markers ?? [],
+)
 
 // ── Display data ──
 

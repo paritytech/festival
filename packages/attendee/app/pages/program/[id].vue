@@ -5,9 +5,6 @@ import { useBookmarks } from "~/composables/useBookmarks";
 import { useFestival } from "~/composables/useFestival";
 import { useRegistration } from "~/composables/useRegistration";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
-import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
 import { getMarkerLocationLabel } from "@festival/shared/venue/floors";
 import { useBulletinImage } from "~/composables/useBulletinImage";
 import { formatTimeBerlin, formatDateBerlin, parseFestivalDate, isSameDay } from "@festival/shared/utils/time";
@@ -32,19 +29,13 @@ watch(
 
 const showToast = ref(false);
 
-const venueMarkers = computed(() => {
-  if (hasDeployedContracts() && metadata.value?.venueMap?.markers?.length) {
-    return metadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
+const venueMarkers = computed(
+  () => metadata.value?.venueMap?.markers ?? [],
+);
 
-const venueZones = computed(() => {
-  if (hasDeployedContracts() && metadata.value?.venueMap?.zones?.length) {
-    return metadata.value.venueMap.zones;
-  }
-  return DEFAULT_ZONES;
-});
+const venueZones = computed(
+  () => metadata.value?.venueMap?.zones ?? [],
+);
 
 const bookmarked = computed(() => (entry.value ? isBookmarked(entry.value.id) : false));
 

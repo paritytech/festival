@@ -9,11 +9,8 @@ import { useHiddenSessions } from "~/composables/useHiddenSessions";
 import { useBookmarks } from "~/composables/useBookmarks";
 import { useNow } from "~/composables/useNow";
 import { useSessionWatcher } from "~/composables/useSessionWatcher";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
-import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
 import { resolveLocationLabel } from "@festival/shared/venue/floors";
 import { useBulletinImage } from "~/composables/useBulletinImage";
 import {
@@ -120,25 +117,13 @@ function dismissBadgeEarned() {
   badgeEarnedOpen.value = false;
 }
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
+const venueMarkers = computed(
+  () => festivalMetadata.value?.venueMap?.markers ?? [],
+);
 
-const venueZones = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.zones?.length
-  ) {
-    return festivalMetadata.value.venueMap.zones;
-  }
-  return DEFAULT_ZONES;
-});
+const venueZones = computed(
+  () => festivalMetadata.value?.venueMap?.zones ?? [],
+);
 
 const speakerLabel = computed(() => {
   const speakers = subEvent.value?.metadata.speakers ?? [];

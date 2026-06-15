@@ -2,8 +2,6 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { isHappeningNow, timeUntil, formatTimeBerlin, parseFestivalDate } from '@festival/shared/utils/time'
 import type { ScheduleEntry } from '@festival/shared/metadata/schemas'
-import { MOCK_VENUE_MAP } from '@festival/shared/mocks'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { getMarkerLocationLabel } from '@festival/shared/venue/floors'
 import { useFestival } from '~/composables/useFestival'
 
@@ -12,12 +10,7 @@ const props = defineProps<{
 }>()
 
 const { metadata } = useFestival()
-const venueMarkers = computed(() => {
-  if (hasDeployedContracts() && metadata.value?.venueMap?.markers?.length) {
-    return metadata.value.venueMap.markers
-  }
-  return MOCK_VENUE_MAP.markers
-})
+const venueMarkers = computed(() => metadata.value?.venueMap?.markers ?? [])
 
 const ROTATE_INTERVAL = 5000 // 5 seconds per card
 const PAUSE_DURATION = 15000 // 15s pause after manual interaction
