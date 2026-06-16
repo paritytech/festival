@@ -1131,7 +1131,16 @@ export async function createVenueMap(
       allowMinLat >= allowMaxLat
         ? midLat
         : Math.max(allowMinLat, Math.min(allowMaxLat, c.lat));
-    if (lng !== c.lng || lat !== c.lat) map.setCenter([lng, lat]);
+    if (lng !== c.lng || lat !== c.lat) {
+      // Glide the correction instead of teleporting, so zooming/panning into
+      // a border rubber-bands back like a native map. Guard re-entry so the
+      // ease's own moveend doesn't re-trigger this clamp.
+      isApplyingCameraIntent = true;
+      map.once("moveend", () => {
+        isApplyingCameraIntent = false;
+      });
+      map.easeTo({ center: [lng, lat], duration: 150, essential: true });
+    }
   }
 
   /** Linearly scales the zone-label font size from LABEL_MIN_PX at fit zoom
@@ -1207,6 +1216,14 @@ export async function createVenueMap(
     const zoomDelta =
       focusOpts.targetZoomDelta ?? Math.max(category.revealTier - 1, 1);
     const maxZoom = Math.min(fitZoom + zoomDelta, map.getMaxZoom());
+    // The asymmetric bottom padding deliberately offsets the centre upward so
+    // the pin clears the detail sheet. Guard against clampCameraCenter, which
+    // measures from the symmetric viewport and would otherwise snap that
+    // offset back on the fly's moveend.
+    isApplyingCameraIntent = true;
+    map.once("moveend", () => {
+      isApplyingCameraIntent = false;
+    });
     map.fitBounds(tinyBoundsAround(lng, lat), {
       maxZoom,
       padding: {
@@ -1228,6 +1245,11 @@ export async function createVenueMap(
       fitZoom + (focusOpts.targetZoomDelta ?? 2),
       map.getMaxZoom(),
     );
+    // See doFocusMarker: shield the padded focus offset from clampCameraCenter.
+    isApplyingCameraIntent = true;
+    map.once("moveend", () => {
+      isApplyingCameraIntent = false;
+    });
     map.fitBounds(tinyBoundsAround(lng, lat), {
       maxZoom,
       padding: {
