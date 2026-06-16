@@ -17,6 +17,7 @@ const props = defineProps<{
   festivalDays: FestivalDay[]
   validStartSlots: number[]
   validEndSlots: number[]
+  fullDateKeys?: Set<string>
 }>()
 
 const emit = defineEmits<{
@@ -70,6 +71,7 @@ defineExpose({ canProceed })
     <SessionDatePicker
       :days="festivalDays"
       :model-value="modelValue.dateKey"
+      :disabled-date-keys="fullDateKeys"
       @update:model-value="patch('dateKey', $event)"
     />
 

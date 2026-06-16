@@ -6,7 +6,13 @@ import PillButton from './ui/PillButton.vue'
 const props = defineProps<{
   days: FestivalDay[]
   modelValue: string | null
+  /** Berlin dateKeys the user can't pick (e.g. per-day session cap reached). */
+  disabledDateKeys?: Set<string>
 }>()
+
+function isDisabled(dateKey: string): boolean {
+  return props.disabledDateKeys?.has(dateKey) ?? false
+}
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -30,6 +36,7 @@ function shortLabel(longLabel: string): string {
 }
 
 function selectDay(dateKey: string) {
+  if (isDisabled(dateKey)) return
   emit('update:modelValue', dateKey)
   expanded.value = false
 }
@@ -84,7 +91,9 @@ watch(
         :key="day.dateKey"
         type="button"
         :data-testid="`session-date-option-${day.dateKey}`"
-        class="w-full flex items-center justify-between p-4 rounded-xl text-sm font-medium transition-colors bg-surface-2 text-text-and-icons-primary"
+        :disabled="isDisabled(day.dateKey)"
+        :aria-disabled="isDisabled(day.dateKey)"
+        class="w-full flex items-center justify-between p-4 rounded-xl text-sm font-medium transition-colors bg-surface-2 text-text-and-icons-primary disabled:opacity-40 disabled:cursor-not-allowed"
         @click="selectDay(day.dateKey)"
       >
         <span>{{ day.label }}</span>

@@ -1,9 +1,14 @@
 import { computed } from 'vue'
-import { getMaxSessionsTotal } from '@festival/shared/contracts/types'
+import {
+  MAX_SESSIONS_PER_DAY,
+  getMaxSessionsTotal,
+} from '@festival/shared/contracts/types'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { walletAddressToH160 } from '@festival/shared/utils/address'
+import { toBerlinDateKey } from '@festival/shared/utils/time'
+import { festivalState } from '@festival/shared/cache/festival-state'
+import { hasPending } from '@festival/shared/cache/pending'
 import { useFestival } from './useFestival'
-import { useSubEvents } from './useSubEvents'
 
 /**
  * Session creation limit for the connected user.
@@ -18,7 +23,6 @@ import { useSubEvents } from './useSubEvents'
  */
 export function useSessionLimit() {
   const { details } = useFestival()
-  const { subEvents } = useSubEvents()
   const wallet = useWalletStore()
 
   const userH160 = computed(() => {
@@ -31,16 +35,55 @@ export function useSessionLimit() {
     return getMaxSessionsTotal(details.value.startTime, details.value.endTime)
   })
 
-  const used = computed(() => {
+  // Sessions that consume one of the creator's per-day slots.
+  // Mirrors Festival.cancelSession: a creator self-cancel below the flag
+  // threshold decrements sessionsPerDay (slot returned); an admin/manager
+  // cancel at/above the flag threshold leaves the slot consumed.
+  const countableSessions = computed(() => {
     const u = userH160.value
-    if (!u) return 0
-    return subEvents.value.filter((se) => se.creator.toLowerCase() === u).length
+    if (!u) return []
+    return festivalState.sessions.filter((s) => {
+      if (s.details.creator.toLowerCase() !== u) return false
+      // Optimistically treat the creator's own pending self-cancel as freeing
+      // the slot (only the creator's device sees their own pending cancels).
+      if (hasPending('cancelSession', s.address)) return false
+      if (!s.details.cancelled) return true
+      return s.details.flagCount >= s.details.flagThreshold
+    })
   })
+
+  const used = computed(() => countableSessions.value.length)
 
   const hasHitLimit = computed(
     () => totalLimit.value > 0 && used.value >= totalLimit.value,
   )
   const canHostMore = computed(() => !hasHitLimit.value)
 
-  return { totalLimit, used, hasHitLimit, canHostMore }
+  /** Berlin dateKey → number of slots the user has consumed on that day. */
+  const usedByDateKey = computed<Map<string, number>>(() => {
+    const map = new Map<string, number>()
+    for (const s of countableSessions.value) {
+      const key = toBerlinDateKey(new Date(Number(s.details.startTime) * 1000))
+      map.set(key, (map.get(key) ?? 0) + 1)
+    }
+    return map
+  })
+
+  /** Berlin dateKeys where the user has reached MAX_SESSIONS_PER_DAY. */
+  const fullDateKeys = computed<Set<string>>(() => {
+    const set = new Set<string>()
+    for (const [key, count] of usedByDateKey.value) {
+      if (count >= MAX_SESSIONS_PER_DAY) set.add(key)
+    }
+    return set
+  })
+
+  return {
+    totalLimit,
+    used,
+    hasHitLimit,
+    canHostMore,
+    usedByDateKey,
+    fullDateKeys,
+  }
 }
