@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import type { ScheduleEntry } from '@festival/shared/metadata/schemas'
+import type { ScheduleEntry, SessionCategory } from '@festival/shared/metadata/schemas'
 import { isHappeningNow, toBerlinDateKey, formatDateBerlin, berlinHourOf, parseFestivalDate } from '@festival/shared/utils/time'
 import { berlinHourToDate } from '@festival/shared/sessions/timeWindow'
 import { useSchedule } from './useSchedule'
@@ -67,6 +67,31 @@ export function isItemPast(item: TimelineItem, now: number = Date.now()): boolea
 
 export function getItemId(item: TimelineItem): string {
   return item.type === 'official' ? item.entry.id : item.subEvent.address
+}
+
+// ── Category ──
+//
+// The timeline only cares whether an item is a schedule entry or a sub-event.
+// Activations are schedule entries we tagged via `ScheduleEntry.category`, so we
+// read the category off that rather than add a third variant to the union.
+// CATEGORY_STYLE holds the label and color for each one. A new category needs an
+// entry there, a `--color-<name>` token in main.css, and a pill in the legend
+// (pages/program/index.vue).
+
+export type CategoryStyle = { label: string; color: string }
+
+export const CATEGORY_STYLE: Record<SessionCategory, CategoryStyle> = {
+  official: { label: 'Official', color: '#fafaf9' },
+  community: { label: 'Community', color: '#9462FA' },
+  activations: { label: 'Activations', color: '#FFB300' },
+}
+
+export function scheduleEntryCategory(entry: ScheduleEntry): SessionCategory {
+  return entry.category === 'activations' ? 'activations' : 'official'
+}
+
+export function getItemCategory(item: TimelineItem): SessionCategory {
+  return item.type === 'community' ? 'community' : scheduleEntryCategory(item.entry)
 }
 
 // ── Composable ──

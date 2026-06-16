@@ -4,6 +4,8 @@ import {
   isItemOngoing,
   isItemPast,
   getItemId,
+  getItemCategory,
+  CATEGORY_STYLE,
 } from "~/composables/useProgramTimeline";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import {
@@ -53,9 +55,7 @@ const isOwner = computed(() => {
 
 const accentColor = computed(() => {
   if (past.value) return "#44403c"; // stone-700
-  if (props.item.type === "community") return "#9462FA"; // --color-community
-  // official (ongoing or upcoming). Always white
-  return "#fafaf9"; // text-primary
+  return CATEGORY_STYLE[getItemCategory(props.item)].color;
 });
 
 const cardClass = computed(() => {

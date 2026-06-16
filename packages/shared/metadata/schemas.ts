@@ -70,6 +70,18 @@ export interface VenueMapData {
   markers: VenueMarker[]
 }
 
+/**
+ * What an attendee sees on a session: its accent color and its legend label.
+ * `community` is always a sub-event. `official` and `activations` are both
+ * schedule entries, told apart only by `ScheduleEntry.category`. Use
+ * `activations` for things that run all day next to the talks; those also stay
+ * out of the "Upcoming talks" card.
+ */
+export type SessionCategory = 'official' | 'community' | 'activations'
+
+/** Which categories a schedule entry may use. Sub-events are always `community`. */
+export type ScheduleEntryCategory = Exclude<SessionCategory, 'community'>
+
 /** A single schedule entry */
 export interface ScheduleEntry {
   /** Stable unique ID */
@@ -85,6 +97,8 @@ export interface ScheduleEntry {
   venueMarkerId?: string
   /** If this schedule entry corresponds to an on-chain sub-event */
   subEventAddress?: string
+  /** Missing means 'official'. */
+  category?: ScheduleEntryCategory
 }
 
 /** Festival metadata JSON schema (stored on Bulletin Chain) */

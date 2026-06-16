@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import { type ScheduleEntry } from "./config";
 import {
+  activationsFrom,
   announcementItemFrom,
   talksFrom,
   timeWindowItems,
@@ -98,6 +99,53 @@ describe("talksFrom", () => {
       ["soon", "later"],
     );
     assert.equal(upcomingItems(items, new Date(2027, 0, 1).getTime()).length, 3);
+  });
+
+  it("excludes activations (all-day programming, any location)", () => {
+    const items = talksFrom({
+      ...festival,
+      schedule: [
+        ...festival.schedule,
+        {
+          // Runs all day, and where it happens doesn't matter. Activations are
+          // filtered out by category, never by location.
+          ...entry("allday", "2026-06-11T09:00:00", "2026-06-11T20:00:00"),
+          category: "activations",
+        },
+      ],
+    });
+    assert.deepEqual(
+      items.map((i) => i.id),
+      ["past", "soon", "later"],
+    );
+  });
+});
+
+describe("activationsFrom", () => {
+  const entry = (id: string, start: string, end: string): ScheduleEntry => ({
+    id,
+    start,
+    end,
+    title: `Activation ${id}`,
+    speakers: ["Ada"],
+  });
+  const festival = {
+    name: "Fest",
+    markerLabels: new Map<string, string>(),
+    schedule: [
+      { ...entry("a-late", "2026-06-12T09:00:00", "2026-06-12T20:00:00"), category: "activations" as const },
+      { ...entry("a-early", "2026-06-10T09:00:00", "2026-06-10T20:00:00"), category: "activations" as const },
+      entry("talk", "2026-06-11T14:00:00", "2026-06-11T15:00:00"),
+    ],
+  };
+
+  it("keeps only activations, sorted by start, with kindLabel 'Activation'", () => {
+    const items = activationsFrom(festival);
+    assert.deepEqual(
+      items.map((i) => i.id),
+      ["a-early", "a-late"],
+    );
+    assert.ok(items.every((i) => i.kindLabel === "Activation"));
   });
 });
 

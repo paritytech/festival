@@ -43,7 +43,7 @@ const MAP_PATH = "/#/map";
 
 export const CARD_MESSAGE_TYPE = "card";
 
-export type CardKind = "welcome" | "announcements" | "talks" | "sessions";
+export type CardKind = "welcome" | "announcements" | "talks" | "sessions" | "activations";
 
 export type CardPayload =
   | { kind: CardKind }
@@ -73,7 +73,7 @@ const LOAD_TIMEOUT_MS = 12_000;
 type ResolvedData =
   | { kind: "welcome"; festivalName: string; subscribed: boolean }
   | { kind: "announcements"; items: AnnouncementItem[]; festivalName: string }
-  | { kind: "talks" | "sessions"; items: ScheduleItem[] }
+  | { kind: "talks" | "sessions" | "activations"; items: ScheduleItem[] }
   | { kind: "timeQuery"; min: number; items: ScheduleItem[] }
   | { kind: "announcement"; item: AnnouncementItem };
 
@@ -82,7 +82,7 @@ export interface CardController {
   /** Pre-seed a freshly posted schedule card's page (typed "see more" flow). */
   seedPage(messageId: string, page: number): void;
   /** Last schedule card the user saw — kind + current page. */
-  lastSchedule(): { kind: "talks" | "sessions"; page: number } | null;
+  lastSchedule(): { kind: "talks" | "sessions" | "activations"; page: number } | null;
 }
 
 export function createCardController(deps: {
@@ -96,7 +96,7 @@ export function createCardController(deps: {
   onResume: () => void;
 }): CardController {
   const states = new Map<string, CardState>();
-  let lastSchedule: { kind: "talks" | "sessions"; page: number } | null = null;
+  let lastSchedule: { kind: "talks" | "sessions" | "activations"; page: number } | null = null;
 
   function getState(messageId: string): CardState {
     let state = states.get(messageId);
@@ -140,6 +140,8 @@ export function createCardController(deps: {
         return { kind: "talks", items: upcomingItems(snapshot.talks) };
       case "sessions":
         return { kind: "sessions", items: upcomingItems(snapshot.sessions) };
+      case "activations":
+        return { kind: "activations", items: upcomingItems(snapshot.activations) };
       case "timeQuery":
         return {
           kind: "timeQuery",
@@ -156,7 +158,8 @@ export function createCardController(deps: {
       case "announcements":
         return announcementsCard(data.items, data.festivalName);
       case "talks":
-      case "sessions": {
+      case "sessions":
+      case "activations": {
         const pages = Math.max(1, Math.ceil(data.items.length / PAGE_SIZE));
         state.page = ((state.page % pages) + pages) % pages;
         lastSchedule = { kind: data.kind, page: state.page };
@@ -205,7 +208,12 @@ export function createCardController(deps: {
         return;
       }
       if (verb === "qa") {
-        if (arg === "announcements" || arg === "talks" || arg === "sessions") {
+        if (
+          arg === "announcements" ||
+          arg === "talks" ||
+          arg === "sessions" ||
+          arg === "activations"
+        ) {
           deps.launchCard({ kind: arg });
         }
         return;

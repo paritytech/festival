@@ -135,6 +135,7 @@ function moveDown(id: string) {
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1">
               <h4 class="font-medium text-sm">{{ entry.title }}</h4>
+              <span v-if="entry.category === 'activations'" class="text-[10px] px-1.5 py-0.5 rounded font-medium" :style="{ backgroundColor: '#FFB300', color: '#000000' }">Activations</span>
               <span v-if="scheduleEntryStatus(entry.id) === 'new'" class="text-[10px] px-1.5 py-0.5 rounded bg-success/12 text-success font-medium">New</span>
               <span v-else-if="scheduleEntryStatus(entry.id) === 'modified'" class="text-[10px] px-1.5 py-0.5 rounded bg-warning/12 text-warning font-medium">Edited</span>
             </div>
@@ -155,6 +156,7 @@ function moveDown(id: string) {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="text-xs text-text-muted">{{ formatTime(entry.start) }} – {{ formatTime(entry.end) }}</span>
+              <span v-if="entry.category === 'activations'" class="text-[10px] px-1.5 py-0.5 rounded font-medium" :style="{ backgroundColor: '#FFB300', color: '#000000' }">Activations</span>
               <span v-if="scheduleEntryStatus(entry.id) === 'new'" class="text-[10px] px-1.5 py-0.5 rounded bg-success/12 text-success font-medium">New</span>
               <span v-else-if="scheduleEntryStatus(entry.id) === 'modified'" class="text-[10px] px-1.5 py-0.5 rounded bg-warning/12 text-warning font-medium">Edited</span>
             </div>

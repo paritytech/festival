@@ -354,12 +354,16 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
           <span class="text-xs text-text-muted">Sessions Type</span>
           <div class="flex items-center gap-3 text-xs">
             <span class="flex items-center gap-1.5">
-              <span class="w-[3px] h-3.5 rounded-full bg-white" />
+              <span class="w-[3px] h-3.5 rounded-full bg-official" />
               <span class="text-white">Official</span>
             </span>
             <span class="flex items-center gap-1.5">
               <span class="w-[3px] h-3.5 rounded-full bg-community" />
               <span class="text-white">Community</span>
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="w-[3px] h-3.5 rounded-full bg-activations" />
+              <span class="text-white">Activations</span>
             </span>
           </div>
         </div>
