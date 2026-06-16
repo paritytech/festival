@@ -32,14 +32,6 @@ const currentStep = ref(1)
 const current = computed(() => props.steps[currentStep.value - 1]!)
 const isLastStep = computed(() => currentStep.value === props.steps.length)
 
-function goBack() {
-  if (currentStep.value > 1) {
-    currentStep.value -= 1
-  } else {
-    router.back()
-  }
-}
-
 function goNext() {
   if (isLastStep.value) {
     router.push(props.finalRoute)
@@ -51,12 +43,9 @@ function goNext() {
 
 <template>
   <div class="-mx-4 flex flex-col min-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom))] bg-white text-black">
-    <!-- Header: back arrow + step progress -->
-    <div class="px-4 pt-4 pb-3 flex items-center gap-3 shrink-0">
-      <BackButton @click="goBack" />
-      <div class="flex-1">
-        <StepProgressBar :steps="steps.length" :current-step="currentStep" variant="dark" />
-      </div>
+    <!-- Header: step progress -->
+    <div class="px-4 pt-4 pb-3 shrink-0">
+      <StepProgressBar :steps="steps.length" :current-step="currentStep" variant="dark" />
     </div>
 
     <!-- Body: illustration + title -->
