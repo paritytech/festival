@@ -346,7 +346,7 @@ function formatDay(d: Date): string {
     @secondary="gate.onSecondary"
   />
 
-  <PassportOverlay v-if="passportOpen" :force-show-qr="true" @close="closePassport" />
+  <SessionQrOverlay v-if="passportOpen" @close="closePassport" />
 
   <BadgeEarnedScreen
     v-if="badgeEarnedOpen && subEvent"
@@ -359,7 +359,7 @@ function formatDay(d: Date): string {
   <SessionLocationView
     v-if="locationViewOpen && subEvent?.metadata.location"
     :location="subEvent.metadata.location"
-    :session-address="addr"
+    :detail-path="`/sessions/${addr}`"
     :markers="venueMarkers"
     :zones="venueZones"
     @close="locationViewOpen = false"

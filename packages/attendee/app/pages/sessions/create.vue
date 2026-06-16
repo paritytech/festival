@@ -7,6 +7,7 @@ import { usePoaps } from "~/composables/usePoaps";
 import { useRegistration } from "~/composables/useRegistration";
 import { useSubEvents } from "~/composables/useSubEvents";
 import { usePassGate } from "~/composables/usePassGate";
+import { useSessionLimit } from "~/composables/useSessionLimit";
 import { useNow } from "~/composables/useNow";
 import type { TxStatus } from "@festival/shared/contracts/write";
 import type { SubEventMetadata } from "@festival/shared/metadata/schemas";
@@ -40,6 +41,7 @@ const { festivalPoaps } = usePoaps();
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
 const { subEvents, reload: reloadSubEvents } = useSubEvents();
 const gate = usePassGate("create a session");
+const { fullDateKeys } = useSessionLimit();
 
 watch(
   isCheckedIn,
@@ -498,7 +500,7 @@ async function doCreate() {
     </div>
 
     <div v-if="currentStep < 4" class="px-4 pb-4">
-      <StepProgressBar :steps="4" :current-step="currentStep" />
+      <StepProgressBar :steps="3" :current-step="currentStep" />
     </div>
 
     <!-- Step content -->
@@ -522,6 +524,7 @@ async function doCreate() {
           :festival-days="festivalDays"
           :valid-start-slots="validStartSlots"
           :valid-end-slots="validEndSlots"
+          :full-date-keys="fullDateKeys"
           @update:model-value="Object.assign(form, $event)"
         />
       </div>
