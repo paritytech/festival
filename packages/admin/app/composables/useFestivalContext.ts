@@ -5,6 +5,7 @@ import type { FestivalMetadata } from '@festival/shared/metadata/schemas'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { readFestivalDetails } from '@festival/shared/contracts/festival-reads'
 import { festivalState } from '@festival/shared/cache/festival-state'
+import { computeSyncDecision } from './useFestivalContext.helpers'
 
 /** Deep-copy that works on Vue reactive proxies (structuredClone can't handle them). */
 function deepCopy<T>(obj: T): T {
@@ -20,6 +21,10 @@ export interface FestivalContext {
   isDirty: Ref<boolean>
   changedSections: Ref<string[]>
   totalChangeCount: Ref<number>
+  /** The on-chain metadataCid the draft/savedMetadata is currently based on. */
+  baseMetadataCid: Ref<string | null>
+  /** True when an external publish landed while the draft had unsaved edits. */
+  remoteChanged: Ref<boolean>
   publish: () => Promise<void>
   discardChanges: () => void
   txStatus: Ref<TxStatus>
@@ -50,6 +55,8 @@ export function provideFestivalContext(address: string) {
   const isDirty = ref(false)
   const changedSections = ref<string[]>([])
   const totalChangeCount = ref(0)
+  const baseMetadataCid = ref<string | null>(null)
+  const remoteChanged = ref(false)
 
   /** Empty baseline for comparison when no metadata has been published yet. */
   const emptyBaseline: FestivalMetadata = {
@@ -142,26 +149,41 @@ export function provideFestivalContext(address: string) {
     }
   }
 
-  function discardChanges() {
-    if (!savedMetadata.value) return
-    const fresh = deepCopy(savedMetadata.value)
+  /**
+   * Reset the editable `draft` in place to match `fresh`, preserving reactive
+   * array/object identities (splice arrays, replace nested object contents) so
+   * Vue's keyed lists and v-model bindings keep working. Used by both
+   * discardChanges() and the live on-chain sync below.
+   */
+  function seedDraftInPlace(fresh: FestivalMetadata) {
     draft.name = fresh.name
     draft.description = fresh.description
     draft.organizer = fresh.organizer
     draft.website = fresh.website
     draft.image = fresh.image
-    draft.tags.splice(0, draft.tags.length, ...fresh.tags)
+    draft.tags.splice(0, draft.tags.length, ...(fresh.tags ?? []))
     Object.assign(draft.location, fresh.location)
-    draft.schedule.splice(0, draft.schedule.length, ...fresh.schedule)
-    if (fresh.venueMap && draft.venueMap) {
-      draft.venueMap.markers.splice(0, draft.venueMap.markers.length, ...fresh.venueMap.markers)
-    } else if (fresh.venueMap) {
-      (draft as any).venueMap = fresh.venueMap
+    draft.schedule.splice(0, draft.schedule.length, ...(fresh.schedule ?? []))
+    if (fresh.venueMap) {
+      if (draft.venueMap) {
+        // Keep the markers array reference; replace its contents and the other
+        // venueMap fields (image/floors) so a full version swap fully syncs.
+        draft.venueMap.markers.splice(0, draft.venueMap.markers.length, ...(fresh.venueMap.markers ?? []))
+        Object.assign(draft.venueMap, { ...deepCopy(fresh.venueMap), markers: draft.venueMap.markers })
+      } else {
+        (draft as any).venueMap = deepCopy(fresh.venueMap)
+      }
+    } else {
+      delete (draft as any).venueMap
     }
-    if (fresh.social) {
-      draft.social = { ...fresh.social }
-    }
+    draft.social = fresh.social ? { ...fresh.social } : undefined
     draft.festivalPoapImage = fresh.festivalPoapImage
+  }
+
+  function discardChanges() {
+    if (!savedMetadata.value) return
+    seedDraftInPlace(deepCopy(savedMetadata.value))
+    remoteChanged.value = false
   }
 
   function scheduleEntryStatus(id: string): 'new' | 'modified' | 'unchanged' {
@@ -234,23 +256,56 @@ export function provideFestivalContext(address: string) {
     if (saved) draft.venueMap.markers.push(deepCopy(saved))
   }
 
-  // Seed savedMetadata + draft from festivalState once bootLoadAdmin lands
-  // and metadata resolves. Roles flow through `userRoles` directly via the
-  // computed above. No manual refresh needed.
-  let stop: (() => void) | null = null
-  stop = watch(
-    () => festivalState.festival?.metadata,
-    (meta) => {
-      if (!meta) return
-      stop?.()
-      savedMetadata.value = deepCopy(meta)
-      Object.assign(draft, deepCopy(meta))
-    },
-    { immediate: true },
+  /**
+   * Keep `savedMetadata` + `draft` in sync with the latest on-chain metadata.
+   *
+   * `festivalState.festival.metadata` is refreshed both by bootLoadAdmin's
+   * initial fetch AND by useFestivalWatcher on `MetadataUpdated` events, so a
+   * persistent watcher picks up cold-boot freshness and live external publishes
+   * alike. `savedMetadata` (the diff baseline) always tracks the freshest
+   * published state; the draft is only re-seeded when it has no unsaved edits —
+   * otherwise the user's edits are preserved and `remoteChanged` is flagged.
+   */
+  function syncFromChain() {
+    const fest = festivalState.festival
+    const meta = fest?.metadata
+    if (!meta) return
+    const incomingCid = fest.details.metadataCid
+
+    const baseline = savedMetadata.value ?? emptyBaseline
+    const decision = computeSyncDecision({
+      // Synchronous dirty check — never trust the debounced isDirty ref here.
+      draftJson: JSON.stringify(toRaw(draft)),
+      savedJson: JSON.stringify(baseline),
+      incomingCid,
+      baseCid: baseMetadataCid.value,
+    })
+
+    savedMetadata.value = deepCopy(meta)
+    baseMetadataCid.value = incomingCid
+
+    if (decision.action === 'adopt') {
+      seedDraftInPlace(deepCopy(meta))
+      remoteChanged.value = false
+    } else if (decision.action === 'flag') {
+      remoteChanged.value = true
+    }
+    // 'keep' → leave the draft and remoteChanged untouched.
+  }
+
+  // `flush: 'sync'` so a remote event can't slip past a just-typed edit inside
+  // the 300ms dirty-recalc debounce window. Watching both metadata and the cid
+  // covers the boot path (metadata set without a cid change) and the event path
+  // (applyMetadataUpdated sets both atomically).
+  watch(
+    () => [festivalState.festival?.metadata, festivalState.festival?.details.metadataCid] as const,
+    () => syncFromChain(),
+    { immediate: true, flush: 'sync' },
   )
 
   const context: FestivalContext = {
     address, userRoles, rolesReady, savedMetadata, draft, isDirty, changedSections, totalChangeCount,
+    baseMetadataCid, remoteChanged,
     publish, discardChanges, txStatus, txError,
     scheduleEntryStatus, deletedScheduleEntries, markerStatus, deletedMarkers,
     undoScheduleEntry, undoMarker, restoreDeletedScheduleEntry, restoreDeletedMarker,
