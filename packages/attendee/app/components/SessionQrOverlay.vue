@@ -30,7 +30,7 @@ watch(() => wallet.address, generateQR);
 <template>
   <Teleport to="body">
     <div
-      class="fixed inset-0 z-[2000] flex flex-col bg-black"
+      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-[2000] flex flex-col bg-black"
       data-testid="session-qr-overlay"
       role="dialog"
       aria-modal="true"
