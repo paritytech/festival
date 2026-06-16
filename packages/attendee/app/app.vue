@@ -51,6 +51,7 @@ const showAccountPicker = ref(false)
 // route.path === '/' — together, the overlay can only exist while the user
 // is actually on home.
 const {
+  passStatus,
   shouldShowPass,
   shouldShowBadge,
   isActivating: isPassActivating,
@@ -377,7 +378,9 @@ const bookmarkAlertMessage = computed(() => {
     :address="userH160 ?? ''"
     :is-activating="isPassActivating"
     :is-exploding="isPassExploding"
+    :dismissible="passStatus === 'deferred'"
     @activate="onActivatePass"
+    @dismiss="onDeferPass"
   />
   <ActivationModal
     variant="error"

@@ -13,12 +13,18 @@ const props = defineProps<{
   isActivating?: boolean
   /** Whether the post-success animation should play (converge + card explode). */
   isExploding?: boolean
+  /** Allow closing without activating — set when re-opened from a deferred state. */
+  dismissible?: boolean
 }>()
 
 const passLabelText = computed(() => props.passLabel || 'WEB3 SUMMIT 2026')
 const passTitleText = computed(() => props.passTitle || 'Festival Pass')
 
-const emit = defineEmits<{ activate: [] }>()
+const emit = defineEmits<{ activate: []; dismiss: [] }>()
+
+const canDismiss = computed(
+  () => props.dismissible && !props.isActivating && !props.isExploding,
+)
 
 const cardColor = computed(() => deriveFestivalColor(props.address || ''))
 
@@ -54,6 +60,20 @@ onMounted(() => {
       role="dialog"
       aria-labelledby="festival-pass-title"
     >
+      <!-- Close — only when re-opened voluntarily from the deferred state. -->
+      <button
+        v-if="canDismiss"
+        type="button"
+        class="close"
+        data-testid="festival-pass-close"
+        aria-label="Close"
+        @click="emit('dismiss')"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+
       <!-- Headline -->
       <h1 id="festival-pass-title" class="title">
         You've received<br />festival pass!
@@ -215,6 +235,22 @@ const particles: Particle[] = [
   align-items: stretch;
   padding-top: calc(var(--safe-top, 0px) + 56px);
   padding-bottom: calc(var(--safe-bottom, 0px) + 24px);
+}
+
+.close {
+  position: absolute;
+  top: calc(var(--safe-top, 0px) + 16px);
+  left: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  cursor: pointer;
 }
 
 .title {
