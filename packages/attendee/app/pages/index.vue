@@ -8,6 +8,7 @@ import { useSubEvents, type AttendeeSubEvent } from "~/composables/useSubEvents"
 import { useSessionLimit } from "~/composables/useSessionLimit";
 import { usePoaps } from "~/composables/usePoaps";
 import { useFestivalPass } from "~/composables/useFestivalPass";
+import { usePassGate } from "~/composables/usePassGate";
 import { useOnboardingSeen } from "~/composables/useOnboardingSeen";
 import {
   useProgramTimeline,
@@ -34,7 +35,12 @@ const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
 const { entries: scheduleEntries } = useSchedule();
 const { subEvents } = useSubEvents();
 const { collectibleSubEventPoaps } = usePoaps();
-const { passStatus, openActivation } = useFestivalPass();
+const { passStatus } = useFestivalPass();
+const passGate = usePassGate("use all Web3 Summit features");
+
+function onActivatePass() {
+  passGate.run(() => {});
+}
 const { has: hasSeenOnboarding } = useOnboardingSeen();
 const buildScheduleTo = computed(() =>
   hasSeenOnboarding("build-schedule") ? "/program" : "/program/welcome",
@@ -175,35 +181,43 @@ function getMyListRoute(item: TimelineItem): string {
       :festival-name="festivalMetadata?.name || 'Web3 Summit'"
     />
 
-    <!-- 2. Passport (+ deferred-pass activation CTA) -->
-    <div>
-      <HomePassport />
+    <!-- 2. Passport. When the pass is deferred, a dark "Activate your pass"
+         card sits behind the passport and peeks out at the bottom; both are
+         bound by one rounded, clipped container. -->
+    <div
+      v-if="passStatus === 'deferred'"
+      class="relative my-6 rounded-3xl overflow-hidden"
+    >
       <button
-        v-if="passStatus === 'deferred'"
         type="button"
-        class="w-full -mt-4 flex items-center justify-between gap-3 rounded-3xl bg-surface-2 px-5 py-4 text-activations"
+        class="absolute inset-0 flex items-end bg-surface-2 text-activations"
         data-testid="activate-pass-cta"
-        @click="openActivation"
+        aria-label="Activate your pass"
+        @click="onActivatePass"
       >
-        <span class="text-lg font-semibold">Activate your pass</span>
-        <svg
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <path
-            d="M5 12h14M13 6l6 6-6 6"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+        <span class="flex w-full items-center justify-between px-5 h-14">
+          <span class="text-lg font-semibold">Activate your pass</span>
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              d="M5 12h14M13 6l6 6-6 6"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
       </button>
+      <HomePassport class="relative z-[1] mb-14" />
     </div>
+    <HomePassport v-else class="my-6" />
 
     <!-- 2.5. Location (kept up top only when not yet checked in;
          once checked in it moves to the bottom of the page). -->
@@ -568,4 +582,11 @@ function getMyListRoute(item: TimelineItem): string {
       <HomeLocation />
     </template>
   </div>
+
+  <ActivationModal
+    :visible="passGate.state.value !== 'none'"
+    v-bind="passGate.modalProps.value"
+    @primary="passGate.onPrimary"
+    @secondary="passGate.onSecondary"
+  />
 </template>

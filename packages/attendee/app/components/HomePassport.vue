@@ -92,7 +92,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="rounded-3xl overflow-hidden my-6"
+    class="rounded-3xl overflow-hidden"
     style="background: linear-gradient(135deg, #FFFFFF 0%, #CFCFCF 100%)"
     data-testid="home-passport"
   >

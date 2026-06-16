@@ -48,7 +48,7 @@ useCheckInPoll();
       </h1>
     </div>
 
-    <HomePassport />
+    <HomePassport class="my-6" />
 
     <div class="px-4 pb-4 text-center text-sm text-text-and-icons-secondary">
       By continuing, you agree to the

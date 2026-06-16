@@ -299,15 +299,6 @@ export function useFestivalPass() {
     }
   }
 
-  // Deliberate re-open from the deferred state (home "Activate your pass" CTA).
-  // Routes through the overlay's activate() — pendingActivation is null — so the
-  // celebration plays, unlike the silent ensureAllowance() gated path.
-  function openActivation(): void {
-    if (isPassActive.value) return
-    activationFailed.value = false
-    if (phase.value === 'idle') phase.value = 'pass'
-  }
-
   // Imperative gated-action path: claim without overlay or animation.
   async function ensureAllowance(): Promise<boolean> {
     if (isPassActive.value) return true
@@ -379,7 +370,6 @@ export function useFestivalPass() {
     activate,
     retryActivation,
     defer,
-    openActivation,
     ensureAllowance,
     dismissBadge,
     refreshAllowance,

@@ -20,40 +20,28 @@ defineEmits<{
     <Transition name="fade">
       <div
         v-if="visible"
-        class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-[2200] bg-black/70 flex items-center justify-center px-6"
+        class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-[2200] bg-black/70 flex items-end justify-center"
         data-testid="activation-modal"
         role="dialog"
         aria-modal="true"
       >
         <div
-          class="w-full max-w-sm bg-surface-2 rounded-[28px] px-6 py-7 flex flex-col items-center gap-6"
+          class="w-full bg-surface-2 rounded-t-[32px] px-6 pt-8 pb-[calc(var(--safe-bottom)+24px)] flex flex-col items-center gap-6"
         >
           <!-- Icon + title + body -->
           <div class="flex flex-col items-center gap-3 text-center">
             <div
-              v-if="variant === 'error'"
-              class="w-16 h-16 rounded-full bg-danger flex items-center justify-center"
+              class="w-14 h-14 rounded-full flex items-center justify-center"
+              :class="variant === 'error' ? 'bg-danger' : 'bg-activations'"
             >
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 6v8" stroke="white" stroke-width="2.5" stroke-linecap="round" />
-                <circle cx="12" cy="17.5" r="1.4" fill="white" />
-              </svg>
-            </div>
-            <div
-              v-else
-              class="w-16 h-16 rounded-full bg-activations flex items-center justify-center"
-            >
-              <svg width="30" height="30" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M4 7a1 1 0 0 0-1 1v2.2a1.8 1.8 0 0 1 0 3.6V16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-2.2a1.8 1.8 0 0 1 0-3.6V8a1 1 0 0 0-1-1H4Z"
-                  fill="black"
-                />
-                <circle cx="10.2" cy="12" r="0.9" fill="#FFB300" />
-                <circle cx="13.8" cy="12" r="0.9" fill="#FFB300" />
-              </svg>
+              <img
+                :src="variant === 'error' ? '/error.svg' : '/confirmation_number.svg'"
+                alt=""
+                class="w-7 h-7"
+              />
             </div>
 
-            <h2 class="text-[26px] font-semibold leading-[32px] text-white">
+            <h2 class="text-[24px] font-semibold leading-[32px] text-white">
               {{ title }}
             </h2>
             <p class="text-base leading-5 text-white/70">{{ message }}</p>
