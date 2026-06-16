@@ -77,7 +77,16 @@ export function buildWindowedMetadata(nowSec: bigint = nowUnixSec()): MetadataWi
         title: 'Opening Keynote',
         description: 'E2E fixture session — schedule rendering check.',
         speakers: ['Alice', 'Bob'],
-        category: 'keynote',
+        category: 'official',
+      },
+      {
+        id: 'e2e-activation',
+        start: isoSec(scheduleStart),
+        end: isoSec(scheduleStart + 8n * 3600n),
+        title: 'All-Day Lounge',
+        description: 'E2E fixture activation — all-day programming, category rendering check.',
+        speakers: ['Carol'],
+        category: 'activations',
       },
     ],
     venueMap: {
@@ -137,7 +146,6 @@ export function buildSessionMetadata(): SessionMetadataFixture {
     description: 'Deterministic sub-event fixture used by the e2e seed script.',
     location: 'e2e-stage',
     speakers: ['Alice'],
-    category: 'workshop',
   }
   const bytes = new TextEncoder().encode(JSON.stringify(metadata))
   return { metadata, bytes }

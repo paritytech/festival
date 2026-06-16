@@ -14,8 +14,15 @@ import {
   type FestivalMetadata,
   type SubEventMetadata,
 } from "./config";
-import { announcementItemFrom, type FestivalInfo, talksFrom, toScheduleItem } from "./items";
+import { activationsFrom, announcementItemFrom, type FestivalInfo, talksFrom, toScheduleItem } from "./items";
 import { readSessions } from "./sessions";
+
+/**
+ * Snapshot schema version. Bump it whenever the snapshot's shape or filtering
+ * changes (like now, with activations dropped from `talks`), so a snapshot
+ * saved by an older worker gets thrown away instead of served stale.
+ */
+export const CARD_SNAPSHOT_VERSION = 2;
 
 /**
  * Everything the cards render, resolved in one sweep and serializable to
@@ -24,11 +31,15 @@ import { readSessions } from "./sessions";
  * exactly when cards are visible. Lists are complete; filtering is render-time.
  */
 export interface CardSnapshot {
+  /** Schema version (see CARD_SNAPSHOT_VERSION). */
+  version: number;
   /** Unix ms the snapshot was built. */
   at: number;
   festivalName: string;
   talks: ScheduleItem[];
   sessions: ScheduleItem[];
+  /** Programming that runs all day (category === 'activations'). */
+  activations: ScheduleItem[];
   /** Newest first, bodies included. */
   announcements: AnnouncementItem[];
 }
@@ -46,10 +57,12 @@ export async function buildSnapshot(): Promise<CardSnapshot> {
     }),
   ]);
   return {
+    version: CARD_SNAPSHOT_VERSION,
     at: Date.now(),
     festivalName: festival.name,
     talks: talksFrom(festival),
     sessions,
+    activations: activationsFrom(festival),
     announcements,
   };
 }

@@ -11,6 +11,7 @@ import { useFestival } from '~/composables/useFestival'
 import { useSubEvents } from '~/composables/useSubEvents'
 import { usePoaps } from '~/composables/usePoaps'
 import { bootLoadAttendee } from '~/composables/useBootLoad'
+import { refreshUserFestivalPoaps, refreshUserSessionPoaps } from '~/composables/usePoapRefresh'
 import { startCachePersistence, hydrateLastKnown } from '@festival/shared/cache/festival-state'
 import { startPendingReconcile } from '@festival/shared/cache/pending'
 import { useFestivalWatcher } from '@festival/shared/cache/useFestivalWatcher'
@@ -100,6 +101,18 @@ const announcements = useAnnouncements()
 const watcher = useFestivalWatcher(FESTIVAL_ADDRESS, {
   deferWhileLoading: festival.isLoading,
   onChannelMetadataUpdated: () => { void announcements.reload() },
+  // Live-populate the user's own POAP on check-in so the badge appears at once,
+  // instead of waiting for the next reconcile. Gated to self.
+  onCheckedIn: (attendee) => {
+    if (!wallet.isConnected) return
+    const me = walletAddressToH160(wallet.address)
+    if (attendee.toLowerCase() === me.toLowerCase()) void refreshUserFestivalPoaps(me)
+  },
+  onSessionCheckedIn: (sessionAddress, attendee) => {
+    if (!wallet.isConnected) return
+    const me = walletAddressToH160(wallet.address)
+    if (attendee.toLowerCase() === me.toLowerCase()) void refreshUserSessionPoaps(me, sessionAddress)
+  },
 })
 
 // Visibility change as safety net — catches events lost during WebSocket

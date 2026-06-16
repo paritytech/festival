@@ -93,12 +93,13 @@ describe("clampContent", () => {
 });
 
 describe("welcomeCard", () => {
-  it("shows the festival name, three launchers, and the broadcast toggle", () => {
+  it("shows the festival name, four launchers, and the broadcast toggle", () => {
     const card = welcomeCard("Web3 Summit 2026", false);
     assert.ok(allText(card).includes("Web3 Summit 2026"));
     assert.deepEqual(actions(card), [
       "qa:announcements",
       "qa:talks",
+      "qa:activations",
       "qa:sessions",
       "open:map",
       "sub:on",

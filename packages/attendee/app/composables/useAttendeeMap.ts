@@ -23,7 +23,7 @@ export type MapMode = 'outdoor' | 'indoor'
  *  accent color (program = white, community = purple). */
 export interface MapSessionStripData {
   kind: 'ongoing' | 'soon'
-  source: 'program' | 'community'
+  source: 'program' | 'community' | 'activations'
   title: string
   /** Minutes until start. Only set for kind 'soon'. */
   minutes?: number
@@ -151,7 +151,7 @@ export function useAttendeeMap() {
     for (const e of schedule.value) {
       if (e.venueMarkerId !== markerId) continue
       candidates.push({
-        source: 'program',
+        source: e.category === 'activations' ? 'activations' : 'program',
         title: e.title,
         startMs: parseFestivalDate(e.start).getTime(),
         endMs: parseFestivalDate(e.end).getTime(),

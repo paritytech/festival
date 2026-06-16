@@ -168,6 +168,8 @@ export function welcomeCard(festivalName: string, subscribed: boolean): Node {
     gap(8),
     qa("Upcoming talks", "qa:talks"),
     gap(8),
+    qa("Upcoming activations", "qa:activations"),
+    gap(8),
     qa("Community sessions", "qa:sessions"),
     gap(8),
     qa("Take me to the map", "open:map"),
@@ -233,12 +235,17 @@ function scheduleRow(item: ScheduleItem): Node {
 }
 
 export function scheduleCard(
-  kind: "talks" | "sessions",
+  kind: "talks" | "sessions" | "activations",
   items: ScheduleItem[],
   state: CardState,
 ): Node {
   const isTalks = kind === "talks";
-  const title = isTalks ? "Upcoming talks" : "Community sessions";
+  const isActivations = kind === "activations";
+  const title = isTalks
+    ? "Upcoming talks"
+    : isActivations
+      ? "Upcoming activations"
+      : "Community sessions";
   // Both kinds open the SPA's unified schedule (/#/program).
   const openCta = pill({ text: "Open schedule", clickAction: "open:schedule" }, [fillW]);
   if (items.length === 0) {
@@ -246,7 +253,11 @@ export function scheduleCard(
       header(title),
       divider(14),
       Txt(
-        isTalks ? "No talks on the schedule yet." : "No community sessions yet.",
+        isTalks
+          ? "No talks on the schedule yet."
+          : isActivations
+            ? "No activations scheduled yet."
+            : "No community sessions yet.",
         "body.large.regular",
         "fg.tertiary",
       ),

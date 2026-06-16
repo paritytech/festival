@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { useSchedule } from "~/composables/useSchedule";
+import { scheduleEntryCategory, CATEGORY_STYLE } from "~/composables/useProgramTimeline";
 import { useBookmarks } from "~/composables/useBookmarks";
 import { useFestival } from "~/composables/useFestival";
 import { useRegistration } from "~/composables/useRegistration";
@@ -18,6 +19,10 @@ const { metadata, isLoading: festivalLoading } = useFestival();
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
 
 const entry = computed(() => entries.value.find((e) => e.id === id));
+
+const categoryStyle = computed(
+  () => CATEGORY_STYLE[entry.value ? scheduleEntryCategory(entry.value) : "official"],
+);
 
 watch(
   [entry, festivalLoading],
@@ -106,7 +111,8 @@ function handleToggle() {
     :image-url="imageUrl"
     :banner-value="speakerLabel"
     banner-label="Speaker"
-    category="Official"
+    :category="categoryStyle.label"
+    :category-color="categoryStyle.color"
     :title="entry.title"
     :description="entry.description"
     :day-label="dayLabel"

@@ -251,18 +251,27 @@ export function useSubEventManage(address: string) {
       await setCachedMetadata(result.cid, newMetadata)
 
       txStatus.value = 'signing'
+      const hydrated = hydrateSubEventMetadata(newMetadata)
       await updateSessionCid({
         ...getWriteOpts(s => {
           txStatus.value = s
-          // Apply optimistic metadata only once tx is in a block
-          if (s === 'in-block') {
-            metadata.value = hydrateSubEventMetadata(newMetadata)
+          // Optimistic overlay so every shared view (program, detail, home,
+          // admin list) reflects the edit at once; GC'd when the chain CID
+          // catches up, rolled back in the catch on failure.
+          if (s === 'broadcasting') {
+            addPending('editSession', address, undefined, {
+              metadata: hydrated,
+              metadataCid: result.bytes32,
+            })
           }
+          // Local form copy for the edit page itself.
+          if (s === 'in-block') metadata.value = hydrated
         }),
         newCid: result.bytes32,
       })
       setTimeout(() => { txStatus.value = 'idle' }, 2000)
     } catch (e) {
+      dropPending('editSession', address)
       txStatus.value = 'error'
       error.value = formatTxError(e)
     }

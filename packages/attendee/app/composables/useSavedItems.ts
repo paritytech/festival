@@ -4,6 +4,7 @@ import { useBookmarks } from './useBookmarks'
 import { useSchedule } from './useSchedule'
 import { useSubEvents } from './useSubEvents'
 import { useHiddenSessions } from './useHiddenSessions'
+import { CATEGORY_STYLE, scheduleEntryCategory } from './useProgramTimeline'
 
 export interface SavedItem {
   id: string
@@ -46,7 +47,7 @@ export function useSavedItems() {
           items.push({
             id: entry.id,
             title: entry.title,
-            subtitle: `Official · ${time}`,
+            subtitle: `${CATEGORY_STYLE[scheduleEntryCategory(entry)].label} · ${time}`,
             type: 'session',
             to: `/program/${entry.id}`,
           })
