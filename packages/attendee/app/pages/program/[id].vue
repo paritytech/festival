@@ -34,6 +34,7 @@ watch(
 );
 
 const showToast = ref(false);
+const locationViewOpen = ref(false);
 
 const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
@@ -125,6 +126,16 @@ function handleToggle() {
     :ongoing="ongoing"
     :ended="ended"
     @toggle-bookmark="handleToggle"
+    @open-location="locationViewOpen = true"
+  />
+
+  <SessionLocationView
+    v-if="locationViewOpen && entry?.venueMarkerId"
+    :location="entry.venueMarkerId"
+    :detail-path="`/program/${entry.id}`"
+    :markers="venueMarkers"
+    :zones="venueZones"
+    @close="locationViewOpen = false"
   />
 
   <div

@@ -546,7 +546,7 @@ async function submit() {
 
           <button
             type="button"
-            class="absolute left-4 right-4 bottom-4 z-[1000] py-4 bg-white text-black rounded-2xl text-sm font-semibold shadow-lg"
+            class="absolute left-4 right-4 bottom-4 z-10 py-4 bg-white text-black rounded-2xl text-sm font-semibold shadow-lg"
             @click="pickerOpen = true"
           >
             Change Location
@@ -577,7 +577,7 @@ async function submit() {
     <!-- Sticky submit (only when dirty) -->
     <div
       v-if="isDirty"
-      class="sticky bottom-0 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-background"
+      class="sticky bottom-0 z-20 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-background"
     >
       <button
         class="w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
