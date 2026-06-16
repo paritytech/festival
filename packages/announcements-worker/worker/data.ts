@@ -14,7 +14,7 @@ import {
   type FestivalMetadata,
   type SubEventMetadata,
 } from "./config";
-import { announcementItemFrom, type FestivalInfo, talksFrom, toScheduleItem } from "./items";
+import { activationsFrom, announcementItemFrom, type FestivalInfo, talksFrom, toScheduleItem } from "./items";
 import { readSessions } from "./sessions";
 
 /**
@@ -22,7 +22,7 @@ import { readSessions } from "./sessions";
  * changes (like now, with activations dropped from `talks`), so a snapshot
  * saved by an older worker gets thrown away instead of served stale.
  */
-export const CARD_SNAPSHOT_VERSION = 1;
+export const CARD_SNAPSHOT_VERSION = 2;
 
 /**
  * Everything the cards render, resolved in one sweep and serializable to
@@ -38,6 +38,8 @@ export interface CardSnapshot {
   festivalName: string;
   talks: ScheduleItem[];
   sessions: ScheduleItem[];
+  /** Programming that runs all day (category === 'activations'). */
+  activations: ScheduleItem[];
   /** Newest first, bodies included. */
   announcements: AnnouncementItem[];
 }
@@ -60,6 +62,7 @@ export async function buildSnapshot(): Promise<CardSnapshot> {
     festivalName: festival.name,
     talks: talksFrom(festival),
     sessions,
+    activations: activationsFrom(festival),
     announcements,
   };
 }

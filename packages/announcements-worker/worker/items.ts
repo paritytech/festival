@@ -31,7 +31,7 @@ export function toScheduleItem(
   title: string,
   speakers: string[],
   room: string | undefined,
-  kindLabel: "Talk" | "Session",
+  kindLabel: "Talk" | "Session" | "Activation",
 ): ScheduleItem {
   return {
     id,
@@ -76,6 +76,30 @@ export function talksFrom(festival: FestivalInfo): ScheduleItem[] {
         entry.speakers ?? [],
         entry.venueMarkerId ? festival.markerLabels.get(entry.venueMarkerId) : undefined,
         "Talk",
+      ),
+    );
+}
+
+/**
+ * Festival activations (category === 'activations'), sorted by start. These run
+ * all day and get their own card, separate from the talks. Time filtering
+ * happens later, in `upcomingItems`.
+ */
+export function activationsFrom(festival: FestivalInfo): ScheduleItem[] {
+  return festival.schedule
+    .filter((e) => e.category === "activations")
+    .map((e) => ({ entry: e, start: new Date(e.start), end: new Date(e.end) }))
+    .filter(({ start, end }) => !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()))
+    .sort((a, b) => a.start.getTime() - b.start.getTime())
+    .map(({ entry, start, end }) =>
+      toScheduleItem(
+        entry.id || entry.start + entry.title,
+        start,
+        end,
+        entry.title,
+        entry.speakers ?? [],
+        entry.venueMarkerId ? festival.markerLabels.get(entry.venueMarkerId) : undefined,
+        "Activation",
       ),
     );
 }

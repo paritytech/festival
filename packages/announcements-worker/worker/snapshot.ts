@@ -28,6 +28,7 @@ function isSnapshot(value: unknown): value is CardSnapshot {
     typeof s.festivalName === "string" &&
     Array.isArray(s.talks) &&
     Array.isArray(s.sessions) &&
+    Array.isArray(s.activations) &&
     Array.isArray(s.announcements)
   );
 }
