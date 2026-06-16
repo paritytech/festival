@@ -1,7 +1,8 @@
 # Deploy both SPAs to paseo-next-v2 via the reusable _deploy.yml workflow.
 #
-#   push → main          → staging   (stg. domains,   nothing published)
-#   release published    → production (base domains,  attendee published)
+#   push → main           → staging    (stg. domains,  nothing published)
+#   pre-release published  → production  (base domains,  nothing published)
+#   full release published → production  (base domains,  attendee published)
 #
 # Config (domains + contract addresses) lives in .github/env.paseo-next-v2.
 # Required repo secret: DOTNS_MNEMONIC (owner of the DotNS domains).
@@ -55,8 +56,9 @@ jobs:
     secrets:
       mnemonic: ${{ secrets.DOTNS_MNEMONIC }}
 
-  # Attendee is the only app listed in the public Publisher registry, and only
-  # on a tagged release.
+  # Attendee is the only app eligible for the public Publisher registry, and
+  # only on a full (non-pre-release) tagged release. Mark the GitHub release as
+  # a pre-release to deploy to attendee.dot without listing it publicly.
   prod-attendee:
     needs: prod-admin
     if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v')
@@ -64,7 +66,7 @@ jobs:
     uses: ./.github/workflows/_deploy.yml
     with:
       spa: attendee
-      publish: true
+      publish: ${{ !github.event.release.prerelease }}
     secrets:
       mnemonic: ${{ secrets.DOTNS_MNEMONIC }}
 
