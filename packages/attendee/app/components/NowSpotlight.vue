@@ -4,6 +4,7 @@ import { isHappeningNow, timeUntil, formatTimeBerlin, parseFestivalDate } from '
 import type { ScheduleEntry } from '@festival/shared/metadata/schemas'
 import { resolveShortLocationLabel } from '@festival/shared/venue/floors'
 import { useVenueMap } from '~/composables/useVenueMap'
+import { scheduleEntryCategory, CATEGORY_STYLE } from '~/composables/useProgramTimeline'
 
 const props = defineProps<{
   schedule: ScheduleEntry[]
@@ -43,6 +44,9 @@ const isLive = computed(() => liveEntries.value.length > 0)
 const totalCards = computed(() => spotlightEntries.value.length)
 const currentIndex = ref(0)
 const currentEntry = computed(() => spotlightEntries.value[currentIndex.value] || null)
+const currentCategory = computed(() =>
+  currentEntry.value ? CATEGORY_STYLE[scheduleEntryCategory(currentEntry.value)] : null,
+)
 
 // Progress bar (0 to 1 over ROTATE_INTERVAL)
 const progress = ref(0)
@@ -225,11 +229,12 @@ watch(totalCards, () => {
         </div>
 
         <!-- Category -->
-        <div class="mt-2">
+        <div v-if="currentCategory" class="mt-2">
           <span
-            class="text-[10px] px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary"
+            class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary"
           >
-            Official
+            <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: currentCategory.color }" />
+            {{ currentCategory.label }}
           </span>
         </div>
       </div>

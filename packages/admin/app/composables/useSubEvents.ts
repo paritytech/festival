@@ -7,7 +7,7 @@ import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { walletAddressToH160 } from '@festival/shared/utils/address'
 import { festivalState, type SessionEntry } from '@festival/shared/cache/festival-state'
-import { addPending, dropPending, hasPending, pendingSessions, draftSessionEntry } from '@festival/shared/cache/pending'
+import { addPending, dropPending, hasPending, pendingSessions, pendingSessionEdit, draftSessionEntry } from '@festival/shared/cache/pending'
 import { bootLoadAdmin } from './useBootLoad'
 
 export interface SubEventListItem {
@@ -38,7 +38,8 @@ export function useSubEvents(_festivalAddress: string) {
   const subEvents = computed<SubEventListItem[]>(() => {
     const toView = (s: SessionEntry): SubEventListItem => ({
       address: s.address,
-      metadata: s.metadata ?? { ...DEFAULT_METADATA, name: `Sub-Event ${s.address.slice(0, 8)}` },
+      // Our own in-flight edit renders immediately; superseded once the chain CID catches up.
+      metadata: pendingSessionEdit(s.address)?.metadata ?? s.metadata ?? { ...DEFAULT_METADATA, name: `Sub-Event ${s.address.slice(0, 8)}` },
       registeredCount: Number(s.details.registeredCount),
       startTime: Number(s.details.startTime),
       endTime: Number(s.details.endTime),
