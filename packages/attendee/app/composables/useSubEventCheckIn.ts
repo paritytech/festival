@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { checkInSession, manualCheckInSession } from '@festival/shared/contracts/session-writes'
 import { FestivalABI } from '@festival/shared/contracts/abis'
+import { FESTIVAL_ADDRESS } from '@festival/shared/contracts/addresses'
 import { batchRead } from '@festival/shared/contracts/multicall'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
@@ -74,13 +75,24 @@ export function useSubEventCheckIn(subEventAddress: string) {
 
     try {
       const attendeeH160 = toH160(address)
-      const [registered, checkedIn] = await batchRead([
+      // Surface the on-chain check up front. The session contract requires the
+      // attendee to be checked in to the parent festival first
+      // (FestivalCheckInRequired), so we verify that here instead of letting it
+      // surface as a confusing transaction revert after the operator confirms.
+      const [festivalCheckedIn, registered, checkedIn] = await batchRead([
+        { address: FESTIVAL_ADDRESS, abi: FestivalABI, functionName: 'isCheckedIn', args: [attendeeH160] },
         { address: subEventAddress as `0x${string}`, abi: FestivalABI, functionName: 'isRegistered', args: [attendeeH160] },
         { address: subEventAddress as `0x${string}`, abi: FestivalABI, functionName: 'isCheckedIn', args: [attendeeH160] },
-      ]) as [boolean, boolean]
+      ]) as [boolean, boolean, boolean]
 
       if (checkedIn) {
-        error.value = 'This account is already checked in'
+        error.value = 'Already checked in to this session.'
+        step.value = 'error'
+        return
+      }
+
+      if (!festivalCheckedIn) {
+        error.value = 'Not checked in to the festival yet. They need to check in at the festival entrance first.'
         step.value = 'error'
         return
       }
