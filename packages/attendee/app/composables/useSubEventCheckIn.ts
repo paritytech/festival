@@ -61,9 +61,7 @@ export function useSubEventCheckIn(subEventAddress: string) {
   async function handleScan(qrData: string) {
     // Passport and ticket QRs both resolve here, and an unreadable code now
     // shows an error. Before, a bad scan just silently vanished.
-    console.log('[session-checkin] handleScan raw input (length=' + qrData.length + '):', qrData)
     const address = extractCheckInAddress(qrData)
-    console.log('[session-checkin] extracted address:', address)
     if (!address) {
       error.value = "Couldn't read that code. Show the attendee's account QR or enter their address manually."
       step.value = 'error'

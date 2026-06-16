@@ -18,14 +18,9 @@ watch(
   () => props.active,
   async (active) => {
     if (active && !isActive.value) {
-      console.log('[QRScanner.vue] active → starting camera, el=', elementId)
-      await start(elementId, (data) => {
-        console.log('[QRScanner.vue] scan emit, length=', data.length)
-        emit('scan', data)
-      })
+      await start(elementId, (data) => emit('scan', data))
       if (error.value) emit('error', error.value)
     } else if (!active && isActive.value) {
-      console.log('[QRScanner.vue] inactive → stopping camera')
       await stop()
     }
   },
@@ -51,6 +46,9 @@ onBeforeUnmount(() => stop())
   width: 100%;
   height: 100%;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /*
