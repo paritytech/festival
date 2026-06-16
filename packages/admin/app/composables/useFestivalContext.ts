@@ -30,6 +30,8 @@ export interface FestivalContext {
   remoteChanged: Ref<boolean>
   publish: (opts?: { force?: boolean }) => Promise<void>
   discardChanges: () => void
+  /** Dismiss the remote-change flag without refreshing (keep editing). */
+  acknowledgeRemoteChange: () => void
   txStatus: Ref<TxStatus>
   txError: Ref<string | null>
   scheduleEntryStatus: (id: string) => 'new' | 'modified' | 'unchanged'
@@ -222,6 +224,10 @@ export function provideFestivalContext(address: string) {
     remoteChanged.value = false
   }
 
+  function acknowledgeRemoteChange() {
+    remoteChanged.value = false
+  }
+
   function scheduleEntryStatus(id: string): 'new' | 'modified' | 'unchanged' {
     if (!savedMetadata.value) return 'new'
     const saved = savedMetadata.value.schedule.find(e => e.id === id)
@@ -342,7 +348,7 @@ export function provideFestivalContext(address: string) {
   const context: FestivalContext = {
     address, userRoles, rolesReady, savedMetadata, draft, isDirty, changedSections, totalChangeCount,
     baseMetadataCid, remoteChanged,
-    publish, discardChanges, txStatus, txError,
+    publish, discardChanges, acknowledgeRemoteChange, txStatus, txError,
     scheduleEntryStatus, deletedScheduleEntries, markerStatus, deletedMarkers,
     undoScheduleEntry, undoMarker, restoreDeletedScheduleEntry, restoreDeletedMarker,
   }
