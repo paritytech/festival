@@ -18,9 +18,14 @@ watch(
   () => props.active,
   async (active) => {
     if (active && !isActive.value) {
-      await start(elementId, (data) => emit('scan', data))
+      console.log('[QRScanner.vue] active → starting camera, el=', elementId)
+      await start(elementId, (data) => {
+        console.log('[QRScanner.vue] scan emit, length=', data.length)
+        emit('scan', data)
+      })
       if (error.value) emit('error', error.value)
     } else if (!active && isActive.value) {
+      console.log('[QRScanner.vue] inactive → stopping camera')
       await stop()
     }
   },
@@ -48,19 +53,12 @@ onBeforeUnmount(() => stop())
   position: relative;
 }
 
+/*
+ * Let html5-qrcode size its own <video> (as the admin scanner does). Forcing
+ * width/height + object-fit on the video desynced the displayed frame from the
+ * region html5-qrcode actually decodes, so visible QRs never decoded.
+ */
 .scanner-surface {
   width: 100%;
-  height: 100%;
-}
-
-.scanner-surface :deep(video) {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  display: block;
-}
-
-.scanner-surface :deep(img) {
-  display: none;
 }
 </style>

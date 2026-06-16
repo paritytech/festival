@@ -1,6 +1,23 @@
 import { ref } from "vue";
 import { requestCameraPermission } from "../host/permissions";
 
+const LOG = "[QRScanner]";
+
+/**
+ * Reject if a promise doesn't settle in time, so a stalled camera enumeration
+ * or stream start surfaces as an error instead of an await that hangs forever
+ * (which previously presented as "the scanner is up but nothing happens").
+ */
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    p.then(
+      (v) => { clearTimeout(t); resolve(v); },
+      (e) => { clearTimeout(t); reject(e); },
+    );
+  });
+}
+
 /**
  * Pure TS composable wrapping html5-qrcode for camera-based QR scanning.
  * Used by both admin and attendee SPA scanner components.
@@ -13,16 +30,27 @@ export function useQRScanner() {
 
   async function start(elementId: string, onScan: (data: string) => void) {
     error.value = null;
+    console.log(`${LOG} start() el=${elementId} existingInstance=${html5Qrcode != null} isActive=${isActive.value}`);
+
+    // A leftover instance (e.g. from a failed previous start) still holds the
+    // camera; clear it before opening a new stream.
+    if (html5Qrcode) {
+      console.warn(`${LOG} start() found an existing instance, stopping it first`);
+      await stop();
+    }
+
     try {
       // Request camera permission from the host before accessing the camera
       const granted = await requestCameraPermission();
+      console.log(`${LOG} camera permission granted=${granted}`);
       if (!granted) {
         error.value = "Camera permission denied by host";
         return;
       }
 
       const { Html5Qrcode } = await import("html5-qrcode");
-      const cameras = await Html5Qrcode.getCameras();
+      const cameras = await withTimeout(Html5Qrcode.getCameras(), 15000, "getCameras");
+      console.log(`${LOG} getCameras returned ${cameras.length} camera(s): ${cameras.map((c: any) => c.label || c.id).join(", ")}`);
 
       html5Qrcode = new Html5Qrcode(elementId);
 
@@ -36,22 +64,23 @@ export function useQRScanner() {
         },
       };
       const successCb = (decodedText: string) => {
+        console.log(`${LOG} decoded a QR (length=${decodedText.length})`);
         onScan(decodedText);
       };
       const errorCb = () => {};
 
       // Try back camera first
       try {
-        await html5Qrcode.start(
-          { facingMode: "environment" },
-          config,
-          successCb,
-          errorCb,
+        await withTimeout(
+          html5Qrcode.start({ facingMode: "environment" }, config, successCb, errorCb),
+          20000,
+          "camera start (environment)",
         );
         isActive.value = true;
+        console.log(`${LOG} camera started (environment facingMode)`);
         return;
-      } catch {
-        // Fall through to fallback
+      } catch (e: any) {
+        console.warn(`${LOG} environment start failed, trying fallback camera:`, e?.message || e);
       }
 
       // Fallback: try first available camera
@@ -63,13 +92,13 @@ export function useQRScanner() {
             height: { ideal: 1080 },
           },
         };
-        await html5Qrcode.start(
-          cameras[0].id,
-          fallbackConfig,
-          successCb,
-          errorCb,
+        await withTimeout(
+          html5Qrcode.start(cameras[0].id, fallbackConfig, successCb, errorCb),
+          20000,
+          "camera start (fallback)",
         );
         isActive.value = true;
+        console.log(`${LOG} camera started (fallback camera ${cameras[0].id})`);
         return;
       }
 
@@ -77,6 +106,7 @@ export function useQRScanner() {
     } catch (e: any) {
       error.value = e?.message || "Failed to start camera";
       isActive.value = false;
+      console.error(`${LOG} start() failed: ${error.value}`, e);
     }
   }
 
