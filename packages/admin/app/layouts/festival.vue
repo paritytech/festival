@@ -10,6 +10,8 @@ import { useAttendees } from '~/composables/useAttendees'
 import { bootLoadAdmin } from '~/composables/useBootLoad'
 import { useFestivalWatcher } from '@festival/shared/cache/useFestivalWatcher'
 import { useVisibilityReconcile } from '@festival/shared/cache/visibility'
+import { startCachePersistence, hydrateLastKnown } from '@festival/shared/cache/festival-state'
+import { startPendingReconcile } from '@festival/shared/cache/pending'
 import { useMyAddressModal } from '~/composables/useMyAddressModal'
 
 const myAddressModal = useMyAddressModal()
@@ -43,6 +45,15 @@ router.afterEach(() => { mobileMenuOpen.value = false })
 const isDev = import.meta.dev
 const driftError = ref<string | null>(null)
 
+// Persist every state mutation, and paint last-known state before the wallet
+// resolves (cache-first).
+startCachePersistence()
+void hydrateLastKnown(address.value as `0x${string}`)
+
+// Promote/GC optimistic pending entries (check-ins, drafts, cancels) as the
+// confirmed tier catches up.
+startPendingReconcile()
+
 // Cold-load admin festival state in two Multicall round-trips. Re-runs on
 // wallet account switch and route-address change.
 function fireBootLoad() {
@@ -55,7 +66,7 @@ watch(address, fireBootLoad)
 
 // Real-time contract event subscription. `deferWhileLoading` lets bootLoad
 // finish first so its reads don't race the watcher's chainHead follow init.
-useFestivalWatcher(address.value as `0x${string}`, {
+const watcher = useFestivalWatcher(address.value as `0x${string}`, {
   onDriftDetected: (msg) => {
     driftError.value = msg
     setTimeout(() => { driftError.value = null }, 8000)
@@ -66,9 +77,11 @@ useFestivalWatcher(address.value as `0x${string}`, {
 // Visibility change as safety net. Reads at best, like every other state
 // source: all festival state is monotonic, so a finalized read could only
 // regress fresher best-derived state (e.g. revert a just-landed check-in).
-useVisibilityReconcile(() => {
+useVisibilityReconcile(async () => {
   const userH160 = wallet.isConnected ? walletAddressToH160(wallet.address) : null
-  return bootLoadAdmin(address.value as `0x${string}`, userH160)
+  await bootLoadAdmin(address.value as `0x${string}`, userH160)
+  // The chainHead follow may have died silently while backgrounded; re-open it.
+  watcher?.restart()
 })
 
 function shortenAddr(addr: string) {

@@ -14,10 +14,23 @@ import {
   persistToCache,
   type SessionEntry,
 } from '@festival/shared/cache/festival-state'
+import { mergeAttendees, mergeSessions, mergePoaps, maxBig } from '@festival/shared/cache/merge'
 import type { ContractRole } from '@festival/shared/permissions'
 
 interface BootLoadOptions {
   at?: 'best' | 'finalized'
+}
+
+/**
+ * A load that started for the previous account must not write user fields
+ * after a switch, so every user write checks this first. Global festival
+ * state stays safe to write from any run.
+ */
+function userStillCurrent(userAddress: `0x${string}` | null): boolean {
+  return (
+    (festivalState.user.address?.toLowerCase() ?? null) ===
+    (userAddress?.toLowerCase() ?? null)
+  )
 }
 
 const ROLE_ORDER: { hash: `0x${string}`; label: ContractRole }[] = [
@@ -41,6 +54,19 @@ export async function bootLoadAdmin(
 ): Promise<void> {
   festivalState.loading = true
   festivalState.error = null
+
+  // Account switch: the previous user's per-user fields must not leak into
+  // the new user's view or win the per-user merges below — resetting makes
+  // those merges start from empty for a new account.
+  const sameUser =
+    (festivalState.user.address?.toLowerCase() ?? null) ===
+    (userAddress?.toLowerCase() ?? null)
+  if (!sameUser) {
+    festivalState.user.ticketTokenId = 0n
+    festivalState.user.festivalPoaps = []
+    festivalState.user.sessionPoaps = []
+    festivalState.user.roles = []
+  }
   festivalState.user.address = userAddress
 
   // Cache-first paint. Show last-known data instantly while chain reads run.
@@ -131,37 +157,55 @@ async function runRound1(
 
   festivalState.festival = {
     address: festivalAddress,
-    details,
+    details: {
+      ...details,
+      registeredCount: maxBig(
+        festivalState.festival?.details.registeredCount ?? 0n,
+        details.registeredCount,
+      ),
+    },
     metadata: festivalState.festival?.metadata ?? null,
-    attendees: attendeesRaw[0].map((a, i) => ({
-      address: a,
-      isCheckedIn: attendeesRaw[1][i] ?? false,
-    })),
+    attendees: mergeAttendees(
+      festivalState.festival?.attendees ?? [],
+      attendeesRaw[0].map((a, i) => ({
+        address: a,
+        isCheckedIn: attendeesRaw[1][i] ?? false,
+      })),
+    ),
   }
 
   // User's roles. Derived locally from the per-role hasRole results.
-  festivalState.user.roles = ROLE_ORDER.filter((_, i) => hasRoleRaw[i]).map((r) => r.label)
+  if (userStillCurrent(userAddress)) {
+    festivalState.user.roles = ROLE_ORDER.filter((_, i) => hasRoleRaw[i]).map((r) => r.label)
+  }
 
   // Stub role holders. R2 fills members per role.
   festivalState.roles = ROLE_ORDER.map(({ hash }) => ({ role: hash, members: [] }))
 
-  // Stub session entries; R2 fills details/attendees.
-  festivalState.sessions = sessionsRaw.map<SessionEntry>((address) => ({
-    address,
-    details: {
-      metadataCid: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
-      creator: '0x0000000000000000000000000000000000000000' as `0x${string}`,
-      poapContract: '0x0000000000000000000000000000000000000000' as `0x${string}`,
-      parentFestival: festivalAddress,
-      startTime: 0n,
-      endTime: 0n,
-      cancelled: false,
-      registeredCount: 0n,
-    },
-    metadata: null,
-    attendees: [],
-    poapTokenIds: [],
-  }))
+  // Stub session entries; R2 upgrades via merge. mergeSessions keeps any
+  // already-real entry (from cache or a prior load) from regressing to a stub.
+  festivalState.sessions = mergeSessions(
+    festivalState.sessions,
+    sessionsRaw.map<SessionEntry>((address) => ({
+      address,
+      details: {
+        metadataCid: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
+        creator: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+        poapContract: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+        parentFestival: festivalAddress,
+        startTime: 0n,
+        endTime: 0n,
+        cancelled: false,
+        registeredCount: 0n,
+        // Zero so keepPositive never lets a stub beat the real chain value.
+        flagCount: 0n,
+        flagThreshold: 0n,
+      },
+      metadata: null,
+      attendees: [],
+      poapTokenIds: [],
+    })),
+  )
 
   if (isNonZeroCid(details.metadataCid)) {
     void fetchFestivalMetadata(details.metadataCid)
@@ -236,13 +280,29 @@ async function runRound2(
       flagThreshold: results[off + 3] as bigint,
     }
 
-    const entry = festivalState.sessions[i]
+    // Find by address, not by index: mergeSessions can reorder the array
+    // (union by address), so positional indexing would write to the wrong
+    // session on a warm re-run.
+    const addr = sessionAddrs[i]!
+    const entry = festivalState.sessions.find(
+      (s) => s.address.toLowerCase() === addr.toLowerCase(),
+    )
     if (entry) {
-      entry.details = details
-      entry.attendees = attendeesRaw[0].map((a, idx) => ({
-        address: a,
-        isCheckedIn: attendeesRaw[1][idx] ?? false,
-      }))
+      // Same latches mergeSession applies elsewhere. A stale read cannot
+      // uncancel a session, shrink its count, or roll back its flags.
+      entry.details = {
+        ...details,
+        cancelled: entry.details.cancelled || details.cancelled,
+        registeredCount: maxBig(entry.details.registeredCount, details.registeredCount),
+        flagCount: maxBig(entry.details.flagCount, details.flagCount),
+      }
+      entry.attendees = mergeAttendees(
+        entry.attendees,
+        attendeesRaw[0].map((a, idx) => ({
+          address: a,
+          isCheckedIn: attendeesRaw[1][idx] ?? false,
+        })),
+      )
       if (isNonZeroCid(details.metadataCid)) {
         metadataTargets.push({ address: entry.address, cid: details.metadataCid })
       }
@@ -269,11 +329,15 @@ async function runRound2(
   // list view shows all check-in timestamps).
   const festPoapOffset = memberOffset
   if (festPoapTokenIds.length > 0) {
-    festivalState.user.festivalPoaps = festPoapTokenIds.map((tokenId, idx) => ({
-      poapContract: FESTIVAL_POAP_ADDRESS,
-      tokenId,
-      data: results[festPoapOffset + idx] as POAPData,
-    }))
+    // Union: mints are monotonic, so a stale read can't drop a POAP.
+    festivalState.user.festivalPoaps = mergePoaps(
+      festivalState.user.festivalPoaps,
+      festPoapTokenIds.map((tokenId, idx) => ({
+        poapContract: FESTIVAL_POAP_ADDRESS,
+        tokenId,
+        data: results[festPoapOffset + idx] as POAPData,
+      })),
+    )
   }
 }
 

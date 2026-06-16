@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { h160ToSs58, walletAddressToH160 } from '@festival/shared/utils/address'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { festivalState } from '@festival/shared/cache/festival-state'
+import { pendingCheckins } from '@festival/shared/cache/pending'
 import { bootLoadAdmin } from './useBootLoad'
 
 export interface CheckedInAttendee {
@@ -17,14 +18,34 @@ export interface CheckedInAttendee {
 export function useAttendees(festivalAddress: string) {
   const search = ref('')
 
-  const attendees = computed<CheckedInAttendee[]>(() =>
-    festivalState.user.festivalPoaps
-      .map((p) => ({
-        address: p.data.attendee,
-        checkedInAt: Number(p.data.issuedAt),
-      }))
-      .sort((a, b) => b.checkedInAt - a.checkedInAt),
-  )
+  const attendees = computed<CheckedInAttendee[]>(() => {
+    const fromPoaps = festivalState.user.festivalPoaps.map((p) => ({
+      address: p.data.attendee,
+      checkedInAt: Number(p.data.issuedAt),
+    }))
+    const seen = new Set(fromPoaps.map((a) => a.address.toLowerCase()))
+
+    // POAP data only refreshes on boot loads, so bridge the gap with rows the
+    // chain already confirmed checked-in (event-fed attendees array) and this
+    // device's in-flight check-ins. Their exact timestamp arrives with the
+    // POAP on the next load; until then they're simply "just now".
+    const nowSec = Math.floor(Date.now() / 1000)
+    const bridged: CheckedInAttendee[] = []
+    for (const a of festivalState.festival?.attendees ?? []) {
+      if (a.isCheckedIn && !seen.has(a.address.toLowerCase())) {
+        seen.add(a.address.toLowerCase())
+        bridged.push({ address: a.address, checkedInAt: nowSec })
+      }
+    }
+    for (const addr of pendingCheckins()) {
+      if (!seen.has(addr)) {
+        seen.add(addr)
+        bridged.push({ address: addr as `0x${string}`, checkedInAt: nowSec })
+      }
+    }
+
+    return [...fromPoaps, ...bridged].sort((a, b) => b.checkedInAt - a.checkedInAt)
+  })
 
   const filtered = computed(() => {
     const q = search.value.trim().toLowerCase()

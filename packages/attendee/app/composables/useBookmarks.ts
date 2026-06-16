@@ -1,7 +1,6 @@
 import { ref } from 'vue'
+import { usePersistentRef } from '@festival/shared/cache/persistent'
 import { useScheduledAlerts, type ScheduleAlertOutcome } from './useScheduledAlerts'
-
-const STORAGE_KEY = 'festival-bookmarks'
 
 export interface BookmarkPayload {
   startMs: number
@@ -15,21 +14,8 @@ export type BookmarkAlert =
   | { kind: 'permission-denied'; ts: number }
   | null
 
-function loadBookmarks(): string[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    return stored ? JSON.parse(stored) : []
-  } catch {
-    return []
-  }
-}
-
-function persistBookmarks(ids: string[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ids))
-}
-
-// Shared state across components
-const bookmarkedIds = ref<string[]>(typeof window !== 'undefined' ? loadBookmarks() : [])
+// Shared state across components. Durable; write-through is automatic.
+const bookmarkedIds = usePersistentRef<string[]>('festival-bookmarks', [])
 // Set when a schedule attempt fails in a way the UI should surface. `ts`
 // changes on every set so the layout-level toast re-fires even when the
 // same `kind` is set twice in a row.
@@ -44,7 +30,6 @@ export function useBookmarks() {
     } else {
       bookmarkedIds.value.splice(idx, 1)
     }
-    persistBookmarks(bookmarkedIds.value)
 
     const alerts = useScheduledAlerts()
     if (adding && payload) {

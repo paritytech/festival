@@ -17,6 +17,8 @@ import { useBulletinStorage } from "@festival/shared/metadata/bulletin";
 import { formatTxError } from "@festival/shared/contracts/errors";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
+import { festivalState } from "@festival/shared/cache/festival-state";
+import { addPending, dropPending, draftSessionEntry } from "@festival/shared/cache/pending";
 import {
   encodeCoordLocation,
   resolveFullLocationLabel,
@@ -245,6 +247,8 @@ async function submit() {
     return;
   error.value = null;
   submitValidationError.value = null;
+  // CID of the in-flight draft, visible to the catch for rollback.
+  let pendingCid: `0x${string}` | null = null;
 
   // Re-validate against the live festival window, catching clock drift between
   // picking a time and tapping submit. Location and badge are preserved.
@@ -307,6 +311,13 @@ async function submit() {
       ),
     );
 
+    const creatorH160 = (
+      isValidEvmAddress(wallet.address)
+        ? wallet.address.toLowerCase()
+        : ss58ToH160(wallet.address).toLowerCase()
+    ) as `0x${string}`;
+    pendingCid = bytes32;
+
     await writeContract({
       address: FESTIVAL_ADDRESS as `0x${string}`,
       abi: FestivalABI,
@@ -316,23 +327,37 @@ async function submit() {
       walletAddress: wallet.address,
       onStatus: (s) => {
         txStatus.value = s;
+        // The draft renders in lists immediately; the confirmed entry with
+        // this CID supersedes it, and the catch below rolls it back.
+        if (s === "broadcasting") {
+          addPending(
+            "session",
+            bytes32,
+            draftSessionEntry(bytes32, startTs, endTs, creatorH160, metadata),
+          );
+        }
       },
     });
 
-    // Try to find the created sub-event address
+    // The tx succeeded, so the draft has done its job either way.
+    dropPending("session", bytes32);
+    // Resolve the created address by its CID, which is unique to this
+    // creation. Prefer a live match, fall back to a cancelled one for the
+    // rare create then instant cancel case.
     try {
       await reloadSubEvents();
-      const userAddr = isValidEvmAddress(wallet.address)
-        ? wallet.address.toLowerCase()
-        : ss58ToH160(wallet.address).toLowerCase();
-      const myEntry = subEvents.value.find(
-        (se) => se.creator.toLowerCase() === userAddr,
-      );
-      createdAddress.value = myEntry?.address ?? FESTIVAL_ADDRESS;
+      const byCid = (live: boolean) =>
+        festivalState.sessions.find(
+          (s) =>
+            (!live || !s.details.cancelled) &&
+            s.details.metadataCid.toLowerCase() === bytes32.toLowerCase(),
+        );
+      createdAddress.value = (byCid(true) ?? byCid(false))?.address ?? FESTIVAL_ADDRESS;
     } catch {
       createdAddress.value = FESTIVAL_ADDRESS;
     }
   } catch (e: any) {
+    if (pendingCid) dropPending("session", pendingCid);
     txStatus.value = "error";
     error.value = formatTxError(e);
   }

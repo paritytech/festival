@@ -6,6 +6,7 @@ import { readIsRegistered } from "@festival/shared/contracts/festival-reads";
 import { batchRead } from "@festival/shared/contracts/multicall";
 import { formatTxError } from "@festival/shared/contracts/errors";
 import { useWalletStore } from "@festival/shared/host/wallet";
+import { addPending, dropPending } from "@festival/shared/cache/pending";
 import {
   shortenAddress,
   ss58ToH160,
@@ -120,9 +121,11 @@ export function useCheckIn(festivalAddress: string) {
     txStatus.value = "preparing";
     error.value = null;
 
+    // Captured before the tx so a late failure still drops the right key,
+    // even if the operator already moved on to the next attendee.
+    const attendeeH160 = ss58ToH160(attendeeSS58.value);
     try {
       const wallet = useWalletStore();
-      const attendeeH160 = ss58ToH160(attendeeSS58.value);
       const registered = accountStatus.value?.registered ?? false;
       const fnName = registered ? "checkIn" : "manualCheckIn";
 
@@ -135,6 +138,9 @@ export function useCheckIn(festivalAddress: string) {
         walletAddress: wallet.address,
         onStatus: (s) => {
           txStatus.value = s;
+          // Attendee list shows the check-in immediately; the overlay rolls
+          // back on failure and is GC'd once the CheckedIn event confirms.
+          if (s === "broadcasting") addPending("checkin", attendeeH160);
           if (s === "in-block") {
             addRecentCheckin({
               address: shortenAddress(attendeeSS58.value!),
@@ -147,6 +153,7 @@ export function useCheckIn(festivalAddress: string) {
         },
       });
     } catch (e: any) {
+      dropPending("checkin", attendeeH160);
       txStatus.value = "error";
       error.value = formatTxError(e);
       errorSource.value = "transaction";
@@ -177,6 +184,7 @@ export function useCheckIn(festivalAddress: string) {
         walletAddress: wallet.address,
         onStatus: (s) => {
           txStatus.value = s;
+          if (s === "broadcasting") addPending("checkin", attendeeH160);
           if (s === "in-block") {
             addRecentCheckin({
               address: toDisplaySs58(address),
@@ -188,6 +196,7 @@ export function useCheckIn(festivalAddress: string) {
         },
       });
     } catch (e: any) {
+      dropPending("checkin", toH160(address));
       txStatus.value = "error";
       error.value = formatTxError(e);
       throw new Error(error.value);

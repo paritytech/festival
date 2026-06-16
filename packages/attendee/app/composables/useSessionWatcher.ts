@@ -45,7 +45,7 @@ export function useSessionWatcher(sessionAddress: string) {
           const { retrievePlaintext } = useBulletinStorage()
           const raw = await retrievePlaintext<SubEventMetadata>(newCid)
           const metadata = hydrateSubEventMetadata(raw)
-          useSubEvents().patchSession(sessionAddress, { metadata })
+          useSubEvents().patchSession(sessionAddress, { metadata, metadataCid: newCid })
         } catch (e) {
           console.warn('[useSessionWatcher] metadata patch failed:', e)
         }

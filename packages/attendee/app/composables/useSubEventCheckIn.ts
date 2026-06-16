@@ -5,6 +5,7 @@ import { FestivalABI } from '@festival/shared/contracts/abis'
 import { batchRead } from '@festival/shared/contracts/multicall'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
+import { addPending, dropPending, sessionScopedId } from '@festival/shared/cache/pending'
 import { shortenAddress, ss58ToH160, isValidSs58, isValidEvmAddress } from '@festival/shared/utils/address'
 
 export type SubEventCheckInStep =
@@ -95,9 +96,12 @@ export function useSubEventCheckIn(subEventAddress: string) {
     txStatus.value = 'preparing'
     error.value = null
 
+    // Captured before the tx so a late failure still drops the right key,
+    // even if the operator already moved on to the next attendee.
+    const attendeeH160 = toH160(attendeeSS58.value)
+    const pendingId = sessionScopedId(attendeeH160, subEventAddress)
     try {
       const wallet = useWalletStore()
-      const attendeeH160 = toH160(attendeeSS58.value)
       const fn = accountStatus.value?.registered
         ? checkInSession
         : manualCheckInSession
@@ -109,6 +113,9 @@ export function useSubEventCheckIn(subEventAddress: string) {
         walletAddress: wallet.address,
         onStatus: (s) => {
           txStatus.value = s
+          // Session-scoped overlay entry: rolls back on failure, GC'd once
+          // the session's attendee row confirms via the next read.
+          if (s === 'broadcasting') addPending('checkin', pendingId)
           if (s === 'in-block') {
             addRecentCheckin({
               address: shortenAddress(attendeeSS58.value!),
@@ -119,6 +126,7 @@ export function useSubEventCheckIn(subEventAddress: string) {
         },
       })
     } catch (e: any) {
+      dropPending('checkin', pendingId)
       txStatus.value = 'error'
       error.value = formatTxError(e)
       step.value = 'error'

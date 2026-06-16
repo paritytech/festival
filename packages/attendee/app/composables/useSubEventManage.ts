@@ -15,6 +15,7 @@ import { formatTxError } from '@festival/shared/contracts/errors'
 import { useBulletinStorage } from '@festival/shared/metadata/bulletin'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { setCachedMetadata } from '@festival/shared/cache/cid-cache'
+import { addPending, dropPending } from '@festival/shared/cache/pending'
 import { ss58ToH160, isValidSs58, isValidEvmAddress } from '@festival/shared/utils/address'
 import { useSubEvents } from './useSubEvents'
 
@@ -144,6 +145,10 @@ export function useSubEventManage(address: string) {
       await cancelSession({
         ...getWriteOpts(s => {
           txStatus.value = s
+          // Optimistic via the pending overlay; never written into the
+          // confirmed tier, where the cancelled-latch would make a failed
+          // cancel permanent. Rolls back in the catch below.
+          if (s === 'broadcasting') addPending('cancelSession', address)
           if (s === 'in-block' && details.value) {
             details.value = { ...details.value, cancelled: true }
             useSubEvents().reload()
@@ -154,6 +159,7 @@ export function useSubEventManage(address: string) {
       })
       setTimeout(() => { txStatus.value = 'idle' }, 2000)
     } catch (e) {
+      dropPending('cancelSession', address)
       txStatus.value = 'error'
       error.value = formatTxError(e)
     }

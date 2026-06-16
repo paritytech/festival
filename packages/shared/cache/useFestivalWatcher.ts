@@ -1,14 +1,18 @@
 import { onUnmounted, getCurrentInstance, watch, type Ref, type WatchStopHandle } from 'vue'
-import type { FestivalMetadata } from '../metadata/schemas'
+import type { FestivalMetadata, SubEventMetadata } from '../metadata/schemas'
+import { hydrateSubEventMetadata } from '../metadata/schemas'
 import { useBulletinStorage } from '../metadata/bulletin'
+import { isNonZeroCid } from '../contracts/festival-reads'
 import { watchFestivalEvents } from './event-watcher'
 import {
+  festivalState,
   applyMetadataUpdated,
   applyRegistered,
   applyCheckedIn,
   applyCapacityUpdated,
   applyCancelled,
   applySessionCreated,
+  applySessionMetadata,
 } from './festival-state'
 
 export interface FestivalWatcherOptions {
@@ -62,6 +66,19 @@ export function useFestivalWatcher(
     }
   }
 
+  // Tear down the current chainHead follow and open a fresh one. The host can
+  // silently pause the WebSocket while backgrounded; on resume the existing
+  // follow may be dead with no error emitted, so the visibility handler calls
+  // this after reconciling to guarantee live updates resume.
+  function restart() {
+    if (disposed) return
+    if (active) {
+      active.unsubscribe()
+      active = null
+    }
+    active = buildHandlers()
+  }
+
   function buildHandlers() {
     return watchFestivalEvents(festivalAddress, {
       onMetadataUpdated: async (newCid) => {
@@ -87,12 +104,27 @@ export function useFestivalWatcher(
         applyCheckedIn(attendee as `0x${string}`)
       },
 
-      onSessionCreated: (sessionAddr, creator, metadataCid) => {
+      onSessionCreated: async (sessionAddr, creator, metadataCid) => {
         applySessionCreated(
           sessionAddr as `0x${string}`,
           creator as `0x${string}`,
           metadataCid,
         )
+        // Fetch the metadata so the card shows a title right away. Skip when
+        // the entry already moved past the creation cid, and pass the cid so
+        // a fetch that raced a newer update cannot apply old content.
+        const entryCid = festivalState.sessions
+          .find((s) => s.address.toLowerCase() === sessionAddr.toLowerCase())
+          ?.details.metadataCid.toLowerCase()
+        if (isNonZeroCid(metadataCid) && entryCid === metadataCid.toLowerCase()) {
+          try {
+            const { retrievePlaintext } = useBulletinStorage()
+            const raw = await retrievePlaintext<SubEventMetadata>(metadataCid)
+            applySessionMetadata(sessionAddr as `0x${string}`, hydrateSubEventMetadata(raw), metadataCid)
+          } catch (e) {
+            console.warn('[FestivalWatcher] session metadata fetch failed:', e)
+          }
+        }
       },
 
       onCapacityUpdated: (newCapacity) => {
@@ -129,4 +161,6 @@ export function useFestivalWatcher(
 
   // Reserved for future use: drift detection driven by reconcile diffs.
   void options.onDriftDetected
+
+  return { restart }
 }

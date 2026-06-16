@@ -1,4 +1,3 @@
-import { ref } from 'vue'
 import {
   pushNotification,
   cancelNotification,
@@ -6,6 +5,7 @@ import {
   type NotificationId,
 } from '@festival/shared/host/notifications'
 import { requestNotificationsPermission } from '@festival/shared/host/permissions'
+import { usePersistentRef } from '@festival/shared/cache/persistent'
 
 const STORAGE_KEY = 'festival-scheduled-alert-ids'
 const LEAD_TIME_MS = 10 * 60_000
@@ -50,21 +50,9 @@ export type ScheduleAlertOutcome =
 
 type IdMap = Record<string, NotificationId>
 
-function loadMap(): IdMap {
-  if (typeof window === 'undefined') return {}
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
-
-function persistMap(map: IdMap) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(map))
-}
-
-const idMap = ref<IdMap>(loadMap())
+// Durable: losing this map orphans uncancellable OS notifications, so it must
+// survive WebView eviction, not just live in localStorage.
+const idMap = usePersistentRef<IdMap>(STORAGE_KEY, {})
 
 export function useScheduledAlerts() {
   async function schedule(input: ScheduleAlertInput): Promise<ScheduleAlertOutcome> {
@@ -84,7 +72,6 @@ export function useScheduledAlerts() {
     if (result === null) return 'failed'
 
     idMap.value = { ...idMap.value, [input.id]: result }
-    persistMap(idMap.value)
     return 'scheduled'
   }
 
@@ -97,7 +84,6 @@ export function useScheduledAlerts() {
     const next = { ...idMap.value }
     delete next[sessionId]
     idMap.value = next
-    persistMap(idMap.value)
   }
 
   return { schedule, cancel }
