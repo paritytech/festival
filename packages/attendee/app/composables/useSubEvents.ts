@@ -82,29 +82,11 @@ export function useSubEvents() {
     return subEvents.value.find((se) => se.address === addr)
   }
 
-  /**
-   * Patch a single session's metadata in festivalState. Used by
-   * useSessionWatcher when MetadataUpdated fires. The CID travels with the
-   * metadata so the entry reflects which version it holds.
-   */
-  function patchSession(
-    address: string,
-    patch: Partial<{ metadata: SubEventMetadata; metadataCid: `0x${string}` }>,
-  ) {
-    const target = address.toLowerCase()
-    const entry = festivalState.sessions.find((s) => s.address.toLowerCase() === target)
-    if (!entry) return
-    if (patch.metadata) entry.metadata = patch.metadata
-    if (patch.metadataCid) {
-      entry.details = { ...entry.details, metadataCid: patch.metadataCid }
-    }
-  }
-
   function reload(): Promise<void> {
     const wallet = useWalletStore()
     const userH160 = wallet.isConnected ? walletAddressToH160(wallet.address) : null
     return bootLoadAttendee(userH160)
   }
 
-  return { subEvents, getByAddress, isLoading, reload, patchSession }
+  return { subEvents, getByAddress, isLoading, reload }
 }

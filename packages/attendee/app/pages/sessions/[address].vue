@@ -8,7 +8,7 @@ import { useFlagSession } from "~/composables/useFlagSession";
 import { useHiddenSessions } from "~/composables/useHiddenSessions";
 import { useBookmarks } from "~/composables/useBookmarks";
 import { useNow } from "~/composables/useNow";
-import { useSessionWatcher } from "~/composables/useSessionWatcher";
+import { useCelebratedSessions } from "~/composables/useCelebratedSessions";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { resolveFullLocationLabel } from "@festival/shared/venue/floors";
@@ -75,26 +75,30 @@ const { isHidden } = useHiddenSessions();
 const passportOpen = ref(false);
 const badgeEarnedOpen = ref(false);
 const locationViewOpen = ref(false);
-// "Received: 18 June, 12:03" line on the badge-earned screen. Stamped at the
-// moment the CheckedIn event lands; the precise on-chain timestamp is not
-// available client-side without an extra read.
+// "Received: 18 June, 12:03" line on the badge-earned screen. Stamped when the
+// check-in is first observed; the precise on-chain timestamp is not available
+// client-side without an extra read.
 const receivedAt = ref<Date | null>(null);
-// Always-on while page mounted: catches CheckedIn for the badge-earned
-// animation AND live-applies session metadata updates to useSubEvents.
-const { checkedIn: watcherCheckedIn } = useSessionWatcher(addr);
+const { hasCelebrated, markCelebrated } = useCelebratedSessions();
 
-watch(watcherCheckedIn, (caught) => {
-  if (!caught) return;
-  receivedAt.value = new Date();
-  passportOpen.value = false;
-  // Creators auto-check-in at session creation and don't earn a "badge" in the
-  // collectible sense. Skip the celebration animation for them.
-  if (!isCreator.value) {
+// Badge celebration: fire once when the user becomes checked in for this
+// session. Driven by shared state (the app-level watcher feeds it), so it's
+// immune to follow drops and event replays; the persisted per-session guard
+// means it plays at most once, ever. Creators auto-check-in at creation and
+// don't earn a collectible badge — skip them.
+watch(
+  () => subEvent.value?.isCheckedIn ?? false,
+  (checkedIn) => {
+    if (!checkedIn || isCreator.value || hasCelebrated(addr)) return;
+    markCelebrated(addr);
+    receivedAt.value = new Date();
+    passportOpen.value = false;
     badgeEarnedOpen.value = true;
-  }
-  // Reconcile cache in the background. Animation is event-driven.
-  reloadSubEvents().catch(() => {});
-});
+    // Pull the freshly minted session POAP for the badge view.
+    reloadSubEvents().catch(() => {});
+  },
+  { immediate: true },
+);
 
 function handleToggleBookmark() {
   if (!subEvent.value) return;
