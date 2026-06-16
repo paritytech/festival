@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useSubEvents } from "~/composables/useSubEvents";
 import { useSubEventRoles } from "~/composables/useSubEventRoles";
 import { useRegistration } from "~/composables/useRegistration";
@@ -31,6 +31,7 @@ definePageMeta({
 });
 
 const route = useRoute();
+const router = useRouter();
 const addr = route.params.address as string;
 // `?from=create` tells us the user landed here from the create-flow success
 // screen. Browser history points back into the create page, which would be
@@ -38,6 +39,16 @@ const addr = route.params.address as string;
 const backTo = computed(() =>
   route.query.from === "create" ? "/program" : undefined,
 );
+
+// `?updated=1` is set by the edit flow on a successful save. Surface the toast
+// here (after redirect), then strip the flag so a reload doesn't replay it.
+const showUpdatedToast = ref(false);
+onMounted(() => {
+  if (route.query.updated === "1") {
+    showUpdatedToast.value = true;
+    router.replace({ path: route.path, query: {} });
+  }
+});
 const wallet = useWalletStore();
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
 const { subEvents, isLoading: subEventsLoading, reload: reloadSubEvents } =
@@ -340,4 +351,13 @@ function formatDay(d: Date): string {
     :zones="venueZones"
     @close="locationViewOpen = false"
   />
+
+  <div class="fixed bottom-28 left-4 right-4 md:left-[calc(var(--col-l)+1rem)] md:right-[calc(var(--col-r)+1rem)] z-[1000] pointer-events-none">
+    <SuccessToast
+      :visible="showUpdatedToast"
+      variant="check"
+      message="Session Updated Successfully"
+      @hide="showUpdatedToast = false"
+    />
+  </div>
 </template>
