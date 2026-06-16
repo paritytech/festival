@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { provideFestivalContext } from '~/composables/useFestivalContext'
+import { provideFestivalContext, PUBLISH_CONFLICT } from '~/composables/useFestivalContext'
 import { usePermissions } from '~/composables/usePermissions'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { walletAddressToH160 } from '@festival/shared/utils/address'
@@ -93,6 +93,14 @@ async function handlePublish() {
   if (context.txStatus.value !== 'error') {
     showPublishPanel.value = false
   }
+}
+
+// Pull the latest published metadata into the draft (discarding unsaved edits),
+// so the user can re-apply their changes against current on-chain state.
+function handleRefreshFromChain() {
+  context.discardChanges()
+  context.txError.value = null
+  showPublishPanel.value = false
 }
 </script>
 
@@ -279,6 +287,33 @@ async function handlePublish() {
       </Transition>
     </Teleport>
 
+    <!-- Remote-change banner: an external publish landed while editing. Persistent
+         (no auto-dismiss) with an explicit refresh/keep-editing choice. -->
+    <Teleport to="body">
+      <Transition enter-active-class="transition duration-200" enter-from-class="opacity-0 translate-y-2" leave-active-class="transition duration-150" leave-to-class="opacity-0 translate-y-2">
+        <div v-if="context.remoteChanged.value" data-testid="remote-change-banner" class="fixed bottom-4 left-4 z-50 bg-warning-muted rounded-lg px-4 py-3 shadow-lg max-w-sm">
+          <p class="text-sm text-warning mb-2">
+            This festival was updated on chain elsewhere. The latest data is loaded; your unpublished edits are preserved. Refresh to edit against the latest, or keep editing and resolve on publish.
+          </p>
+          <div class="flex gap-2">
+            <button
+              data-testid="remote-change-refresh"
+              class="px-3 py-1.5 bg-warning text-black rounded-xl text-xs font-medium hover:bg-warning/80 transition-colors"
+              @click="handleRefreshFromChain"
+            >
+              Refresh from chain
+            </button>
+            <button
+              class="px-3 py-1.5 bg-secondary-btn rounded-xl text-xs text-text-secondary hover:bg-secondary-btn-hover hover:text-text-primary transition-colors"
+              @click="context.acknowledgeRemoteChange()"
+            >
+              Keep editing
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <!-- Publish confirmation -->
     <Teleport to="body">
       <Transition enter-active-class="transition duration-200" enter-from-class="opacity-0" leave-active-class="transition duration-150" leave-to-class="opacity-0">
@@ -325,7 +360,19 @@ async function handlePublish() {
             </div>
 
             <div v-if="context.txError.value" class="bg-danger-muted rounded-lg p-3 mb-4 text-sm text-danger">
-              {{ context.txError.value }}
+              <template v-if="context.txError.value === PUBLISH_CONFLICT">
+                <p class="mb-2">
+                  Someone else published changes since you started editing. The latest on-chain data has been loaded — refresh to edit against it, then re-apply your changes and publish.
+                </p>
+                <button
+                  data-testid="conflict-refresh"
+                  class="px-3 py-1.5 bg-danger/20 rounded-xl text-xs font-medium hover:bg-danger/30 transition-colors"
+                  @click="handleRefreshFromChain"
+                >
+                  Refresh from chain
+                </button>
+              </template>
+              <template v-else>{{ context.txError.value }}</template>
             </div>
 
             <div class="flex gap-2 justify-end">

@@ -152,16 +152,20 @@ const categoryColor = computed(() =>
   color: rgba(15, 15, 15, 0.55);
   font-size: 12px;
   font-weight: 500;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 .sel-card__primary {
   font-size: 16px;
   font-weight: 600;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .sel-card__actions {

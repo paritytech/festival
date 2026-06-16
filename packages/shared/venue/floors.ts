@@ -6,6 +6,9 @@ import type {
 } from "../metadata/schemas";
 import { TYPE_LABELS } from "./categories";
 
+/** Cap for resolved venue labels rendered alongside a session time. */
+export const LOCATION_LABEL_MAX_CHARS = 28
+
 /** Outdoor venue overhead. Treated as a pseudo-"floor" so markers can be
  *  placed against it using the same coordinate model as indoor floors,
  *  but it does not belong to any VenueBlock. */

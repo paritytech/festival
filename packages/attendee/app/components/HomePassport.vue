@@ -98,7 +98,7 @@ onUnmounted(() => {
         <p class="text-lg uppercase font-mono font-medium text-black leading-tight" data-testid="passport-festival-name">
           {{ festivalName }}
         </p>
-        <p class="text-lg font-semibold text-black leading-tight">Your Passport</p>
+        <p class="text-lg font-semibold text-black leading-tight">Your Pass</p>
       </div>
       <img src="/w3s-logo.png" alt="W3S" width="53" height="22.05" class="shrink-0" />
     </div>
