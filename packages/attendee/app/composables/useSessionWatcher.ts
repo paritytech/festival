@@ -7,6 +7,7 @@ import { useBulletinStorage } from '@festival/shared/metadata/bulletin'
 import { isNonZeroCid } from '@festival/shared/contracts/festival-reads'
 import { ss58ToH160, isValidEvmAddress } from '@festival/shared/utils/address'
 import { useSubEvents } from './useSubEvents'
+import { refreshUserSessionPoaps } from './usePoapRefresh'
 
 /**
  * Subscribe to a session's Revive.ContractEmitted events for the lifetime of
@@ -37,7 +38,12 @@ export function useSessionWatcher(sessionAddress: string) {
     const sub = watchFestivalEvents(sessionAddress as `0x${string}`, {
       onCheckedIn: (attendee) => {
         const me = userH160OrNull()
-        if (me && attendee.toLowerCase() === me) checkedIn.value = true
+        if (!me || attendee.toLowerCase() !== me) return
+        checkedIn.value = true
+        void refreshUserSessionPoaps(
+          me as `0x${string}`,
+          sessionAddress as `0x${string}`,
+        )
       },
       onMetadataUpdated: async (newCid) => {
         if (!isNonZeroCid(newCid)) return

@@ -11,6 +11,7 @@ import { useFestival } from '~/composables/useFestival'
 import { useSubEvents } from '~/composables/useSubEvents'
 import { usePoaps } from '~/composables/usePoaps'
 import { bootLoadAttendee } from '~/composables/useBootLoad'
+import { refreshUserFestivalPoaps } from '~/composables/usePoapRefresh'
 import { startCachePersistence, hydrateLastKnown } from '@festival/shared/cache/festival-state'
 import { startPendingReconcile } from '@festival/shared/cache/pending'
 import { useFestivalWatcher } from '@festival/shared/cache/useFestivalWatcher'
@@ -100,6 +101,12 @@ const announcements = useAnnouncements()
 const watcher = useFestivalWatcher(FESTIVAL_ADDRESS, {
   deferWhileLoading: festival.isLoading,
   onChannelMetadataUpdated: () => { void announcements.reload() },
+  onCheckedIn: (attendee) => {
+    if (!wallet.isConnected) return
+    const userH160 = walletAddressToH160(wallet.address)
+    if (attendee.toLowerCase() !== userH160.toLowerCase()) return
+    void refreshUserFestivalPoaps(userH160)
+  },
 })
 
 // Visibility change as safety net — catches events lost during WebSocket

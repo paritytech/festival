@@ -20,6 +20,7 @@ export interface FestivalWatcherOptions {
   onDriftDetected?: (msg: string) => void
   /** Fired when the festival's channel CID pointer updates on chain. */
   onChannelMetadataUpdated?: (newCid: `0x${string}`) => void
+  onCheckedIn?: (attendee: string) => void
   /**
    * If provided, the watcher is held off until this ref flips to false.
    * Lets callers invoke the composable during setup (so onUnmounted registers)
@@ -43,7 +44,7 @@ export function useFestivalWatcher(
     return
   }
 
-  const { deferWhileLoading, onChannelMetadataUpdated } = options
+  const { deferWhileLoading, onChannelMetadataUpdated, onCheckedIn } = options
 
   let active: { unsubscribe: () => void } | null = null
   let disposed = false
@@ -102,6 +103,7 @@ export function useFestivalWatcher(
 
       onCheckedIn: (attendee) => {
         applyCheckedIn(attendee as `0x${string}`)
+        onCheckedIn?.(attendee)
       },
 
       onSessionCreated: async (sessionAddr, creator, metadataCid) => {
