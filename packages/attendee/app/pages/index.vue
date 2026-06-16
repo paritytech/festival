@@ -16,10 +16,14 @@ import {
 import type { TimelineItem } from "~/composables/useProgramTimeline";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { resolveShortLocationLabel } from "@festival/shared/venue/floors";
+import {
+  LOCATION_LABEL_MAX_CHARS,
+  resolveShortLocationLabel,
+} from "@festival/shared/venue/floors";
 import { useVenueMap } from "~/composables/useVenueMap";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import { formatTimeBerlin } from "@festival/shared/utils/time";
+import { truncate } from "@festival/shared/utils/text";
 
 const { metadata: festivalMetadata } = useFestival();
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
@@ -123,21 +127,21 @@ function getMyListTimeLabel(item: TimelineItem): string {
 
 function getMyListLocation(item: TimelineItem): string {
   if (!venueMarkers.value.length) return "";
+  let label = "";
   if (item.type === "official" && item.entry.venueMarkerId) {
-    return resolveShortLocationLabel(
+    label = resolveShortLocationLabel(
       item.entry.venueMarkerId,
       venueMarkers.value,
       venueZones.value,
     );
-  }
-  if (item.type === "community" && item.subEvent.metadata.location) {
-    return resolveShortLocationLabel(
+  } else if (item.type === "community" && item.subEvent.metadata.location) {
+    label = resolveShortLocationLabel(
       item.subEvent.metadata.location,
       venueMarkers.value,
       venueZones.value,
     );
   }
-  return "";
+  return truncate(label, LOCATION_LABEL_MAX_CHARS);
 }
 
 function getMyListRoute(item: TimelineItem): string {
