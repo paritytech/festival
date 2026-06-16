@@ -96,16 +96,31 @@ const onSessionFloor = computed(() => {
   return resolved.value.floorId === activeFloorId.value
 })
 
+// Red "you are here" pin marking the session location. The full map renders
+// every venue marker, so the pin is what distinguishes this session's spot —
+// for marker-resolved locations it's dropped on the marker's coordinates.
+const sessionPin = computed(() => {
+  if (!resolved.value || resolved.value.kind === 'unknown' || !onSessionFloor.value) return null
+  if (resolved.value.kind === 'spot') return resolved.value.spot
+  const m = resolved.value.marker
+  return { x: m.x, y: m.y, floorId: m.floorId }
+})
+
+// The session's own marker is replaced by the large red pin, so drop it from
+// the rendered set; every other marker still shows.
+const displayMarkers = computed(() => {
+  const r = resolved.value
+  if (r?.kind !== 'marker') return props.markers
+  return props.markers.filter((m) => m.id !== r.marker.id)
+})
+
 const mapRef = useTemplateRef<InstanceType<typeof VenueMap>>('mapRef')
 
 function focusSessionTarget() {
-  if (!resolved.value || resolved.value.kind === 'unknown' || !onSessionFloor.value) return
-  const opts = { bottomPadding: 220, animate: false, sticky: true }
-  if (resolved.value.kind === 'spot') {
-    mapRef.value?.focusSpot(resolved.value.spot, opts)
-  } else {
-    mapRef.value?.focusMarker(resolved.value.marker.id, opts)
-  }
+  // Focus the spot, not the marker: the session's marker is removed from the
+  // rendered set (replaced by the red pin), so focusMarker would find nothing.
+  if (!sessionPin.value) return
+  mapRef.value?.focusSpot(sessionPin.value, { bottomPadding: 220, animate: false, sticky: true })
 }
 
 function handleReady() {
@@ -161,13 +176,11 @@ async function handleShare() {
         <VenueMap
           v-if="resolved && resolved.kind !== 'unknown' && activeFloorId"
           ref="mapRef"
-          :markers="markers"
+          :markers="displayMarkers"
           :zones="zones"
           :active-floor-id="activeFloorId"
-          :selected-marker-id="
-            resolved.kind === 'marker' && onSessionFloor ? resolved.marker.id : null
-          "
-          :user-spot="resolved.kind === 'spot' && onSessionFloor ? resolved.spot : null"
+          :selected-marker-id="null"
+          :user-spot="sessionPin"
           :interactive="false"
           @ready="handleReady"
         />
@@ -212,13 +225,20 @@ async function handleShare() {
 <style scoped>
 .loc-view {
   position: fixed;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  /* Confine to the desktop centre column; --col-l/--col-r are 0 below md so
+     this spans the full viewport on mobile. */
+  left: var(--col-l);
+  right: var(--col-r);
   z-index: 2000;
   background: #000;
   color: var(--color-text-and-icons-primary);
   display: flex;
   flex-direction: column;
   padding-top: var(--safe-top);
+  /* Enlarge the red session pin (inherited by .vpin in the map engine). */
+  --vpin-scale: 1.6;
 }
 
 .loc-view__canvas {
