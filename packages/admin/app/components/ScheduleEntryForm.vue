@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, computed } from 'vue'
-import type { ScheduleEntry, VenueMarker } from '@festival/shared/metadata/schemas'
+import type { ScheduleEntry, ScheduleEntryCategory, VenueMarker } from '@festival/shared/metadata/schemas'
 
 const props = defineProps<{
   entry: ScheduleEntry
@@ -19,11 +19,21 @@ const emit = defineEmits<{
 const form = reactive<ScheduleEntry>({
   ...props.entry,
   speakers: [...props.entry.speakers],
+  // Fall back to 'official' so a saved entry always has a real category and we
+  // never write undefined.
+  category: props.entry.category ?? 'official',
 })
 
 const speakersText = computed({
   get: () => form.speakers.join(', '),
   set: (v: string) => { form.speakers = v.split(',').map(s => s.trim()).filter(Boolean) },
+})
+
+// 'official' by default. 'activations' is for things that run all day, and they
+// don't show up in the announcement talks card.
+const category = computed<ScheduleEntryCategory>({
+  get: () => form.category ?? 'official',
+  set: (v: ScheduleEntryCategory) => { form.category = v },
 })
 
 const isNew = computed(() => !props.entry.title)
@@ -56,6 +66,18 @@ function handleSubmit() {
           rows="2"
           class="w-full px-3 py-2 border border-border rounded-md text-sm bg-surface-elevated focus:outline-none focus:border-primary resize-none"
         />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Category</label>
+        <select
+          v-model="category"
+          data-testid="schedule-category-select"
+          class="w-full px-3 py-2 border border-border rounded-md text-sm bg-surface-elevated"
+        >
+          <option value="official">Official</option>
+          <option value="activations">Activations</option>
+        </select>
       </div>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

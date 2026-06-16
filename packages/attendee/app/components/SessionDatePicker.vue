@@ -8,6 +8,9 @@ const props = defineProps<{
   modelValue: string | null
   /** Berlin dateKeys the user can't pick (e.g. per-day session cap reached). */
   disabledDateKeys?: Set<string>
+  /** Display-only: show the chosen day but block opening the picker (edit flow,
+   * where session time is immutable on-chain). */
+  readonly?: boolean
 }>()
 
 function isDisabled(dateKey: string): boolean {
@@ -25,7 +28,7 @@ const selectedDay = computed(() =>
 )
 
 function toggle() {
-  if (props.days.length === 0) return
+  if (props.readonly || props.days.length === 0) return
   expanded.value = !expanded.value
 }
 
@@ -75,7 +78,7 @@ watch(
       <PillButton
         :data-testid="selectedDay ? 'session-date-pill' : 'session-date-add'"
         :aria-pressed="expanded"
-        :disabled="days.length === 0"
+        :disabled="days.length === 0 || readonly"
         size="md"
         tone="glass"
         :variant="selectedDay ? 'filled' : expanded ? 'active' : 'idle'"

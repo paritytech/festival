@@ -8,7 +8,7 @@
  */
 
 import { hostLocalStorage } from "@novasamatech/host-api-wrapper";
-import { buildSnapshot, type CardSnapshot } from "./data";
+import { buildSnapshot, CARD_SNAPSHOT_VERSION, type CardSnapshot } from "./data";
 import { withTimeout } from "./time";
 
 const TAG = "[w3s-announcements]";
@@ -23,10 +23,12 @@ function isSnapshot(value: unknown): value is CardSnapshot {
   if (!value || typeof value !== "object") return false;
   const s = value as CardSnapshot;
   return (
+    s.version === CARD_SNAPSHOT_VERSION &&
     typeof s.at === "number" &&
     typeof s.festivalName === "string" &&
     Array.isArray(s.talks) &&
     Array.isArray(s.sessions) &&
+    Array.isArray(s.activations) &&
     Array.isArray(s.announcements)
   );
 }

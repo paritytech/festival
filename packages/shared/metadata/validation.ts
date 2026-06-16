@@ -20,6 +20,18 @@ export function validateFestivalMetadata(data: unknown): ValidationResult {
   if (!d.location || typeof d.location !== 'object') errors.push('location is required')
   if (!Array.isArray(d.tags)) errors.push('tags must be an array')
   if (!Array.isArray(d.schedule)) errors.push('schedule must be an array')
+  else {
+    for (const e of d.schedule as Array<Record<string, unknown>>) {
+      if (!e) continue
+      const c = e.category
+      // Missing is fine, it just means 'official'. null or anything else is
+      // wrong; flag them all, not only the first.
+      if (c !== undefined && c !== 'official' && c !== 'activations') {
+        const id = typeof e.id === 'string' ? e.id : '?'
+        errors.push(`schedule entry "${id}" has invalid category: ${JSON.stringify(c)}`)
+      }
+    }
+  }
 
   return { valid: errors.length === 0, errors }
 }
