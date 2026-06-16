@@ -80,13 +80,13 @@ export function buildWindowedMetadata(nowSec: bigint = nowUnixSec()): MetadataWi
         category: 'official',
       },
       {
-        id: 'e2e-initiative',
+        id: 'e2e-activation',
         start: isoSec(scheduleStart),
         end: isoSec(scheduleStart + 8n * 3600n),
         title: 'All-Day Lounge',
-        description: 'E2E fixture initiative — all-day programming, category rendering check.',
+        description: 'E2E fixture activation — all-day programming, category rendering check.',
         speakers: ['Carol'],
-        category: 'initiatives',
+        category: 'activations',
       },
     ],
     venueMap: {

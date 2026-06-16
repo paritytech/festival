@@ -72,7 +72,7 @@ export function getItemId(item: TimelineItem): string {
 // ── Category ──
 //
 // The timeline only cares whether an item is a schedule entry or a sub-event.
-// Initiatives are schedule entries we tagged via `ScheduleEntry.category`, so we
+// Activations are schedule entries we tagged via `ScheduleEntry.category`, so we
 // read the category off that rather than add a third variant to the union.
 // CATEGORY_STYLE holds the label and color for each one. A new category needs an
 // entry there, a `--color-<name>` token in main.css, and a pill in the legend
@@ -83,11 +83,11 @@ export type CategoryStyle = { label: string; color: string }
 export const CATEGORY_STYLE: Record<SessionCategory, CategoryStyle> = {
   official: { label: 'Official', color: '#fafaf9' },
   community: { label: 'Community', color: '#9462FA' },
-  initiatives: { label: 'Initiatives', color: '#728806' },
+  activations: { label: 'Activations', color: '#FFB300' },
 }
 
 export function scheduleEntryCategory(entry: ScheduleEntry): SessionCategory {
-  return entry.category === 'initiatives' ? 'initiatives' : 'official'
+  return entry.category === 'activations' ? 'activations' : 'official'
 }
 
 export function getItemCategory(item: TimelineItem): SessionCategory {

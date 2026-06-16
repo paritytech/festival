@@ -29,7 +29,7 @@ const speakersText = computed({
   set: (v: string) => { form.speakers = v.split(',').map(s => s.trim()).filter(Boolean) },
 })
 
-// 'official' by default. 'initiatives' is for things that run all day, and they
+// 'official' by default. 'activations' is for things that run all day, and they
 // don't show up in the announcement talks card.
 const category = computed<ScheduleEntryCategory>({
   get: () => form.category ?? 'official',
@@ -76,7 +76,7 @@ function handleSubmit() {
           class="w-full px-3 py-2 border border-border rounded-md text-sm bg-surface-elevated"
         >
           <option value="official">Official</option>
-          <option value="initiatives">Initiatives</option>
+          <option value="activations">Activations</option>
         </select>
       </div>
 

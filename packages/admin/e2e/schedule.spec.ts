@@ -10,7 +10,7 @@ test.describe('Schedule editor', () => {
     await expect(frame.locator('[data-testid="schedule-add-btn"]')).toBeVisible()
   })
 
-  test('add-entry form exposes the Official / Initiatives category selector', async ({ testHost }) => {
+  test('add-entry form exposes the Official / Activations category selector', async ({ testHost }) => {
     const frame = await waitForAdminReady(testHost)
 
     await frame.locator('[data-testid="nav-item-schedule"]').first().click()
@@ -20,7 +20,7 @@ test.describe('Schedule editor', () => {
     await expect(select).toBeVisible()
     await expect(select.locator('option')).toHaveText([
       'Official',
-      'Initiatives',
+      'Activations',
     ])
   })
 })

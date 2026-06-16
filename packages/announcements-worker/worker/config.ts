@@ -105,11 +105,11 @@ export interface ScheduleEntry {
   /** Links to a VenueMarker.id on the festival venue map. */
   venueMarkerId?: string;
   /**
-   * 'initiatives' is for things that run all day; we hide those from the
+   * 'activations' is for things that run all day; we hide those from the
    * "Upcoming talks" and time window cards. Missing means 'official'. Mirrors
    * shared's `ScheduleEntry.category`.
    */
-  category?: "official" | "initiatives";
+  category?: "official" | "activations";
 }
 
 /**

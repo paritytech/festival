@@ -24,7 +24,7 @@ test.describe('Program', () => {
     await expect(mylistTab).toHaveClass(/text-white(?!\/)/)
   })
 
-  test('Sessions Type legend lists Official, Community, and Initiatives', async ({ testHost }) => {
+  test('Sessions Type legend lists Official, Community, and Activations', async ({ testHost }) => {
     const frame = await waitForAttendeeReady(testHost)
 
     await (await navLink(frame, 'program')).click()
@@ -35,7 +35,7 @@ test.describe('Program', () => {
     await expect(legend).toBeVisible()
     await expect(legend).toContainText('Official')
     await expect(legend).toContainText('Community')
-    await expect(legend).toContainText('Initiatives')
+    await expect(legend).toContainText('Activations')
   })
 
   test('My List counter pill is gated on the My List tab', async ({ testHost }) => {

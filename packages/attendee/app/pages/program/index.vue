@@ -362,8 +362,8 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
               <span class="text-white">Community</span>
             </span>
             <span class="flex items-center gap-1.5">
-              <span class="w-[3px] h-3.5 rounded-full bg-initiatives" />
-              <span class="text-white">Initiatives</span>
+              <span class="w-[3px] h-3.5 rounded-full bg-activations" />
+              <span class="text-white">Activations</span>
             </span>
           </div>
         </div>

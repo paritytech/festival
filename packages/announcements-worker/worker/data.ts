@@ -19,7 +19,7 @@ import { readSessions } from "./sessions";
 
 /**
  * Snapshot schema version. Bump it whenever the snapshot's shape or filtering
- * changes (like now, with initiatives dropped from `talks`), so a snapshot
+ * changes (like now, with activations dropped from `talks`), so a snapshot
  * saved by an older worker gets thrown away instead of served stale.
  */
 export const CARD_SNAPSHOT_VERSION = 1;

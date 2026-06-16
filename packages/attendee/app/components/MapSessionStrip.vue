@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineProps<{
   kind: 'ongoing' | 'soon'
-  source: 'program' | 'community' | 'initiatives'
+  source: 'program' | 'community' | 'activations'
   title: string
   minutes?: number
 }>()
@@ -53,7 +53,7 @@ defineEmits<{
 .session-strip:active { background: #1d1d1d; }
 
 /* Left accent bar. White for program entries, purple for community sessions,
-   olive for all-day initiatives. */
+   gold for activations. */
 .session-strip__accent {
   flex: none;
   width: 3px;
@@ -62,7 +62,7 @@ defineEmits<{
 }
 .session-strip--program .session-strip__accent { background: #fafaf9; }
 .session-strip--community .session-strip__accent { background: #9462fa; }
-.session-strip--initiatives .session-strip__accent { background: #728806; }
+.session-strip--activations .session-strip__accent { background: #FFB300; }
 
 .session-strip__body {
   display: flex;

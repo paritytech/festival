@@ -26,7 +26,7 @@ export function validateFestivalMetadata(data: unknown): ValidationResult {
       const c = e.category
       // Missing is fine, it just means 'official'. null or anything else is
       // wrong; flag them all, not only the first.
-      if (c !== undefined && c !== 'official' && c !== 'initiatives') {
+      if (c !== undefined && c !== 'official' && c !== 'activations') {
         const id = typeof e.id === 'string' ? e.id : '?'
         errors.push(`schedule entry "${id}" has invalid category: ${JSON.stringify(c)}`)
       }
