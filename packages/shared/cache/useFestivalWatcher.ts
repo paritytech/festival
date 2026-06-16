@@ -23,6 +23,12 @@ export interface FestivalWatcherOptions {
   onDriftDetected?: (msg: string) => void
   /** Fired when the festival's channel CID pointer updates on chain. */
   onChannelMetadataUpdated?: (newCid: `0x${string}`) => void
+  /** Fired on a festival-level CheckedIn (after state applied). Lets the app
+   * refresh the checked-in user's festival POAP without a full reconcile. */
+  onCheckedIn?: (attendee: string) => void
+  /** Fired on a session-level CheckedIn (after state applied), for the same
+   * per-user POAP refresh on the session contract. */
+  onSessionCheckedIn?: (sessionAddress: `0x${string}`, attendee: string) => void
   /**
    * If provided, the watcher is held off until this ref flips to false.
    * Lets callers invoke the composable during setup (so onUnmounted registers)
@@ -46,7 +52,7 @@ export function useFestivalWatcher(
     return
   }
 
-  const { deferWhileLoading, onChannelMetadataUpdated } = options
+  const { deferWhileLoading, onChannelMetadataUpdated, onCheckedIn, onSessionCheckedIn } = options
 
   let active: { unsubscribe: () => void } | null = null
   let disposed = false
@@ -94,6 +100,7 @@ export function useFestivalWatcher(
       },
       onCheckedIn: (attendee) => {
         applySessionCheckedIn(sessionAddr, attendee as `0x${string}`)
+        onSessionCheckedIn?.(sessionAddr, attendee)
       },
       onMetadataUpdated: async (newCid) => {
         if (!isNonZeroCid(newCid)) return
@@ -132,6 +139,7 @@ export function useFestivalWatcher(
 
       onCheckedIn: (attendee) => {
         applyCheckedIn(attendee as `0x${string}`)
+        onCheckedIn?.(attendee)
       },
 
       onSessionCreated: async (sessionAddr, creator, metadataCid) => {
