@@ -6,6 +6,7 @@ import { useRegistration } from "~/composables/useRegistration";
 import { useSchedule } from "~/composables/useSchedule";
 import { useSubEvents } from "~/composables/useSubEvents";
 import { usePoaps } from "~/composables/usePoaps";
+import { useFestivalPass } from "~/composables/useFestivalPass";
 import { useOnboardingSeen } from "~/composables/useOnboardingSeen";
 import {
   useProgramTimeline,
@@ -28,6 +29,7 @@ const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
 const { entries: scheduleEntries } = useSchedule();
 const { subEvents } = useSubEvents();
 const { collectibleSubEventPoaps } = usePoaps();
+const { passStatus, openActivation } = useFestivalPass();
 const { has: hasSeenOnboarding } = useOnboardingSeen();
 const buildScheduleTo = computed(() =>
   hasSeenOnboarding("build-schedule") ? "/program" : "/program/welcome",
@@ -172,8 +174,35 @@ function getMyListRoute(item: TimelineItem): string {
       :festival-name="festivalMetadata?.name || 'Web3 Summit'"
     />
 
-    <!-- 2. Passport -->
-    <HomePassport />
+    <!-- 2. Passport (+ deferred-pass activation CTA) -->
+    <div>
+      <HomePassport />
+      <button
+        v-if="passStatus === 'deferred'"
+        type="button"
+        class="w-full -mt-4 flex items-center justify-between gap-3 rounded-3xl bg-surface-2 px-5 py-4 text-activations"
+        data-testid="activate-pass-cta"
+        @click="openActivation"
+      >
+        <span class="text-lg font-semibold">Activate your pass</span>
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
+          <path
+            d="M5 12h14M13 6l6 6-6 6"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+    </div>
 
     <!-- 2.5. Location (kept up top only when not yet checked in;
          once checked in it moves to the bottom of the page). -->
