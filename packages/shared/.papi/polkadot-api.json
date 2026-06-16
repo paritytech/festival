@@ -18,7 +18,7 @@
       "wsUrl": "wss://paseo-asset-hub-next-rpc.polkadot.io",
       "metadata": ".papi/metadata/paseoNextAh.scale",
       "genesis": "0xbf0488dbe9daa1de1c08c5f743e26fdc2a4ecd74cf87dd1b4b1eeb99ae4ef19f",
-      "codeHash": "0x970b97e4531a527555f3b89d7a3c2d1beb3b389579eef6c2e3afb7d425066415"
+      "codeHash": "0xdbba4a60ddc55aaf412d740eb9e0b93b8f98c5b8f050cc0a97a56a43b9fb24d5"
     },
     "paseoNextBulletin": {
       "wsUrl": "wss://paseo-bulletin-next-rpc.polkadot.io",
@@ -30,7 +30,7 @@
       "wsUrl": "wss://previewnet.substrate.dev/asset-hub",
       "metadata": ".papi/metadata/previewnetAh.scale",
       "genesis": "0x29f7b15e6227f86b90bf5199b5c872c28649a30e5f15fae6dd8fa9d5d48d6fbb",
-      "codeHash": "0x970b97e4531a527555f3b89d7a3c2d1beb3b389579eef6c2e3afb7d425066415"
+      "codeHash": "0xdbba4a60ddc55aaf412d740eb9e0b93b8f98c5b8f050cc0a97a56a43b9fb24d5"
     },
     "previewnetBulletin": {
       "wsUrl": "wss://previewnet.substrate.dev/bulletin",
