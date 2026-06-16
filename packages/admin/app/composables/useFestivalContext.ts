@@ -5,12 +5,15 @@ import type { FestivalMetadata } from '@festival/shared/metadata/schemas'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { readFestivalDetails } from '@festival/shared/contracts/festival-reads'
 import { festivalState } from '@festival/shared/cache/festival-state'
-import { computeSyncDecision } from './useFestivalContext.helpers'
+import { computeSyncDecision, isPublishConflict } from './useFestivalContext.helpers'
 
 /** Deep-copy that works on Vue reactive proxies (structuredClone can't handle them). */
 function deepCopy<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj))
 }
+
+/** `txError` sentinel set when publish() aborts on a concurrent-change conflict. */
+export const PUBLISH_CONFLICT = 'CONFLICT'
 
 export interface FestivalContext {
   address: string
@@ -25,7 +28,7 @@ export interface FestivalContext {
   baseMetadataCid: Ref<string | null>
   /** True when an external publish landed while the draft had unsaved edits. */
   remoteChanged: Ref<boolean>
-  publish: () => Promise<void>
+  publish: (opts?: { force?: boolean }) => Promise<void>
   discardChanges: () => void
   txStatus: Ref<TxStatus>
   txError: Ref<string | null>
@@ -119,10 +122,41 @@ export function provideFestivalContext(address: string) {
   const txStatus = ref<TxStatus>('idle')
   const txError = ref<string | null>(null)
 
-  async function publish() {
+  async function publish(opts: { force?: boolean } = {}) {
     txError.value = null
     txStatus.value = 'preparing'
     try {
+      // Concurrency guard: re-read the current on-chain cid and compare it to
+      // the cid this draft is based on. A mismatch means another writer
+      // (another admin tab, a maintenance script) published since we loaded, so
+      // writing the whole draft blob now would silently overwrite their change.
+      // Abort, pull their data in so the user can re-apply against it, and flag
+      // the conflict. Read at 'best' (≈6s, same as the post-publish refresh
+      // below): a recent concurrent publish is already in the best block, so
+      // 'best' detects it; 'finalized' could miss an in-block-but-unfinalized one.
+      if (!opts.force && baseMetadataCid.value !== null) {
+        const onChain = await readFestivalDetails(address as `0x${string}`)
+        if (isPublishConflict(baseMetadataCid.value, onChain.metadataCid)) {
+          try {
+            const { useBulletinStorage } = await import('@festival/shared/metadata/bulletin')
+            const latest = await useBulletinStorage().retrievePlaintext<FestivalMetadata>(onChain.metadataCid)
+            savedMetadata.value = deepCopy(latest)
+            baseMetadataCid.value = onChain.metadataCid
+            if (festivalState.festival) {
+              festivalState.festival.details = onChain
+              festivalState.festival.metadata = deepCopy(latest)
+            }
+          } catch {
+            // Couldn't fetch the latest blob; still block. useFestivalWatcher
+            // will sync savedMetadata/draft once it resolves the new cid.
+          }
+          remoteChanged.value = true
+          txStatus.value = 'error'
+          txError.value = PUBLISH_CONFLICT
+          return
+        }
+      }
+
       const { useMetadataSave } = await import('./useMetadataSave')
       const saver = useMetadataSave(address)
       await saver.save(toRaw(draft) as FestivalMetadata)
@@ -131,9 +165,11 @@ export function provideFestivalContext(address: string) {
       savedMetadata.value = deepCopy(draft)
 
       // Refresh festivalState with the freshly-published details so the UI
-      // reflects the new metadata immediately.
+      // reflects the new metadata immediately, and advance the base cid so the
+      // sync watcher treats our own write as already-applied (no false conflict).
       try {
         const freshDetails = await readFestivalDetails(address as `0x${string}`)
+        baseMetadataCid.value = freshDetails.metadataCid
         if (festivalState.festival) {
           festivalState.festival.details = freshDetails
           festivalState.festival.metadata = deepCopy(draft) as FestivalMetadata
