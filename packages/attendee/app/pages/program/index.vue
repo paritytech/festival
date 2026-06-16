@@ -10,6 +10,7 @@ import { useFestival } from "~/composables/useFestival";
 import { useNow } from "~/composables/useNow";
 import { useRegistration } from "~/composables/useRegistration";
 import { useSavedItems } from "~/composables/useSavedItems";
+import { useSessionLimit } from "~/composables/useSessionLimit";
 import { useOnboardingSeen } from "~/composables/useOnboardingSeen";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { useVenueMap } from "~/composables/useVenueMap";
@@ -30,6 +31,7 @@ const { has: hasSeenOnboarding } = useOnboardingSeen();
 const hostSessionTo = computed(() =>
   hasSeenOnboarding("host-session") ? "/sessions/create" : "/sessions/host",
 );
+const { canHostMore: canHostMoreSessions } = useSessionLimit();
 
 // `displayedCount` lags the real count on increments so the number ticks up
 // exactly when the flying-ghost lands; decrements apply immediately. The
@@ -475,7 +477,7 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
 
     <!-- Host your own session: collapsible button (Program tab only) -->
     <NuxtLink
-      v-if="subEventsEnabled && isCheckedIn && activeTab === 'program'"
+      v-if="subEventsEnabled && isCheckedIn && activeTab === 'program' && canHostMoreSessions"
       :to="hostSessionTo"
       class="fixed right-4 md:right-[calc(var(--col-r)+1rem)] z-40 bg-white rounded-full h-14 flex items-center px-5 text-black shadow-lg overflow-hidden transition-all duration-300 ease-in-out md:max-w-[calc(var(--col-w)-2rem)] bottom-[calc(var(--safe-bottom)+75px)] md:bottom-[calc(var(--safe-bottom)+1rem)]"
       :style="{

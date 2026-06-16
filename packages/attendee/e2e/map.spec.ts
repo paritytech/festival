@@ -107,10 +107,9 @@ test.describe('Venue map', () => {
     await expect(frame.locator('[data-testid="map-empty-prompt"]')).toBeVisible()
     await (await firstInteractiveMarker(frame)).click()
     await expect(card).toBeVisible()
-    const mapBox = await frame.locator('[data-testid="venue-map"]').boundingBox()
-    if (!mapBox) throw new Error('venue-map has no bounding box')
+    // Tap the empty top-left corner (the floor control sits top-right).
     await frame.locator('[data-testid="venue-map"]').click({
-      position: { x: mapBox.width - 20, y: 20 },
+      position: { x: 20, y: 20 },
     })
     await expect(card).toHaveCount(0)
   })

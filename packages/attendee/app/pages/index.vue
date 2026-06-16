@@ -4,7 +4,8 @@ import { useFestival } from "~/composables/useFestival";
 import { useNow } from "~/composables/useNow";
 import { useRegistration } from "~/composables/useRegistration";
 import { useSchedule } from "~/composables/useSchedule";
-import { useSubEvents } from "~/composables/useSubEvents";
+import { useSubEvents, type AttendeeSubEvent } from "~/composables/useSubEvents";
+import { useSessionLimit } from "~/composables/useSessionLimit";
 import { usePoaps } from "~/composables/usePoaps";
 import { useOnboardingSeen } from "~/composables/useOnboardingSeen";
 import {
@@ -18,10 +19,14 @@ import {
 import type { TimelineItem } from "~/composables/useProgramTimeline";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { resolveShortLocationLabel } from "@festival/shared/venue/floors";
+import {
+  LOCATION_LABEL_MAX_CHARS,
+  resolveShortLocationLabel,
+} from "@festival/shared/venue/floors";
 import { useVenueMap } from "~/composables/useVenueMap";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import { formatTimeBerlin } from "@festival/shared/utils/time";
+import { truncate } from "@festival/shared/utils/text";
 
 const { metadata: festivalMetadata } = useFestival();
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
@@ -56,32 +61,28 @@ const userH160 = computed(() => {
     : ss58ToH160(wallet.address).toLowerCase();
 });
 
-const mySession = computed(() => {
-  if (!userH160.value) return null;
+const mySessions = computed<AttendeeSubEvent[]>(() => {
+  if (!userH160.value) return [];
   const nowSec = now.value / 1000;
-  const mine = subEvents.value
+  return subEvents.value
     .filter(
       (se) =>
         se.creator.toLowerCase() === userH160.value && se.endTime > nowSec,
     )
     .sort((a, b) => a.startTime - b.startTime);
-  return mine[0] || null;
 });
 
-const mySessionOngoing = computed(() => {
-  if (!mySession.value) return false;
-  const now = Date.now();
-  return (
-    mySession.value.startTime * 1000 <= now &&
-    mySession.value.endTime * 1000 > now
-  );
-});
+const { canHostMore: canHostMoreSessions } = useSessionLimit();
 
-const mySessionSubtitle = computed(() => {
-  if (!mySession.value) return "";
-  const joiners = `${mySession.value.registeredCount} Joiner${mySession.value.registeredCount !== 1 ? "s" : ""}`;
-  if (mySessionOngoing.value) return `Session ongoing · ${joiners}`;
-  const diff = mySession.value.startTime * 1000 - Date.now();
+function isSessionOngoing(session: AttendeeSubEvent): boolean {
+  const t = Date.now();
+  return session.startTime * 1000 <= t && session.endTime * 1000 > t;
+}
+
+function getSessionSubtitle(session: AttendeeSubEvent): string {
+  const joiners = `${session.registeredCount} Joiner${session.registeredCount !== 1 ? "s" : ""}`;
+  if (isSessionOngoing(session)) return `Session ongoing · ${joiners}`;
+  const diff = session.startTime * 1000 - Date.now();
   if (diff <= 0) return joiners;
   const totalMin = Math.floor(diff / 60_000);
   const h = Math.floor(totalMin / 60);
@@ -91,7 +92,7 @@ const mySessionSubtitle = computed(() => {
   else if (h > 0) countdown = `Start within ${h}h`;
   else countdown = `Start within ${m} min`;
   return `${countdown} · ${joiners}`;
-});
+}
 
 // ── My List (bookmarked + registered sessions) ──
 
@@ -127,21 +128,21 @@ function getMyListTimeLabel(item: TimelineItem): string {
 
 function getMyListLocation(item: TimelineItem): string {
   if (!venueMarkers.value.length) return "";
+  let label = "";
   if (item.type === "official" && item.entry.venueMarkerId) {
-    return resolveShortLocationLabel(
+    label = resolveShortLocationLabel(
       item.entry.venueMarkerId,
       venueMarkers.value,
       venueZones.value,
     );
-  }
-  if (item.type === "community" && item.subEvent.metadata.location) {
-    return resolveShortLocationLabel(
+  } else if (item.type === "community" && item.subEvent.metadata.location) {
+    label = resolveShortLocationLabel(
       item.subEvent.metadata.location,
       venueMarkers.value,
       venueZones.value,
     );
   }
-  return "";
+  return truncate(label, LOCATION_LABEL_MAX_CHARS);
 }
 
 function getMyListRoute(item: TimelineItem): string {
@@ -308,7 +309,62 @@ function getMyListRoute(item: TimelineItem): string {
       </div>
     </template>
 
-    <!-- 4. My List -->
+    <!-- 4. My Sessions -->
+    <div v-if="isCheckedIn && mySessions.length">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold text-text-and-icons-primary">My Sessions</h3>
+        <NuxtLink
+          v-if="canHostMoreSessions"
+          :to="hostSessionTo"
+          class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-and-icons-primary"
+          aria-label="Host a session"
+        >
+          <PlusIcon :size="18" />
+        </NuxtLink>
+      </div>
+      <div class="space-y-2">
+        <NuxtLink
+          v-for="session in mySessions"
+          :key="session.address"
+          :to="`/sessions/${session.address}`"
+          class="block rounded-2xl bg-white px-4 py-2.5"
+        >
+          <div class="flex items-center gap-3">
+            <div
+              v-if="session.metadata.badgePixels"
+              class="w-12 h-12 rounded-xl overflow-hidden shrink-0"
+            >
+              <BadgeCanvas :pixels="session.metadata.badgePixels" :size="48" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-black truncate">
+                {{ session.metadata.name }}
+              </p>
+              <p class="text-xs text-black/50 mt-0.5">{{ getSessionSubtitle(session) }}</p>
+            </div>
+            <NuxtLink
+              v-if="!isSessionOngoing(session)"
+              :to="`/my/manage/${session.address}/edit`"
+              class="shrink-0"
+              @click.stop
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M3 17.46v3.04c0 .28.22.5.5.5h3.04c.13 0 .26-.05.35-.15L17.81 9.94l-3.75-3.75L3.15 17.1a.49.49 0 0 0-.15.36Z"
+                  fill="black"
+                />
+                <path
+                  d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83a1 1 0 0 0 0-1.41Z"
+                  fill="black"
+                />
+              </svg>
+            </NuxtLink>
+          </div>
+        </NuxtLink>
+      </div>
+    </div>
+
+    <!-- 5. My List -->
     <div v-if="isCheckedIn && myListItems.length">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-lg font-semibold text-text-and-icons-primary">My List</h3>
@@ -358,47 +414,9 @@ function getMyListRoute(item: TimelineItem): string {
     <template v-if="isCheckedIn">
 
       <div class="space-y-6">
-      <!-- 5. Host your own session / My session -->
+      <!-- Host your own session (fallback when user has no sessions) -->
       <NuxtLink
-        v-if="mySession"
-        :to="`/sessions/${mySession.address}`"
-        class="block rounded-2xl bg-white px-4 py-2.5"
-      >
-        <div class="flex items-center gap-3">
-          <div
-            v-if="mySession.metadata.badgePixels"
-            class="w-12 h-12 rounded-xl overflow-hidden shrink-0"
-          >
-            <BadgeCanvas :pixels="mySession.metadata.badgePixels" :size="48" />
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-black truncate">
-              {{ mySession.metadata.name }}
-            </p>
-            <p class="text-xs text-black/50 mt-0.5">{{ mySessionSubtitle }}</p>
-          </div>
-          <NuxtLink
-            v-if="!mySessionOngoing"
-            :to="`/my/manage/${mySession.address}/edit`"
-            class="shrink-0"
-            @click.stop
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M3 17.46v3.04c0 .28.22.5.5.5h3.04c.13 0 .26-.05.35-.15L17.81 9.94l-3.75-3.75L3.15 17.1a.49.49 0 0 0-.15.36Z"
-                fill="black"
-              />
-              <path
-                d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83a1 1 0 0 0 0-1.41Z"
-                fill="black"
-              />
-            </svg>
-          </NuxtLink>
-        </div>
-      </NuxtLink>
-
-      <NuxtLink
-        v-else
+        v-if="!mySessions.length && canHostMoreSessions"
         :to="hostSessionTo"
         class="block rounded-3xl bg-magenta relative overflow-hidden"
       >

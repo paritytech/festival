@@ -245,10 +245,12 @@
   position: absolute;
   left: 0;
   top: 0;
-  /* anchor at tip: offset so the SVG's (34, 66) sits at the map point */
-  transform: translate(-34px, -66px);
-  width: 68px;
-  height: 77px;
+  /* anchor at tip: offset so the SVG's (34, 66) sits at the map point.
+     --vpin-scale (default 1) lets a host view enlarge the pin; the anchor
+     offset scales with it so the tip stays on the point. */
+  transform: translate(calc(-34px * var(--vpin-scale, 1)), calc(-66px * var(--vpin-scale, 1)));
+  width: calc(68px * var(--vpin-scale, 1));
+  height: calc(77px * var(--vpin-scale, 1));
   pointer-events: none;
 }
 .vpin > svg {

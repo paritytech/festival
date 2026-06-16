@@ -9,6 +9,7 @@ import {
 } from "~/composables/useProgramTimeline";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import {
+  LOCATION_LABEL_MAX_CHARS,
   resolveFullLocationLabel,
   resolveShortLocationLabel,
 } from "@festival/shared/venue/floors";
@@ -19,6 +20,7 @@ import type { VenueMarker, VenueZone } from "@festival/shared/metadata/schemas";
 import type { BookmarkPayload } from "~/composables/useBookmarks";
 import { useMyListFlyAnimation } from "~/composables/useMyListFlyAnimation";
 import { formatTimeBerlin, parseFestivalDate } from "@festival/shared/utils/time";
+import { truncate } from "@festival/shared/utils/text";
 
 const props = withDefaults(
   defineProps<{
@@ -95,20 +97,20 @@ const venueLabel = computed(() => {
     props.locationFormat === "full"
       ? resolveFullLocationLabel
       : resolveShortLocationLabel;
+  let label = "";
   if (props.item.type === "official" && props.item.entry.venueMarkerId) {
-    return resolve(props.item.entry.venueMarkerId, props.venueMarkers, zones);
-  }
-  if (
+    label = resolve(props.item.entry.venueMarkerId, props.venueMarkers, zones);
+  } else if (
     props.item.type === "community" &&
     props.item.subEvent.metadata.location
   ) {
-    return resolve(
+    label = resolve(
       props.item.subEvent.metadata.location,
       props.venueMarkers,
       zones,
     );
   }
-  return "";
+  return truncate(label, LOCATION_LABEL_MAX_CHARS);
 });
 
 const detailRoute = computed(() => {
@@ -205,10 +207,10 @@ function onStarTap(e: MouseEvent) {
         </p>
 
         <!-- Time + venue -->
-        <p class="text-xs mt-2">
+        <div class="text-xs mt-2 flex items-center justify-between gap-2">
           <span :class="timeClass">{{ timeRange }}<span v-if="past"> Ended </span></span>
-          <span v-if="venueLabel" :class="mutedClass">&nbsp;&nbsp;{{ venueLabel }}</span>
-        </p>
+          <span v-if="venueLabel" :class="mutedClass">{{ venueLabel }}</span>
+        </div>
       </div>
 
       <!-- Right action: pencil for owner, star for others -->

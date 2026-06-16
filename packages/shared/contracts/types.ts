@@ -1,3 +1,32 @@
+/** Max sessions a single creator can host per festival day (Festival.sol). */
+export const MAX_SESSIONS_PER_DAY = 2
+
+/**
+ * Number of distinct festival days, matching the contract's day-index math
+ * (`(timestamp - startTime) / 86400`). Inputs are unix seconds.
+ */
+export function getFestivalDayCount(
+  startSec: bigint | number,
+  endSec: bigint | number,
+): number {
+  const start = typeof startSec === 'bigint' ? Number(startSec) : startSec
+  const end = typeof endSec === 'bigint' ? Number(endSec) : endSec
+  if (end <= start) return 0
+  return Math.ceil((end - start) / 86400)
+}
+
+/**
+ * Total sessions a single creator can host across the festival
+ * (MAX_SESSIONS_PER_DAY × number of festival days). Once a creator's
+ * non-cancelled session count hits this, no day has room for another.
+ */
+export function getMaxSessionsTotal(
+  startSec: bigint | number,
+  endSec: bigint | number,
+): number {
+  return MAX_SESSIONS_PER_DAY * getFestivalDayCount(startSec, endSec)
+}
+
 /** Role constants (keccak256 hashes matching contract) */
 export const ROLES = {
   DEFAULT_ADMIN_ROLE: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,

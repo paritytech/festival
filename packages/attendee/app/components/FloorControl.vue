@@ -52,10 +52,10 @@ const emit = defineEmits<{
 .floor-control--single {
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
-  padding: 8px 14px;
+  min-height: 30px;
+  padding: 6px 11px;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   line-height: 1.2;
   color: var(--color-fg-secondary);
@@ -64,10 +64,10 @@ const emit = defineEmits<{
   box-shadow: var(--shadow-md);
 }
 .floor-control__pill {
-  min-height: 36px;
-  padding: 8px 14px;
+  min-height: 30px;
+  padding: 6px 11px;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   line-height: 1.2;
   text-align: center;
