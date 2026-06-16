@@ -20,6 +20,7 @@ import { useAnnouncements } from '~/composables/useAnnouncements'
 import { useFestivalPass } from '~/composables/useFestivalPass'
 import { APP_SCROLLER_KEY } from '~/composables/appScroller'
 import FestivalPassScreen from '~/components/FestivalPassScreen.vue'
+import ActivationModal from '~/components/ActivationModal.vue'
 import BadgeEarnedFestivalScreen from '~/components/BadgeEarnedFestivalScreen.vue'
 import { FESTIVAL_ADDRESS } from '@festival/shared/contracts/addresses'
 import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
@@ -55,8 +56,10 @@ const {
   isActivating: isPassActivating,
   isExploding: isPassExploding,
   activatedAtMs,
-  allocationWarning,
+  activationFailed,
   activate: onActivatePass,
+  retryActivation: onRetryActivation,
+  defer: onDeferPass,
   dismissBadge: onBadgeNext,
 } = useFestivalPass()
 
@@ -376,6 +379,17 @@ const bookmarkAlertMessage = computed(() => {
     :is-exploding="isPassExploding"
     @activate="onActivatePass"
   />
+  <ActivationModal
+    variant="error"
+    :visible="shouldShowPass && activationFailed"
+    title="Activation failed"
+    message="Something went wrong activating your pass. Try again, or do it later — some features will ask you to activate when you use them."
+    primary-label="Try again"
+    secondary-label="Do it later"
+    :busy="isPassActivating"
+    @primary="onRetryActivation"
+    @secondary="onDeferPass"
+  />
   <BadgeEarnedFestivalScreen
     v-if="shouldShowBadge"
     :address="userH160 ?? ''"
@@ -383,16 +397,4 @@ const bookmarkAlertMessage = computed(() => {
     :received-at-ms="activatedAtMs ?? undefined"
     @next="onBadgeNext"
   />
-  <Teleport to="body">
-    <div
-      class="fixed bottom-28 left-4 right-4 md:left-[calc(var(--col-l)+1rem)] md:right-[calc(var(--col-r)+1rem)] z-[2120] pointer-events-none"
-    >
-      <SuccessToast
-        :visible="!!allocationWarning"
-        variant="star"
-        :message="allocationWarning ?? ''"
-        @hide="allocationWarning = null"
-      />
-    </div>
-  </Teleport>
 </template>

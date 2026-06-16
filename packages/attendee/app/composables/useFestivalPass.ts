@@ -37,9 +37,6 @@ const phase = ref<
   'idle' | 'pass' | 'activating' | 'exploding' | 'badge'
 >('idle')
 const activatedAtMs = ref<number | null>(null)
-// Superseded by the "Activation failed" modal; kept until app.vue drops the
-// toast in the same change. TODO: remove with the toast.
-const allocationWarning = ref<string | null>(null)
 
 function storageKey(userAddr: string): string {
   return `festivalPass:${FESTIVAL_ADDRESS}:${userAddr}`
@@ -367,7 +364,6 @@ export function useFestivalPass() {
     shouldShowPass,
     shouldShowBadge,
     activationFailed,
-    allocationWarning,
     isActivating,
     isExploding,
     activatedAtMs,
