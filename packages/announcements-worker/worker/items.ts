@@ -56,9 +56,14 @@ export function upcomingItems(items: ScheduleItem[], now: number = Date.now()): 
   return upcoming.length > 0 ? upcoming : items;
 }
 
-/** All festival schedule entries, sorted. Render-time filtering happens elsewhere. */
+/**
+ * Festival talks, sorted by start. Initiatives run all day and aren't talks, so
+ * we drop them here and they never reach the talks or time window cards. The
+ * time filtering happens later, in `upcomingItems`.
+ */
 export function talksFrom(festival: FestivalInfo): ScheduleItem[] {
   return festival.schedule
+    .filter((e) => e.category !== "initiatives")
     .map((e) => ({ entry: e, start: new Date(e.start), end: new Date(e.end) }))
     .filter(({ start, end }) => !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()))
     .sort((a, b) => a.start.getTime() - b.start.getTime())

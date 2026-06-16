@@ -2,6 +2,7 @@
 import { useSchedule } from '~/composables/useSchedule'
 import { useBookmarks } from '~/composables/useBookmarks'
 import { useVenueMap } from '~/composables/useVenueMap'
+import { scheduleEntryCategory, CATEGORY_STYLE } from '~/composables/useProgramTimeline'
 import { resolveFullLocationLabel } from '@festival/shared/venue/floors'
 import { formatDateTimeBerlin, parseFestivalDate } from '@festival/shared/utils/time'
 
@@ -12,6 +13,8 @@ const { toggleBookmark, isBookmarked } = useBookmarks()
 const { markers: venueMarkers, zones: venueZones } = useVenueMap()
 
 const entry = getById(id)
+
+const categoryStyle = entry ? CATEGORY_STYLE[scheduleEntryCategory(entry)] : CATEGORY_STYLE.official
 
 function formatDateTime(iso: string) {
   return formatDateTimeBerlin(iso)
@@ -54,8 +57,9 @@ function handleToggle() {
     </div>
 
     <div class="flex items-center gap-2 mb-4">
-      <span class="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded font-medium">
-        Official
+      <span class="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 bg-primary/10 text-primary rounded font-medium">
+        <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: categoryStyle.color }" />
+        {{ categoryStyle.label }}
       </span>
     </div>
 

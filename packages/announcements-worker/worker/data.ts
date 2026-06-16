@@ -18,12 +18,21 @@ import { announcementItemFrom, type FestivalInfo, talksFrom, toScheduleItem } fr
 import { readSessions } from "./sessions";
 
 /**
+ * Snapshot schema version. Bump it whenever the snapshot's shape or filtering
+ * changes (like now, with initiatives dropped from `talks`), so a snapshot
+ * saved by an older worker gets thrown away instead of served stale.
+ */
+export const CARD_SNAPSHOT_VERSION = 1;
+
+/**
  * Everything the cards render, resolved in one sweep and serializable to
  * hostLocalStorage. Cards render snapshot-first because the host pauses the
  * worker's connections while the chat is open — live reads at render time hang
  * exactly when cards are visible. Lists are complete; filtering is render-time.
  */
 export interface CardSnapshot {
+  /** Schema version (see CARD_SNAPSHOT_VERSION). */
+  version: number;
   /** Unix ms the snapshot was built. */
   at: number;
   festivalName: string;
@@ -46,6 +55,7 @@ export async function buildSnapshot(): Promise<CardSnapshot> {
     }),
   ]);
   return {
+    version: CARD_SNAPSHOT_VERSION,
     at: Date.now(),
     festivalName: festival.name,
     talks: talksFrom(festival),

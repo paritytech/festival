@@ -12,6 +12,8 @@ import {
   isItemOngoing,
   isItemPast,
   getItemId,
+  getItemCategory,
+  CATEGORY_STYLE,
 } from "~/composables/useProgramTimeline";
 import type { TimelineItem } from "~/composables/useProgramTimeline";
 import { useWalletStore } from "@festival/shared/host/wallet";
@@ -98,9 +100,11 @@ const myListItems = computed(() =>
 );
 
 function getMyListAccentColor(item: TimelineItem): string {
-  if (item.type === "official")
+  const category = getItemCategory(item);
+  // Official entries dim when they're not ongoing; the colored ones keep their color.
+  if (category === "official")
     return isItemOngoing(item) ? "#fafaf9" : "#57534e";
-  return "#9462FA"; // --color-community
+  return CATEGORY_STYLE[category].color;
 }
 
 function getMyListTitle(item: TimelineItem): string {

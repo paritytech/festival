@@ -14,6 +14,7 @@ import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { resolveFullLocationLabel } from "@festival/shared/venue/floors";
 import { useVenueMap } from "~/composables/useVenueMap";
 import { useBulletinImage } from "~/composables/useBulletinImage";
+import { CATEGORY_STYLE } from "~/composables/useProgramTimeline";
 import {
   SESSION_CHECKIN_GRACE_MS,
   formatCountdown,
@@ -243,8 +244,8 @@ function formatDay(d: Date): string {
     :image-url="festivalPoapImageUrl"
     :banner-value="speakerLabel"
     :banner-label="speakerLabel ? 'Session Speaker' : undefined"
-    category="Community"
-    category-color="var(--color-community)"
+    :category="CATEGORY_STYLE.community.label"
+    :category-color="CATEGORY_STYLE.community.color"
     :title="subEvent.metadata.name"
     :description="subEvent.metadata.description"
     :day-label="dayLabel"

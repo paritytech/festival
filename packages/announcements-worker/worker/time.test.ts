@@ -99,6 +99,25 @@ describe("talksFrom", () => {
     );
     assert.equal(upcomingItems(items, new Date(2027, 0, 1).getTime()).length, 3);
   });
+
+  it("excludes initiatives (all-day programming, any location)", () => {
+    const items = talksFrom({
+      ...festival,
+      schedule: [
+        ...festival.schedule,
+        {
+          // Runs all day, and where it happens doesn't matter. Initiatives are
+          // filtered out by category, never by location.
+          ...entry("allday", "2026-06-11T09:00:00", "2026-06-11T20:00:00"),
+          category: "initiatives",
+        },
+      ],
+    });
+    assert.deepEqual(
+      items.map((i) => i.id),
+      ["past", "soon", "later"],
+    );
+  });
 });
 
 describe("timeWindowItems", () => {
