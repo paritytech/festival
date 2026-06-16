@@ -46,21 +46,17 @@ onBeforeUnmount(() => stop())
   width: 100%;
   height: 100%;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+/*
+ * Let html5-qrcode size its own <video> (as the admin scanner does). Forcing
+ * width/height + object-fit on the video desynced the displayed frame from the
+ * region html5-qrcode actually decodes, so visible QRs never decoded.
+ */
 .scanner-surface {
   width: 100%;
-  height: 100%;
-}
-
-.scanner-surface :deep(video) {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  display: block;
-}
-
-.scanner-surface :deep(img) {
-  display: none;
 }
 </style>

@@ -176,13 +176,14 @@ function onScannerError(msg: string) {
     <div class="px-4 mb-4">
       <div class="relative w-full aspect-square rounded-2xl overflow-hidden border border-white/12 bg-black">
         <QRScanner
-          :active="scannerActive"
+          v-if="scannerActive"
+          :active="true"
           class="w-full h-full"
           @scan="handleScan"
           @error="onScannerError"
         />
         <div
-          v-if="!scannerActive"
+          v-else
           class="absolute inset-0 flex items-center justify-center bg-surface-2/60"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-white/40">

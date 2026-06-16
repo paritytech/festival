@@ -2,11 +2,13 @@ import { ref } from 'vue'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { checkInSession, manualCheckInSession } from '@festival/shared/contracts/session-writes'
 import { FestivalABI } from '@festival/shared/contracts/abis'
+import { FESTIVAL_ADDRESS } from '@festival/shared/contracts/addresses'
 import { batchRead } from '@festival/shared/contracts/multicall'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { addPending, dropPending, sessionScopedId } from '@festival/shared/cache/pending'
 import { shortenAddress, ss58ToH160, isValidSs58, isValidEvmAddress } from '@festival/shared/utils/address'
+import { extractCheckInAddress } from '@festival/shared/checkin/qr'
 
 export type SubEventCheckInStep =
   | 'idle'
@@ -58,9 +60,12 @@ export function useSubEventCheckIn(subEventAddress: string) {
   }
 
   async function handleScan(qrData: string) {
-    const address = qrData.trim()
-    if (!isValidSs58(address)) {
-      error.value = 'Invalid SS58 address'
+    // Passport and ticket QRs both resolve here, and an unreadable code now
+    // shows an error. Before, a bad scan just silently vanished.
+    const address = extractCheckInAddress(qrData)
+    if (!address) {
+      error.value = "Couldn't read that code. Show the attendee's account QR or enter their address manually."
+      step.value = 'error'
       return
     }
 
@@ -69,14 +74,25 @@ export function useSubEventCheckIn(subEventAddress: string) {
     step.value = 'validating'
 
     try {
-      const attendeeH160 = ss58ToH160(address)
-      const [registered, checkedIn] = await batchRead([
+      const attendeeH160 = toH160(address)
+      // Surface the on-chain check up front. The session contract requires the
+      // attendee to be checked in to the parent festival first
+      // (FestivalCheckInRequired), so we verify that here instead of letting it
+      // surface as a confusing transaction revert after the operator confirms.
+      const [festivalCheckedIn, registered, checkedIn] = await batchRead([
+        { address: FESTIVAL_ADDRESS, abi: FestivalABI, functionName: 'isCheckedIn', args: [attendeeH160] },
         { address: subEventAddress as `0x${string}`, abi: FestivalABI, functionName: 'isRegistered', args: [attendeeH160] },
         { address: subEventAddress as `0x${string}`, abi: FestivalABI, functionName: 'isCheckedIn', args: [attendeeH160] },
-      ]) as [boolean, boolean]
+      ]) as [boolean, boolean, boolean]
 
       if (checkedIn) {
-        error.value = 'This account is already checked in'
+        error.value = 'Already checked in to this session.'
+        step.value = 'error'
+        return
+      }
+
+      if (!festivalCheckedIn) {
+        error.value = 'Not checked in to the festival yet. They need to check in at the festival entrance first.'
         step.value = 'error'
         return
       }

@@ -67,7 +67,7 @@ export type { CheckInPayload } from './checkin/sign'
 export { verifyCheckInChallenge } from './checkin/verify'
 export type { VerificationResult } from './checkin/verify'
 export {
-  encodeCheckInQR, decodeCheckInQR, isCheckInQR,
+  encodeCheckInQR, decodeCheckInQR, isCheckInQR, extractCheckInAddress,
 } from './checkin/qr'
 export type { CheckInQRData } from './checkin/qr'
 
