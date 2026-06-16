@@ -15,18 +15,20 @@ import { festivalState, type SessionEntry } from './festival-state'
  * makes it permanent.
  */
 
-export type PendingKind = 'register' | 'checkin' | 'session' | 'cancelSession'
+export type PendingKind = 'register' | 'checkin' | 'session' | 'cancelSession' | 'editSession'
 
 interface PendingEntry {
   kind: PendingKind
   /**
    * Lowercased id: an attendee address ('register'/'checkin'), an
    * `<attendee>@<session>` pair for session-scoped check-ins, a session
-   * metadata CID ('session'), or a session address ('cancelSession').
+   * metadata CID ('session'), or a session address ('cancelSession'/'editSession').
    */
   id: string
   /** Draft session to render immediately (only for kind === 'session'). */
   session?: SessionEntry
+  /** Draft metadata + new CID for an in-flight session edit (kind === 'editSession'). */
+  edit?: { metadata: SubEventMetadata | null; metadataCid: `0x${string}` }
 }
 
 /** Id for a check-in scoped to a session contract rather than the festival. */
@@ -40,8 +42,13 @@ function keyOf(kind: PendingKind, id: string): string {
   return `${kind}:${id.toLowerCase()}`
 }
 
-export function addPending(kind: PendingKind, id: string, session?: SessionEntry): void {
-  pending.set(keyOf(kind, id), { kind, id: id.toLowerCase(), session })
+export function addPending(
+  kind: PendingKind,
+  id: string,
+  session?: SessionEntry,
+  edit?: PendingEntry['edit'],
+): void {
+  pending.set(keyOf(kind, id), { kind, id: id.toLowerCase(), session, edit })
 }
 
 export function dropPending(kind: PendingKind, id: string): void {
@@ -57,6 +64,13 @@ export function pendingSessions(): SessionEntry[] {
   const out: SessionEntry[] = []
   for (const e of pending.values()) if (e.session) out.push(e.session)
   return out
+}
+
+/** Draft metadata for a session whose edit (updateCid) tx is in flight. */
+export function pendingSessionEdit(
+  sessionAddress: string,
+): { metadata: SubEventMetadata | null; metadataCid: `0x${string}` } | null {
+  return pending.get(keyOf('editSession', sessionAddress))?.edit ?? null
 }
 
 /** Festival-scoped check-ins in flight (lowercased attendee addresses). */
@@ -132,6 +146,15 @@ function isConfirmed(entry: PendingEntry): boolean {
       return Boolean(
         festivalState.sessions.find((s) => s.address.toLowerCase() === entry.id)?.details
           .cancelled,
+      )
+    case 'editSession':
+      // Confirmed once the session's CID on chain matches the edited one.
+      return Boolean(
+        festivalState.sessions.find(
+          (s) =>
+            s.address.toLowerCase() === entry.id &&
+            s.details.metadataCid.toLowerCase() === entry.edit?.metadataCid.toLowerCase(),
+        ),
       )
   }
 }

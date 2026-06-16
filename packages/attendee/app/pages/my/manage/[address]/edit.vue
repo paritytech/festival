@@ -115,7 +115,6 @@ const form = reactive({
 
 const submitValidationError = ref<SessionTimeValidationFailReason | null>(null);
 
-const showUpdatedToast = ref(false);
 const pendingSnapshot = ref<{
   name: string;
   description: string;
@@ -128,9 +127,10 @@ const pendingSnapshot = ref<{
 
 watch(txStatus, (s) => {
   if ((s === "in-block" || s === "finalized") && pendingSnapshot.value) {
-    showUpdatedToast.value = true;
-    Object.assign(original, pendingSnapshot.value);
+    // Edit applied (optimistic overlay is live). Land on the session page and
+    // let it surface the success toast.
     pendingSnapshot.value = null;
+    navigateTo(`/sessions/${addr}?updated=1`, { replace: true });
   } else if (s === "error") {
     pendingSnapshot.value = null;
   }
@@ -491,10 +491,11 @@ async function submit() {
         </p>
       </div>
 
+      <!-- Time is immutable on-chain after creation: display-only here. -->
       <SessionDatePicker
         :days="festivalDays"
         :model-value="form.dateKey"
-        @update:model-value="form.dateKey = $event"
+        readonly
       />
 
       <SessionTimePicker
@@ -502,9 +503,7 @@ async function submit() {
         :end-minutes-of-day="form.endMinutesOfDay"
         :valid-start-slots="validStartSlots"
         :valid-end-slots="validEndSlots"
-        :disabled="!form.dateKey"
-        @update:start-minutes-of-day="form.startMinutesOfDay = $event"
-        @update:end-minutes-of-day="form.endMinutesOfDay = $event"
+        readonly
       />
 
       <SessionDescriptionField v-model="form.description" />
@@ -602,15 +601,6 @@ async function submit() {
         }}
       </button>
     </div>
-  </div>
-
-  <div class="fixed bottom-28 left-4 right-4 md:left-[calc(var(--col-l)+1rem)] md:right-[calc(var(--col-r)+1rem)] z-[1000] pointer-events-none">
-    <SuccessToast
-      :visible="showUpdatedToast"
-      variant="check"
-      message="Session Updated Successfully"
-      @hide="showUpdatedToast = false"
-    />
   </div>
 
   <!-- ── Change Location picker (full-screen modal, teleported to body) ── -->
