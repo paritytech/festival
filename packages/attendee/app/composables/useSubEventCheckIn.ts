@@ -7,6 +7,7 @@ import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { addPending, dropPending, sessionScopedId } from '@festival/shared/cache/pending'
 import { shortenAddress, ss58ToH160, isValidSs58, isValidEvmAddress } from '@festival/shared/utils/address'
+import { extractCheckInAddress } from '@festival/shared/checkin/qr'
 
 export type SubEventCheckInStep =
   | 'idle'
@@ -58,9 +59,12 @@ export function useSubEventCheckIn(subEventAddress: string) {
   }
 
   async function handleScan(qrData: string) {
-    const address = qrData.trim()
-    if (!isValidSs58(address)) {
-      error.value = 'Invalid SS58 address'
+    // Passport and ticket QRs both resolve here, and an unreadable code now
+    // shows an error. Before, a bad scan just silently vanished.
+    const address = extractCheckInAddress(qrData)
+    if (!address) {
+      error.value = "Couldn't read that code. Show the attendee's account QR or enter their address manually."
+      step.value = 'error'
       return
     }
 
@@ -69,7 +73,7 @@ export function useSubEventCheckIn(subEventAddress: string) {
     step.value = 'validating'
 
     try {
-      const attendeeH160 = ss58ToH160(address)
+      const attendeeH160 = toH160(address)
       const [registered, checkedIn] = await batchRead([
         { address: subEventAddress as `0x${string}`, abi: FestivalABI, functionName: 'isRegistered', args: [attendeeH160] },
         { address: subEventAddress as `0x${string}`, abi: FestivalABI, functionName: 'isCheckedIn', args: [attendeeH160] },
