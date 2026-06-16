@@ -250,7 +250,7 @@ onUnmounted(() => {
 /* Label. Session name + received timestamp */
 .label {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom) + 220px);
+  bottom: 220px;
   left: 0;
   right: 0;
   text-align: center;
