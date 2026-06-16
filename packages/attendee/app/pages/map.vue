@@ -371,7 +371,7 @@ onBeforeUnmount(() => {
         />
       </ClientOnly>
 
-      <!-- Floor switcher (top-left of the map canvas). Includes Outdoor
+      <!-- Floor switcher (top-right of the map canvas). Includes Outdoor
            as the first option, so it's shown in both outdoor and indoor modes. -->
       <FloorControl
         v-if="!transitioning"
