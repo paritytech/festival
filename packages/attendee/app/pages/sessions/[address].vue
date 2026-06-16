@@ -318,7 +318,7 @@ function formatDay(d: Date): string {
     @done="handleReportDone"
   />
 
-  <PassportOverlay v-if="passportOpen" :force-show-qr="true" @close="closePassport" />
+  <SessionQrOverlay v-if="passportOpen" @close="closePassport" />
 
   <BadgeEarnedScreen
     v-if="badgeEarnedOpen && subEvent"
