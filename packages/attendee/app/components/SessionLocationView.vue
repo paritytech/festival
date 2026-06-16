@@ -19,7 +19,8 @@ const props = defineProps<{
   location: string
   markers: VenueMarker[]
   zones: VenueZone[]
-  sessionAddress: string
+  // Route path of the session detail page, used for the share URL.
+  detailPath: string
 }>()
 
 const emit = defineEmits<{
@@ -126,7 +127,7 @@ async function handleShare() {
   if (!resolved.value || resolved.value.kind === 'unknown') return
   const where = `${chip.value.headline || 'Location'} — ${chip.value.sub}`
   // Hash-mode share URL, matching the convention in pages/map.vue.
-  const fullPath = router.resolve(`/sessions/${props.sessionAddress}`).fullPath
+  const fullPath = router.resolve(props.detailPath).fullPath
   const url = `${window.location.origin}/#${fullPath}`
   try {
     if (navigator.share) {

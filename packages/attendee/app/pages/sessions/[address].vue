@@ -331,7 +331,7 @@ function formatDay(d: Date): string {
   <SessionLocationView
     v-if="locationViewOpen && subEvent?.metadata.location"
     :location="subEvent.metadata.location"
-    :session-address="addr"
+    :detail-path="`/sessions/${addr}`"
     :markers="venueMarkers"
     :zones="venueZones"
     @close="locationViewOpen = false"
