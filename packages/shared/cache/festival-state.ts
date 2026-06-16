@@ -215,6 +215,89 @@ export function applySessionMetadata(
   entry.metadata = metadata
 }
 
+const ZERO_ADDR = '0x0000000000000000000000000000000000000000' as `0x${string}`
+const ZERO_CID = ('0x' + '00'.repeat(32)) as `0x${string}`
+
+/** Stub session entry seeded from a session-level event. Zeros never beat
+ * real values under mergeSession, so this is safe to merge before R2 lands. */
+function sessionStub(
+  address: `0x${string}`,
+  over: { registeredCount?: bigint; attendees?: AttendeeRow[] } = {},
+): SessionEntry {
+  return {
+    address,
+    details: {
+      metadataCid: ZERO_CID,
+      creator: ZERO_ADDR,
+      poapContract: ZERO_ADDR,
+      parentFestival: festivalState.festival?.address ?? ZERO_ADDR,
+      startTime: 0n,
+      endTime: 0n,
+      cancelled: false,
+      registeredCount: over.registeredCount ?? 0n,
+      flagCount: 0n,
+      flagThreshold: 0n,
+    },
+    metadata: null,
+    attendees: over.attendees ?? [],
+    poapTokenIds: [],
+  }
+}
+
+/**
+ * Session-level Registered. Mirrors {@link applyRegistered}: bump the session's
+ * registeredCount only for an attendee row we haven't seen, so a watchBest
+ * replay can't inflate it (mergeAttendees never drops the row). R2's maxBig
+ * grounds the authoritative count.
+ */
+export function applySessionRegistered(
+  sessionAddress: `0x${string}`,
+  attendee: `0x${string}`,
+): void {
+  const existing = festivalState.sessions.find(
+    (s) => s.address.toLowerCase() === sessionAddress.toLowerCase(),
+  )
+  const known = existing?.attendees.some(
+    (a) => a.address.toLowerCase() === attendee.toLowerCase(),
+  )
+  if (known) return
+  const nextCount = (existing?.details.registeredCount ?? 0n) + 1n
+  festivalState.sessions = mergeSessions(festivalState.sessions, [
+    sessionStub(sessionAddress, {
+      registeredCount: nextCount,
+      attendees: [{ address: attendee, isCheckedIn: false }],
+    }),
+  ])
+}
+
+/** Session-level CheckedIn. mergeAttendees latches isCheckedIn and appends the
+ * row if the Registered event was missed. */
+export function applySessionCheckedIn(
+  sessionAddress: `0x${string}`,
+  attendee: `0x${string}`,
+): void {
+  festivalState.sessions = mergeSessions(festivalState.sessions, [
+    sessionStub(sessionAddress, {
+      attendees: [{ address: attendee, isCheckedIn: true }],
+    }),
+  ])
+}
+
+/** Session-level MetadataUpdated. Advances the entry's CID then writes the
+ * fetched metadata under the CID-race guard. */
+export function applySessionMetadataUpdated(
+  sessionAddress: `0x${string}`,
+  newCid: `0x${string}`,
+  metadata: SubEventMetadata | null,
+): void {
+  const entry = festivalState.sessions.find(
+    (s) => s.address.toLowerCase() === sessionAddress.toLowerCase(),
+  )
+  if (!entry) return
+  entry.details = { ...entry.details, metadataCid: newCid }
+  applySessionMetadata(sessionAddress, metadata, newCid)
+}
+
 // ── Persistent cache ───────────────────────────────────────────────────────
 //
 // Hydrate `festivalState` from localStorage on cold boot so the UI shows

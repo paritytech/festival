@@ -23,6 +23,9 @@ const props = defineProps<{
   validEndSlots: number[]
   /** Set true when no day is chosen yet. Both pills are disabled. */
   disabled?: boolean
+  /** Display-only: show the chosen time but block all interaction (edit flow,
+   * where session time is immutable on-chain). */
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -52,7 +55,7 @@ const toMinutesForBucket = computed(() =>
 )
 
 function openFrom() {
-  if (props.disabled) return
+  if (props.disabled || props.readonly) return
   if (stage.value === 'from-hour' || stage.value === 'from-minute') {
     stage.value = null
     fromHourBucket.value = null
@@ -63,7 +66,7 @@ function openFrom() {
 }
 
 function openTo() {
-  if (props.disabled) return
+  if (props.disabled || props.readonly) return
   if (props.startMinutesOfDay == null) {
     stage.value = 'from-hour'
     return
@@ -180,7 +183,7 @@ const toPillValueLabel = computed(() => {
   return ''
 })
 
-const showGrid = computed(() => stage.value !== null && !props.disabled)
+const showGrid = computed(() => stage.value !== null && !props.disabled && !props.readonly)
 
 const durationMinutes = computed(() => {
   if (props.startMinutesOfDay == null || props.endMinutesOfDay == null) return null
@@ -211,7 +214,7 @@ const showDurationFooter = computed(
         <PillButton
           data-testid="session-time-from-pill"
           :aria-pressed="stage === 'from-hour' || stage === 'from-minute'"
-          :disabled="disabled"
+          :disabled="disabled || readonly"
           size="sm"
           :variant="variantFor(
             startMinutesOfDay != null,
@@ -233,7 +236,7 @@ const showDurationFooter = computed(
         <PillButton
           data-testid="session-time-to-pill"
           :aria-pressed="stage === 'to-hour' || stage === 'to-minute'"
-          :disabled="disabled || startMinutesOfDay == null"
+          :disabled="disabled || readonly || startMinutesOfDay == null"
           size="sm"
           :variant="variantFor(
             endMinutesOfDay != null,
@@ -363,9 +366,10 @@ const showDurationFooter = computed(
       >
         Your Session Duration · {{ formatDurationLabel(durationMinutes) }}
       </p>
-      <p v-else>Sessions can run 15 min to 2 hours</p>
+      <p v-else-if="!readonly">Sessions can run 15 min to 2 hours</p>
       <hr class="my-1 border-0 border-t border-stroke-primary" />
-      <p>All times in Berlin time (CET)</p>
+      <p v-if="readonly">The time can't be changed after creation.</p>
+      <p v-else>All times in Berlin time (CET)</p>
     </div>
   </div>
 </template>

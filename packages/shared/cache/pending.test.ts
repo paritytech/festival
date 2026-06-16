@@ -6,6 +6,7 @@ import {
   dropPending,
   hasPending,
   pendingSessions,
+  pendingSessionEdit,
   pendingCheckins,
   sessionScopedId,
   draftSessionEntry,
@@ -180,4 +181,40 @@ test('cancelSession promotes when the confirmed session flips cancelled', async 
   festivalState.sessions = [session({ cancelled: true })]
   await nextTick()
   assert.equal(hasPending('cancelSession', SESSION_ADDR), false)
+})
+
+const CID_NEW = ('0x' + 'cd'.repeat(32)) as `0x${string}`
+const EDIT_META = {
+  version: '1.0' as const,
+  type: 'sub-event' as const,
+  name: 'Edited',
+  description: '',
+  location: '',
+  speakers: [],
+}
+
+test('editSession exposes draft metadata via pendingSessionEdit; drop clears it', () => {
+  resetFestivalState()
+  addPending('editSession', SESSION_ADDR, undefined, { metadata: EDIT_META, metadataCid: CID_NEW })
+  const edit = pendingSessionEdit(SESSION_ADDR)
+  assert.equal(edit?.metadataCid, CID_NEW)
+  assert.equal(edit?.metadata?.name, 'Edited')
+  // Case-insensitive lookup.
+  assert.equal(pendingSessionEdit(SESSION_ADDR.toUpperCase().replace('0X', '0x'))?.metadataCid, CID_NEW)
+  dropPending('editSession', SESSION_ADDR)
+  assert.equal(pendingSessionEdit(SESSION_ADDR), null)
+})
+
+test('editSession promotes once the session CID on chain matches the edit', async () => {
+  resetFestivalState()
+  await nextTick()
+  addPending('editSession', SESSION_ADDR, undefined, { metadata: EDIT_META, metadataCid: CID_NEW })
+  // Still on the old CID → edit overlay survives.
+  festivalState.sessions = [session({ metadataCid: CID })]
+  await nextTick()
+  assert.equal(hasPending('editSession', SESSION_ADDR), true)
+  // Chain catches up to the edited CID → promoted (GC'd).
+  festivalState.sessions = [session({ metadataCid: CID_NEW })]
+  await nextTick()
+  assert.equal(hasPending('editSession', SESSION_ADDR), false)
 })

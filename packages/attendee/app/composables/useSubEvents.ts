@@ -3,7 +3,7 @@ import type { SubEventMetadata } from '@festival/shared/metadata/schemas'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { walletAddressToH160 } from '@festival/shared/utils/address'
 import { festivalState, type SessionEntry } from '@festival/shared/cache/festival-state'
-import { hasPending, pendingSessions, sessionScopedId } from '@festival/shared/cache/pending'
+import { hasPending, pendingSessions, pendingSessionEdit, sessionScopedId } from '@festival/shared/cache/pending'
 import { bootLoadAttendee } from './useBootLoad'
 
 export interface AttendeeSubEvent {
@@ -44,10 +44,12 @@ export function useSubEvents() {
       const pendingCheckIn = userLower
         ? hasPending('checkin', sessionScopedId(userLower, s.address))
         : false
+      // Our own in-flight edit renders immediately; superseded once the chain CID catches up.
+      const edit = pendingSessionEdit(s.address)
       return {
         address: s.address,
         creator: s.details.creator,
-        metadata: s.metadata ?? { ...DEFAULT_METADATA, name: `Sub-Event ${s.address.slice(0, 8)}` },
+        metadata: edit?.metadata ?? s.metadata ?? { ...DEFAULT_METADATA, name: `Sub-Event ${s.address.slice(0, 8)}` },
         registeredCount: Number(s.details.registeredCount),
         capacity: 0,
         startTime: Number(s.details.startTime),
@@ -82,29 +84,11 @@ export function useSubEvents() {
     return subEvents.value.find((se) => se.address === addr)
   }
 
-  /**
-   * Patch a single session's metadata in festivalState. Used by
-   * useSessionWatcher when MetadataUpdated fires. The CID travels with the
-   * metadata so the entry reflects which version it holds.
-   */
-  function patchSession(
-    address: string,
-    patch: Partial<{ metadata: SubEventMetadata; metadataCid: `0x${string}` }>,
-  ) {
-    const target = address.toLowerCase()
-    const entry = festivalState.sessions.find((s) => s.address.toLowerCase() === target)
-    if (!entry) return
-    if (patch.metadata) entry.metadata = patch.metadata
-    if (patch.metadataCid) {
-      entry.details = { ...entry.details, metadataCid: patch.metadataCid }
-    }
-  }
-
   function reload(): Promise<void> {
     const wallet = useWalletStore()
     const userH160 = wallet.isConnected ? walletAddressToH160(wallet.address) : null
     return bootLoadAttendee(userH160)
   }
 
-  return { subEvents, getByAddress, isLoading, reload, patchSession }
+  return { subEvents, getByAddress, isLoading, reload }
 }
