@@ -4,7 +4,10 @@ const emit = defineEmits<{
 }>()
 
 function onScreenAnimationEnd(event: AnimationEvent) {
-  if (event.animationName === 'screen-fade' || event.animationName === 'rm-screen-fade') {
+  // The fade is the only animation on the root element; bar/text animations
+  // bubble up from children. Gate on target identity rather than animationName
+  // — Vue scoped styles rewrite @keyframes names with the scope hash.
+  if (event.target === event.currentTarget) {
     emit('done')
   }
 }
