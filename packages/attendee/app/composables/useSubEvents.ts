@@ -3,7 +3,7 @@ import type { SubEventMetadata } from '@festival/shared/metadata/schemas'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { walletAddressToH160 } from '@festival/shared/utils/address'
 import { festivalState, type SessionEntry } from '@festival/shared/cache/festival-state'
-import { hasPending, pendingSessions, sessionScopedId } from '@festival/shared/cache/pending'
+import { hasPending, pendingSessions, pendingSessionEdit, sessionScopedId } from '@festival/shared/cache/pending'
 import { bootLoadAttendee } from './useBootLoad'
 
 export interface AttendeeSubEvent {
@@ -44,10 +44,12 @@ export function useSubEvents() {
       const pendingCheckIn = userLower
         ? hasPending('checkin', sessionScopedId(userLower, s.address))
         : false
+      // Our own in-flight edit renders immediately; superseded once the chain CID catches up.
+      const edit = pendingSessionEdit(s.address)
       return {
         address: s.address,
         creator: s.details.creator,
-        metadata: s.metadata ?? { ...DEFAULT_METADATA, name: `Sub-Event ${s.address.slice(0, 8)}` },
+        metadata: edit?.metadata ?? s.metadata ?? { ...DEFAULT_METADATA, name: `Sub-Event ${s.address.slice(0, 8)}` },
         registeredCount: Number(s.details.registeredCount),
         capacity: 0,
         startTime: Number(s.details.startTime),
