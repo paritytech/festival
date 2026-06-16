@@ -569,7 +569,14 @@ async function doCreate() {
       />
     </div>
 
-    <div class="sticky bottom-0 z-10 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-background">
+    <!-- Step 3 (badge) supplies its own actions (intro "Create Badge" button and
+         the full-screen editor's own header), so the wizard footer is hidden
+         there — otherwise its empty bg-background bar overlaps the editor's
+         bottom toolbar. -->
+    <div
+      v-if="currentStep !== 3"
+      class="sticky bottom-0 z-10 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-background"
+    >
       <!-- Step 1: Next -->
       <button
         v-if="currentStep === 1"
