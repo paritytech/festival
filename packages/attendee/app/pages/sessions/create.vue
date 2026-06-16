@@ -6,6 +6,7 @@ import { useVenueMap } from "~/composables/useVenueMap";
 import { usePoaps } from "~/composables/usePoaps";
 import { useRegistration } from "~/composables/useRegistration";
 import { useSubEvents } from "~/composables/useSubEvents";
+import { usePassGate } from "~/composables/usePassGate";
 import { useSessionLimit } from "~/composables/useSessionLimit";
 import { useNow } from "~/composables/useNow";
 import type { TxStatus } from "@festival/shared/contracts/write";
@@ -39,6 +40,7 @@ const { metadata: festivalMetadata, details: festivalDetails } = useFestival();
 const { festivalPoaps } = usePoaps();
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
 const { subEvents, reload: reloadSubEvents } = useSubEvents();
+const gate = usePassGate("create a session");
 const { fullDateKeys } = useSessionLimit();
 
 watch(
@@ -249,8 +251,6 @@ async function submit() {
     return;
   error.value = null;
   submitValidationError.value = null;
-  // CID of the in-flight draft, visible to the catch for rollback.
-  let pendingCid: `0x${string}` | null = null;
 
   // Re-validate against the live festival window, catching clock drift between
   // picking a time and tapping submit. Location and badge are preserved.
@@ -276,6 +276,13 @@ async function submit() {
     }
   }
 
+  gate.run(doCreate);
+}
+
+async function doCreate() {
+  if (form.startMinutesOfDay == null || form.endMinutesOfDay == null) return;
+  // CID of the in-flight draft, visible to the catch for rollback.
+  let pendingCid: `0x${string}` | null = null;
   txStatus.value = "preparing";
   try {
     if (!wallet.isConnected) throw new Error("Wallet not connected");
@@ -620,6 +627,13 @@ async function submit() {
     :zones="venueZones"
     @done="handlePickerDone"
     @cancel="pickerOpen = false"
+  />
+
+  <ActivationModal
+    :visible="gate.state.value !== 'none'"
+    v-bind="gate.modalProps.value"
+    @primary="gate.onPrimary"
+    @secondary="gate.onSecondary"
   />
 </template>
 

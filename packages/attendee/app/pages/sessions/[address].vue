@@ -5,6 +5,7 @@ import { useSubEventRoles } from "~/composables/useSubEventRoles";
 import { useRegistration } from "~/composables/useRegistration";
 import { useFestival } from "~/composables/useFestival";
 import { useFlagSession } from "~/composables/useFlagSession";
+import { usePassGate } from "~/composables/usePassGate";
 import { useHiddenSessions } from "~/composables/useHiddenSessions";
 import { useBookmarks } from "~/composables/useBookmarks";
 import { useNow } from "~/composables/useNow";
@@ -220,9 +221,13 @@ function formatReceived(d: Date): string {
   return `${day}, ${time}`;
 }
 
+const gate = usePassGate("report a session");
+
 function openReportSheet() {
-  resetFlag();
-  reportSheetVisible.value = true;
+  gate.run(() => {
+    resetFlag();
+    reportSheetVisible.value = true;
+  });
 }
 
 async function confirmReport() {
@@ -332,6 +337,13 @@ function formatDay(d: Date): string {
     @confirm="confirmReport"
     @cancel="dismissReportSheet"
     @done="handleReportDone"
+  />
+
+  <ActivationModal
+    :visible="gate.state.value !== 'none'"
+    v-bind="gate.modalProps.value"
+    @primary="gate.onPrimary"
+    @secondary="gate.onSecondary"
   />
 
   <SessionQrOverlay v-if="passportOpen" @close="closePassport" />

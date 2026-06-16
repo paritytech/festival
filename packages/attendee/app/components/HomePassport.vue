@@ -4,6 +4,7 @@ import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { useFestival } from "~/composables/useFestival";
 import { useRegistration } from "~/composables/useRegistration";
+import { useFestivalPass } from "~/composables/useFestivalPass";
 import { generateQRDataUrl } from "@festival/shared/scanner/useQRImage";
 import QrSpoiler from "~/components/QrSpoiler.vue";
 
@@ -14,12 +15,15 @@ const props = defineProps<{
 const wallet = useWalletStore();
 const { metadata } = useFestival();
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
+const { passStatus } = useFestivalPass();
 
 const showQr = computed(() => !isCheckedIn.value || props.forceShowQr);
+const isDeferred = computed(() => passStatus.value === "deferred");
 
 const BAND_SIDE = "PRIVACY IS DIGNITY · USABILITY MAKES IDEALS REAL · ";
 const BAND_CENTER = "SOVEREIGNTY IS AGENCY";
 const NOT_CHECKED_IN_BAND = "NOT CHECKED-IN YET · ";
+const ACTIVATE_BAND = "ACTIVATE YOUR PASS    ";
 const REVEAL_DURATION = 10;
 
 const festivalName = computed(() => metadata.value?.name || "WEB3 SUMMIT");
@@ -88,7 +92,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="rounded-3xl overflow-hidden my-6"
+    class="rounded-3xl overflow-hidden"
     style="background: linear-gradient(135deg, #FFFFFF 0%, #CFCFCF 100%)"
     data-testid="home-passport"
   >
@@ -103,9 +107,29 @@ onUnmounted(() => {
       <img src="/w3s-logo.png" alt="W3S" width="53" height="22.05" class="shrink-0" />
     </div>
 
-    <!-- Marquee band: red NOT CHECKED-IN YET when not checked in, sovereignty otherwise -->
+    <!-- Marquee band: amber ACTIVATE when the pass is deferred, red NOT
+         CHECKED-IN YET before check-in, sovereignty otherwise. -->
     <div
-      v-if="isCheckedIn"
+      v-if="isDeferred"
+      class="bg-activations h-8 flex items-center mt-20 overflow-hidden"
+      data-testid="passport-band-activate"
+    >
+      <div class="flex w-max marquee-track">
+        <p
+          class="text-black uppercase whitespace-nowrap font-mono font-normal pr-6 shrink-0 text-passport-band-checked-in"
+        >
+          {{ ACTIVATE_BAND.repeat(8) }}
+        </p>
+        <p
+          aria-hidden="true"
+          class="text-black uppercase whitespace-nowrap font-mono font-normal pr-6 shrink-0 text-passport-band-checked-in"
+        >
+          {{ ACTIVATE_BAND.repeat(8) }}
+        </p>
+      </div>
+    </div>
+    <div
+      v-else-if="isCheckedIn"
       class="bg-black h-8 flex items-center mt-20 overflow-hidden"
       data-testid="passport-band-checked-in"
     >
