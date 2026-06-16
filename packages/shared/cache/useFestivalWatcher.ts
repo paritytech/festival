@@ -3,7 +3,7 @@ import type { FestivalMetadata, SubEventMetadata } from '../metadata/schemas'
 import { hydrateSubEventMetadata } from '../metadata/schemas'
 import { useBulletinStorage } from '../metadata/bulletin'
 import { isNonZeroCid } from '../contracts/festival-reads'
-import { watchFestivalEvents } from './event-watcher'
+import { watchContractEvents, type FestivalEventHandlers } from './event-watcher'
 import {
   festivalState,
   applyMetadataUpdated,
@@ -13,6 +13,9 @@ import {
   applyCancelled,
   applySessionCreated,
   applySessionMetadata,
+  applySessionRegistered,
+  applySessionCheckedIn,
+  applySessionMetadataUpdated,
 } from './festival-state'
 
 export interface FestivalWatcherOptions {
@@ -79,8 +82,35 @@ export function useFestivalWatcher(
     active = buildHandlers()
   }
 
+  const normalizedFestival = festivalAddress.toLowerCase()
+
+  // Session contract handlers route the same event names into the session-scoped
+  // apply helpers. Rebuilt per event (cheap) so a session created mid-session is
+  // covered without re-subscribing the follow.
+  function makeSessionHandlers(sessionAddr: `0x${string}`): FestivalEventHandlers {
+    return {
+      onRegistered: (attendee) => {
+        applySessionRegistered(sessionAddr, attendee as `0x${string}`)
+      },
+      onCheckedIn: (attendee) => {
+        applySessionCheckedIn(sessionAddr, attendee as `0x${string}`)
+      },
+      onMetadataUpdated: async (newCid) => {
+        if (!isNonZeroCid(newCid)) return
+        let metadata: SubEventMetadata | null = null
+        try {
+          const { retrievePlaintext } = useBulletinStorage()
+          metadata = hydrateSubEventMetadata(await retrievePlaintext<SubEventMetadata>(newCid))
+        } catch (e) {
+          console.warn('[FestivalWatcher] session metadata fetch failed:', e)
+        }
+        applySessionMetadataUpdated(sessionAddr, newCid, metadata)
+      },
+    }
+  }
+
   function buildHandlers() {
-    return watchFestivalEvents(festivalAddress, {
+    const festivalHandlers: FestivalEventHandlers = {
       onMetadataUpdated: async (newCid) => {
         let newMetadata: FestivalMetadata | null = null
         try {
@@ -134,6 +164,17 @@ export function useFestivalWatcher(
       onCancelled: () => {
         applyCancelled()
       },
+    }
+
+    // One follow, dispatch by emitting contract: the festival, or any session
+    // currently in state. The session set is read per event, so newly created
+    // sessions are covered without re-subscribing.
+    return watchContractEvents((contract) => {
+      if (contract === normalizedFestival) return festivalHandlers
+      if (festivalState.sessions.some((s) => s.address.toLowerCase() === contract)) {
+        return makeSessionHandlers(contract as `0x${string}`)
+      }
+      return null
     })
   }
 
