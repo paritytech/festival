@@ -5,7 +5,8 @@ import { usePermissions, type FestivalRole } from '~/composables/usePermissions'
 import { loadUserRoles } from '@festival/shared/contracts/role-helpers'
 import { readIsCheckedIn } from '@festival/shared/contracts/festival-reads'
 import { writeContract } from '@festival/shared/contracts/write'
-import { retryTransient } from '@festival/shared/contracts/retry'
+import { retryTransient, isTransientError, READ_RETRY_OPTS } from '@festival/shared/contracts/retry'
+import { resetMainClient } from '@festival/shared/host/client'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { FestivalSessionABI } from '@festival/shared/contracts/abis'
 import { formatTxError } from '@festival/shared/contracts/errors'
@@ -110,7 +111,16 @@ async function lookupAttendee() {
     resolvedAttendeeH160.value = h160
     resolvedAttendeeSs58.value = h160ToSs58(h160)
 
-    const checkedIn = await retryTransient(() => readIsCheckedIn(address as `0x${string}`, h160))
+    // Cap each attempt so a dry-run orphaned by a flapping host connection
+    // rejects instead of hanging the lookup. On a whole-round connection
+    // failure, rebuild the wedged client (as a page refresh would) and try
+    // once more before surfacing an error.
+    const probe = () => retryTransient(() => readIsCheckedIn(address as `0x${string}`, h160), READ_RETRY_OPTS)
+    const checkedIn = await probe().catch((e) => {
+      if (!isTransientError(e)) throw e
+      resetMainClient()
+      return probe()
+    })
     lookupState.value = checkedIn ? 'ready' : 'not-festival-checked-in'
   } catch (e: any) {
     checkInError.value = formatTxError(e)
@@ -127,7 +137,9 @@ async function performSessionCheckIn() {
 
   const pendingId = sessionScopedId(attendeeH160, subAddress)
   try {
-    // Retry transient submit/watch failures; a revert is deterministic and throws.
+    // Retry only PRE-broadcast transient failures; once signed/broadcast the tx
+    // must never be re-submitted. A revert is deterministic and throws.
+    let committed = false
     await retryTransient(() => writeContract({
       address: subAddress as `0x${string}`,
       abi: FestivalSessionABI,
@@ -137,9 +149,10 @@ async function performSessionCheckIn() {
       walletAddress: wallet.address,
       onStatus: (s) => {
         checkInTxStatus.value = s
+        if (s === 'signing' || s === 'broadcasting') committed = true
         if (s === 'broadcasting') addPending('checkin', pendingId)
       },
-    }))
+    }), { shouldRetry: (e) => !committed && isTransientError(e) })
 
     checkInInput.value = ''
     resetLookup()
