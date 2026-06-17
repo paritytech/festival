@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { SubEventDetails } from '@festival/shared/contracts/types'
 import type { SubEventMetadata } from '@festival/shared/metadata/schemas'
 import { hydrateSubEventMetadata } from '@festival/shared/metadata/schemas'
@@ -15,8 +15,10 @@ import { formatTxError } from '@festival/shared/contracts/errors'
 import { useBulletinStorage } from '@festival/shared/metadata/bulletin'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { setCachedMetadata } from '@festival/shared/cache/cid-cache'
-import { addPending, dropPending } from '@festival/shared/cache/pending'
-import { ss58ToH160, isValidSs58, isValidEvmAddress } from '@festival/shared/utils/address'
+import { festivalState } from '@festival/shared/cache/festival-state'
+import { addPending, dropPending, pendingSessionCheckins } from '@festival/shared/cache/pending'
+import { ss58ToH160, walletAddressToH160, isValidSs58, isValidEvmAddress } from '@festival/shared/utils/address'
+import { bootLoadAttendee } from './useBootLoad'
 import { useSubEvents } from './useSubEvents'
 
 export interface RoleHolder {
@@ -27,8 +29,21 @@ export interface RoleHolder {
 export function useSubEventManage(address: string) {
   const details = ref<SubEventDetails | null>(null)
   const metadata = ref<SubEventMetadata | null>(null)
-  const attendees = ref<{ address: `0x${string}`; isCheckedIn: boolean }[]>([])
   const holders = ref<RoleHolder[]>([])
+
+  // Roster is a view over the confirmed tier (fed by bootLoad, the watcher, the
+  // visibility reconcile and the check-in poll) OR'd with this device's in-flight
+  // check-ins, so it self-heals and reflects check-ins from any device.
+  const attendees = computed<{ address: `0x${string}`; isCheckedIn: boolean }[]>(() => {
+    const entry = festivalState.sessions.find((s) => s.address.toLowerCase() === address.toLowerCase())
+    const rows = (entry?.attendees ?? []).map((a) => ({ address: a.address, isCheckedIn: a.isCheckedIn }))
+    for (const attendee of pendingSessionCheckins(address)) {
+      const existing = rows.find((r) => r.address.toLowerCase() === attendee.toLowerCase())
+      if (existing) existing.isCheckedIn = true
+      else rows.push({ address: attendee as `0x${string}`, isCheckedIn: true })
+    }
+    return rows
+  })
   const isLoading = ref(true)
   const txStatus = ref<TxStatus>('idle')
   const error = ref<string | null>(null)
@@ -38,13 +53,18 @@ export function useSubEventManage(address: string) {
     try {
       const addr = address as `0x${string}`
 
-      // Batch initial reads: session details + attendees (2 reads → 1 round-trip)
-      const [rawDetails, rawAttendees] = await batchRead([
-        { address: addr, abi: FestivalSessionABI, functionName: 'getEventDetails' },
-        { address: addr, abi: FestivalSessionABI, functionName: 'getAttendees' },
-      ]) as [
-        readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, bigint, bigint, boolean, bigint],
-        readonly [`0x${string}`[], boolean[]],
+      // Reconcile the confirmed tier the roster reads from, in parallel with
+      // this session's own details (used by the edit/cancel flow).
+      const wallet = useWalletStore()
+      const userH160 = wallet.isConnected ? walletAddressToH160(wallet.address) : null
+      const [, raw] = await Promise.all([
+        bootLoadAttendee(userH160),
+        batchRead([
+          { address: addr, abi: FestivalSessionABI, functionName: 'getEventDetails' },
+        ]),
+      ])
+      const rawDetails = raw[0] as readonly [
+        `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, bigint, bigint, boolean, bigint,
       ]
 
       details.value = {
@@ -57,11 +77,6 @@ export function useSubEventManage(address: string) {
         cancelled: rawDetails[6],
         registeredCount: rawDetails[7],
       } as any
-
-      attendees.value = rawAttendees[0].map((a, i) => ({
-        address: a,
-        isCheckedIn: rawAttendees[1][i],
-      }))
 
       if (isNonZeroCid(details.value!.metadataCid)) {
         try {

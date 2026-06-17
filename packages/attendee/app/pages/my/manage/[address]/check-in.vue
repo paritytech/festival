@@ -5,12 +5,14 @@ import { useSubEventManage } from '~/composables/useSubEventManage'
 import { useSubEventCheckIn } from '~/composables/useSubEventCheckIn'
 import { useSubEventRoles } from '~/composables/useSubEventRoles'
 import { useFestival } from '~/composables/useFestival'
+import { bootLoadAttendee } from '~/composables/useBootLoad'
 import { usePermissions } from '@festival/shared/permissions'
+import { useWalletStore } from '@festival/shared/host/wallet'
+import { useVisiblePoll } from '@festival/shared/cache/visibility'
 import {
   isValidEvmAddress,
-  isSameAddress,
   shortenAddress,
-  ss58ToH160,
+  walletAddressToH160,
 } from '@festival/shared/utils/address'
 import { resolveFullLocationLabel } from '@festival/shared/venue/floors'
 import { formatTimeBerlin } from '@festival/shared/utils/time'
@@ -53,6 +55,14 @@ watch(
 // ── Stats source + optimistic mutation target ──
 const { attendees } = useSubEventManage(addr)
 
+// Keep the roster live while the door screen is open (the creator is already
+// checked in, so the per-attendee badge poll never runs here).
+const wallet = useWalletStore()
+useVisiblePoll(() => {
+  if (!wallet.isConnected) return
+  return bootLoadAttendee(walletAddressToH160(wallet.address))
+}, 10_000)
+
 const checkedInCount = computed(
   () => attendees.value.filter((a) => a.isCheckedIn).length,
 )
@@ -78,7 +88,6 @@ const timeRange = computed(() => {
 const {
   step,
   attendeeSS58,
-  accountStatus,
   error: checkInError,
   recentCheckins,
   reset,
@@ -93,24 +102,10 @@ onMounted(() => {
   if (step.value === 'idle') startScanning()
 })
 
-// ── Optimistic attendees mutation + auto-reset after success ──
+// Auto-rescan after a successful check-in. The roster updates itself via the
+// pending overlay + watcher, so there's nothing to mutate here.
 watch(step, (s) => {
   if (s !== 'success') return
-  if (!attendeeSS58.value) return
-
-  const wasRegistered = accountStatus.value?.registered ?? true
-  try {
-    const h160 = ss58ToH160(attendeeSS58.value)
-    const existing = attendees.value.find((a) => isSameAddress(a.address, h160))
-    if (existing) {
-      existing.isCheckedIn = true
-    } else if (!wasRegistered) {
-      attendees.value.push({ address: h160, isCheckedIn: true })
-    }
-  } catch {
-    // malformed address. Skip mutation, counts will fix up on next reload
-  }
-
   setTimeout(() => {
     if (step.value === 'success') startScanning()
   }, 1500)

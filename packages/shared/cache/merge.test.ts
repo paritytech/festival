@@ -5,6 +5,7 @@ import {
   mergeSession,
   mergeSessions,
   mergePoaps,
+  mergeTokenIds,
   maxBig,
   keepPositive,
 } from './merge'
@@ -52,6 +53,11 @@ const realDetails = (over: Partial<SessionEntry['details']> = {}) => ({
   startTime: 100n,
   endTime: 200n,
   ...over,
+})
+
+test('mergeTokenIds: unions by value, order-preserving, deduped', () => {
+  assert.deepEqual(mergeTokenIds([1n, 2n], [2n, 3n]), [1n, 2n, 3n])
+  assert.deepEqual(mergeTokenIds([], [5n]), [5n])
 })
 
 test('mergeAttendees: check-in latches true regardless of arrival order', () => {

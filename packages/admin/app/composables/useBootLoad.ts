@@ -12,6 +12,7 @@ import {
   festivalState,
   hydrateFromCache,
   persistToCache,
+  applyFestivalMetadata,
   type SessionEntry,
 } from '@festival/shared/cache/festival-state'
 import { mergeAttendees, mergeSessions, mergePoaps, maxBig } from '@festival/shared/cache/merge'
@@ -345,7 +346,8 @@ async function fetchFestivalMetadata(cid: `0x${string}`): Promise<void> {
   try {
     const { retrievePlaintext } = useBulletinStorage()
     const meta = await retrievePlaintext<FestivalMetadata>(cid)
-    if (festivalState.festival) festivalState.festival.metadata = meta
+    // Guarded on the CID we fetched, so a slow read can't clobber a newer update.
+    applyFestivalMetadata(meta, cid)
   } catch (e) {
     console.warn('[bootLoadAdmin] festival metadata fetch failed:', e)
   }

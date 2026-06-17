@@ -33,7 +33,8 @@ export function keepPositive(prev: bigint, incoming: bigint): bigint {
   return incoming > 0n ? incoming : prev
 }
 
-function unionBig(a: readonly bigint[], b: readonly bigint[]): bigint[] {
+/** Union of two token-id lists, order-preserving, dedup by value. */
+export function mergeTokenIds(a: readonly bigint[], b: readonly bigint[]): bigint[] {
   const seen = new Set<bigint>(a)
   const out = [...a]
   for (const x of b) {
@@ -103,7 +104,7 @@ export function mergeSession(
     },
     metadata: incoming.metadata ?? prev.metadata,
     attendees: mergeAttendees(prev.attendees, incoming.attendees),
-    poapTokenIds: unionBig(prev.poapTokenIds, incoming.poapTokenIds),
+    poapTokenIds: mergeTokenIds(prev.poapTokenIds, incoming.poapTokenIds),
   }
 }
 
