@@ -4,6 +4,7 @@ import { checkInSession, manualCheckInSession } from '@festival/shared/contracts
 import { FestivalABI } from '@festival/shared/contracts/abis'
 import { FESTIVAL_ADDRESS } from '@festival/shared/contracts/addresses'
 import { batchRead } from '@festival/shared/contracts/multicall'
+import { retryTransient } from '@festival/shared/contracts/retry'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { addPending, dropPending, sessionScopedId } from '@festival/shared/cache/pending'
@@ -79,11 +80,11 @@ export function useSubEventCheckIn(subEventAddress: string) {
       // attendee to be checked in to the parent festival first
       // (FestivalCheckInRequired), so we verify that here instead of letting it
       // surface as a confusing transaction revert after the operator confirms.
-      const [festivalCheckedIn, registered, checkedIn] = await batchRead([
+      const [festivalCheckedIn, registered, checkedIn] = await retryTransient(() => batchRead([
         { address: FESTIVAL_ADDRESS, abi: FestivalABI, functionName: 'isCheckedIn', args: [attendeeH160] },
         { address: subEventAddress as `0x${string}`, abi: FestivalABI, functionName: 'isRegistered', args: [attendeeH160] },
         { address: subEventAddress as `0x${string}`, abi: FestivalABI, functionName: 'isCheckedIn', args: [attendeeH160] },
-      ]) as [boolean, boolean, boolean]
+      ])) as [boolean, boolean, boolean]
 
       if (checkedIn) {
         error.value = 'Already checked in to this session.'
@@ -122,7 +123,9 @@ export function useSubEventCheckIn(subEventAddress: string) {
         ? checkInSession
         : manualCheckInSession
 
-      await fn({
+      // Retry transient submit/watch failures; a revert (incl. a double-landed
+      // check-in) is deterministic and throws straight through.
+      await retryTransient(() => fn({
         address: subEventAddress as `0x${string}`,
         attendee: attendeeH160,
         signer: wallet.getSigner(),
@@ -140,7 +143,7 @@ export function useSubEventCheckIn(subEventAddress: string) {
             step.value = 'success'
           }
         },
-      })
+      }))
     } catch (e: any) {
       dropPending('checkin', pendingId)
       txStatus.value = 'error'

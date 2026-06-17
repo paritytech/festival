@@ -5,6 +5,7 @@ import { usePermissions, type FestivalRole } from '~/composables/usePermissions'
 import { loadUserRoles } from '@festival/shared/contracts/role-helpers'
 import { readIsCheckedIn } from '@festival/shared/contracts/festival-reads'
 import { writeContract } from '@festival/shared/contracts/write'
+import { retryTransient } from '@festival/shared/contracts/retry'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { FestivalSessionABI } from '@festival/shared/contracts/abis'
 import { formatTxError } from '@festival/shared/contracts/errors'
@@ -109,7 +110,7 @@ async function lookupAttendee() {
     resolvedAttendeeH160.value = h160
     resolvedAttendeeSs58.value = h160ToSs58(h160)
 
-    const checkedIn = await readIsCheckedIn(address as `0x${string}`, h160)
+    const checkedIn = await retryTransient(() => readIsCheckedIn(address as `0x${string}`, h160))
     lookupState.value = checkedIn ? 'ready' : 'not-festival-checked-in'
   } catch (e: any) {
     checkInError.value = formatTxError(e)
@@ -126,7 +127,8 @@ async function performSessionCheckIn() {
 
   const pendingId = sessionScopedId(attendeeH160, subAddress)
   try {
-    await writeContract({
+    // Retry transient submit/watch failures; a revert is deterministic and throws.
+    await retryTransient(() => writeContract({
       address: subAddress as `0x${string}`,
       abi: FestivalSessionABI,
       functionName: 'manualCheckIn',
@@ -137,7 +139,7 @@ async function performSessionCheckIn() {
         checkInTxStatus.value = s
         if (s === 'broadcasting') addPending('checkin', pendingId)
       },
-    })
+    }))
 
     checkInInput.value = ''
     resetLookup()
