@@ -197,6 +197,22 @@ export function applySessionCreated(
 }
 
 /**
+ * Merge real on-chain details into a session entry. Used by the SessionCreated
+ * handler so a new session carries its true times/cid the moment the event
+ * lands (the event itself only seeds a zeroed stub), instead of sorting to the
+ * epoch-0 bucket on subject devices until the next bootLoad. Upgrade-only via
+ * mergeSession: zeros never beat known values.
+ */
+export function applySessionDetails(
+  sessionAddress: `0x${string}`,
+  details: SessionDetails,
+): void {
+  festivalState.sessions = mergeSessions(festivalState.sessions, [
+    { address: sessionAddress, details, metadata: null, attendees: [], poapTokenIds: [] },
+  ])
+}
+
+/**
  * Attach fetched metadata to a session. When expectedCid is given the write
  * only lands if the entry still points at that cid, so a fetch that raced a
  * newer update cannot put old content back.
