@@ -72,11 +72,13 @@ const title = computed(() =>
     : props.item.subEvent.metadata.name,
 );
 
+const SPEAKERS_MAX_CHARS = 64;
 const subtitle = computed(() => {
-  if (props.item.type === "official") {
-    return props.item.entry.speakers.join(", ");
-  }
-  return props.item.subEvent.metadata.speakers.join(", ");
+  const speakers =
+    props.item.type === "official"
+      ? props.item.entry.speakers.join(", ")
+      : props.item.subEvent.metadata.speakers.join(", ");
+  return truncate(speakers, SPEAKERS_MAX_CHARS);
 });
 
 const timeRange = computed(() => {
