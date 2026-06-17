@@ -8,7 +8,7 @@ import { useFlagSession } from "~/composables/useFlagSession";
 import { usePassGate } from "~/composables/usePassGate";
 import { useHiddenSessions } from "~/composables/useHiddenSessions";
 import { useBookmarks } from "~/composables/useBookmarks";
-import { useNow } from "~/composables/useNow";
+import { useRafNow } from "~/composables/useRafNow";
 import { useCelebratedSessions } from "~/composables/useCelebratedSessions";
 import { useSessionCheckInPoll } from "~/composables/useSessionCheckInPoll";
 import { useWalletStore } from "@festival/shared/host/wallet";
@@ -74,7 +74,7 @@ const subEvent = computed(() =>
 );
 const { roles: subEventRoles } = useSubEventRoles(addr);
 const hasManageAccess = computed(() => subEventRoles.value.length > 0);
-const now = useNow();
+const now = useRafNow();
 const { isBookmarked, toggleBookmark } = useBookmarks();
 
 const reportSheetVisible = ref(false);
@@ -311,13 +311,34 @@ function formatDay(d: Date): string {
     </template>
 
     <template #action>
-      <NuxtLink
-        v-if="isCreator || hasManageAccess"
-        :to="`/my/manage/${addr}/check-in`"
-        class="block w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold text-center"
-      >
-        Check People In
-      </NuxtLink>
+      <template v-if="isCreator || hasManageAccess">
+        <button
+          v-if="isUpcoming"
+          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-white/10 text-white/60 cursor-default"
+          disabled
+          data-testid="session-check-in-pending"
+        >
+          Check People In · Opens in {{ countdownLabel }}
+        </button>
+
+        <NuxtLink
+          v-else-if="isLive"
+          :to="`/my/manage/${addr}/check-in`"
+          class="block w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold text-center"
+          data-testid="session-check-in-cta"
+        >
+          Check People In<template v-if="isPastEnd"> · Closes in {{ closesInLabel }}</template>
+        </NuxtLink>
+
+        <button
+          v-else
+          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-white/10 text-white/60 cursor-default"
+          disabled
+          data-testid="session-check-in-ended"
+        >
+          Session ended
+        </button>
+      </template>
 
       <template v-else-if="!subEvent.isCheckedIn">
         <button
