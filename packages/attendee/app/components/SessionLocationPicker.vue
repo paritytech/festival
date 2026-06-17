@@ -321,7 +321,7 @@ function handleDone() {
 .slp__floor-control {
   position: absolute;
   top: 12px;
-  left: 16px;
+  right: 16px;
   z-index: 1000;
 }
 
