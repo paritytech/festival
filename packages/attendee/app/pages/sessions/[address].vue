@@ -10,6 +10,7 @@ import { useHiddenSessions } from "~/composables/useHiddenSessions";
 import { useBookmarks } from "~/composables/useBookmarks";
 import { useNow } from "~/composables/useNow";
 import { useCelebratedSessions } from "~/composables/useCelebratedSessions";
+import { useSessionCheckInPoll } from "~/composables/useSessionCheckInPoll";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { resolveFullLocationLabel } from "@festival/shared/venue/floors";
@@ -93,6 +94,9 @@ const locationViewOpen = ref(false);
 // client-side without an extra read.
 const receivedAt = ref<Date | null>(null);
 const { hasCelebrated, markCelebrated } = useCelebratedSessions();
+
+// Foreground fallback for a missed CheckedIn event, so the badge still fires.
+useSessionCheckInPoll(addr);
 
 // Badge celebration: fire once when the user becomes checked in for this
 // session. Driven by shared state (the app-level watcher feeds it), so it's

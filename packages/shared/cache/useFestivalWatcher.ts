@@ -3,6 +3,8 @@ import type { FestivalMetadata, SubEventMetadata } from '../metadata/schemas'
 import { hydrateSubEventMetadata } from '../metadata/schemas'
 import { useBulletinStorage } from '../metadata/bulletin'
 import { isNonZeroCid } from '../contracts/festival-reads'
+import { batchRead } from '../contracts/multicall'
+import { FestivalSessionABI } from '../contracts/abis'
 import { watchContractEvents, type FestivalEventHandlers } from './event-watcher'
 import {
   festivalState,
@@ -12,6 +14,7 @@ import {
   applyCapacityUpdated,
   applyCancelled,
   applySessionCreated,
+  applySessionDetails,
   applySessionMetadata,
   applySessionRegistered,
   applySessionCheckedIn,
@@ -148,6 +151,28 @@ export function useFestivalWatcher(
           creator as `0x${string}`,
           metadataCid,
         )
+        // Pull the session's real details so subject devices place it in the
+        // right program slot now, not just after the next bootLoad. flag fields
+        // arrive with that load; zeros here never regress under mergeSession.
+        try {
+          const [d] = (await batchRead([
+            { address: sessionAddr as `0x${string}`, abi: FestivalSessionABI, functionName: 'getEventDetails' },
+          ])) as [readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, bigint, bigint, boolean, bigint]]
+          applySessionDetails(sessionAddr as `0x${string}`, {
+            metadataCid: d[0],
+            creator: d[1],
+            poapContract: d[2],
+            parentFestival: d[3],
+            startTime: d[4],
+            endTime: d[5],
+            cancelled: d[6],
+            registeredCount: d[7],
+            flagCount: 0n,
+            flagThreshold: 0n,
+          })
+        } catch (e) {
+          console.warn('[FestivalWatcher] session details fetch failed:', e)
+        }
         // Fetch the metadata so the card shows a title right away. Skip when
         // the entry already moved past the creation cid, and pass the cid so
         // a fetch that raced a newer update cannot apply old content.
