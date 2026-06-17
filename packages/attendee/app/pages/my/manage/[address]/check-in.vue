@@ -8,9 +8,7 @@ import { useFestival } from '~/composables/useFestival'
 import { usePermissions } from '@festival/shared/permissions'
 import {
   isValidEvmAddress,
-  isSameAddress,
   shortenAddress,
-  ss58ToH160,
 } from '@festival/shared/utils/address'
 import { resolveFullLocationLabel } from '@festival/shared/venue/floors'
 import { formatTimeBerlin } from '@festival/shared/utils/time'
@@ -78,7 +76,6 @@ const timeRange = computed(() => {
 const {
   step,
   attendeeSS58,
-  accountStatus,
   error: checkInError,
   recentCheckins,
   reset,
@@ -93,24 +90,10 @@ onMounted(() => {
   if (step.value === 'idle') startScanning()
 })
 
-// ── Optimistic attendees mutation + auto-reset after success ──
+// Auto-rescan after a successful check-in. The roster updates itself via the
+// pending overlay + watcher, so there's nothing to mutate here.
 watch(step, (s) => {
   if (s !== 'success') return
-  if (!attendeeSS58.value) return
-
-  const wasRegistered = accountStatus.value?.registered ?? true
-  try {
-    const h160 = ss58ToH160(attendeeSS58.value)
-    const existing = attendees.value.find((a) => isSameAddress(a.address, h160))
-    if (existing) {
-      existing.isCheckedIn = true
-    } else if (!wasRegistered) {
-      attendees.value.push({ address: h160, isCheckedIn: true })
-    }
-  } catch {
-    // malformed address. Skip mutation, counts will fix up on next reload
-  }
-
   setTimeout(() => {
     if (step.value === 'success') startScanning()
   }, 1500)

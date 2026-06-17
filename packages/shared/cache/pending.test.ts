@@ -8,6 +8,7 @@ import {
   pendingSessions,
   pendingSessionEdit,
   pendingCheckins,
+  pendingSessionCheckins,
   sessionScopedId,
   draftSessionEntry,
   startPendingReconcile,
@@ -126,6 +127,19 @@ test('checkin survives a registered-only row, promotes on isCheckedIn', async ()
   seedFestival([{ address: USER as `0x${string}`, isCheckedIn: true }])
   await nextTick()
   assert.equal(hasPending('checkin', USER), false)
+})
+
+test('pendingSessionCheckins returns only this session, splitting off the suffix', () => {
+  resetFestivalState()
+  addPending('checkin', USER) // festival-scoped — excluded
+  addPending('checkin', sessionScopedId(USER, SESSION_ADDR))
+  addPending('checkin', sessionScopedId(USER, ZERO)) // other session — excluded
+  const ids = pendingSessionCheckins(SESSION_ADDR)
+  assert.deepEqual(ids, [USER.toLowerCase()])
+  assert.deepEqual(pendingCheckins(), [USER.toLowerCase()])
+  dropPending('checkin', USER)
+  dropPending('checkin', sessionScopedId(USER, SESSION_ADDR))
+  dropPending('checkin', sessionScopedId(USER, ZERO))
 })
 
 test('session promotes when a confirmed session carries the metadata CID', async () => {
