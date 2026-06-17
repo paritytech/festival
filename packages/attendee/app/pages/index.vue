@@ -441,11 +441,11 @@ function getMyListRoute(item: TimelineItem): string {
                 {{ getMyListTitle(item) }}
               </p>
             </div>
-            <div class="flex items-center justify-between mt-0.5">
-              <span class="text-xs text-text-muted">{{
+            <div class="flex items-start justify-between gap-2 mt-0.5">
+              <span class="text-xs text-text-muted whitespace-nowrap shrink-0">{{
                 getMyListTimeLabel(item)
               }}</span>
-              <span class="text-xs text-text-muted">{{
+              <span class="text-xs text-text-muted text-left">{{
                 getMyListLocation(item)
               }}</span>
             </div>
