@@ -5,6 +5,7 @@ import {
   resetFestivalState,
   applySessionRegistered,
   applySessionCheckedIn,
+  applySessionDetails,
   applySessionMetadataUpdated,
   type SessionEntry,
 } from './festival-state'
@@ -43,6 +44,16 @@ function realSession(addr: `0x${string}`): SessionEntry {
     poapTokenIds: [],
   }
 }
+
+test('applySessionDetails upgrades a stub with real times and preserves the roster', () => {
+  resetFestivalState()
+  applySessionCheckedIn(S, A) // event stub: zeroed times, one checked-in row
+  applySessionDetails(S, realSession(S).details)
+  const e = find(S)
+  assert.equal(e?.details.startTime, 1000n)
+  assert.equal(e?.details.endTime, 2000n)
+  assert.equal(e?.attendees[0]?.isCheckedIn, true)
+})
 
 test('applySessionCheckedIn latches and is replay-idempotent', () => {
   resetFestivalState()
