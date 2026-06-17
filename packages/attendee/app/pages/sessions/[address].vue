@@ -99,6 +99,17 @@ const { hasCelebrated, markCelebrated } = useCelebratedSessions();
 // Foreground fallback for a missed CheckedIn event, so the badge still fires.
 useSessionCheckInPoll(addr);
 
+// Declared before the celebration watcher below: that watcher runs with
+// `immediate: true`, so it reads isCreator synchronously during setup when the
+// user is already checked in (e.g. the creator).
+const isCreator = computed(() => {
+  if (!subEvent.value || !wallet.isConnected) return false;
+  const userH160 = isValidEvmAddress(wallet.address)
+    ? wallet.address.toLowerCase()
+    : ss58ToH160(wallet.address).toLowerCase();
+  return subEvent.value.creator.toLowerCase() === userH160;
+});
+
 // Badge celebration: fire once when the user becomes checked in for this
 // session. Driven by shared state (the app-level watcher feeds it), so it's
 // immune to follow drops and event replays; the persisted per-session guard
@@ -174,14 +185,6 @@ const locationLabel = computed(() => {
 const festivalPoapImageUrl = useBulletinImage(
   () => festivalMetadata.value?.festivalPoapImage || festivalMetadata.value?.image || null,
 );
-
-const isCreator = computed(() => {
-  if (!subEvent.value || !wallet.isConnected) return false;
-  const userH160 = isValidEvmAddress(wallet.address)
-    ? wallet.address.toLowerCase()
-    : ss58ToH160(wallet.address).toLowerCase();
-  return subEvent.value.creator.toLowerCase() === userH160;
-});
 
 const canReport = computed(() => {
   if (!subEvent.value) return false;
