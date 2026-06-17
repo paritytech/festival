@@ -5,10 +5,14 @@ import { useSubEventManage } from '~/composables/useSubEventManage'
 import { useSubEventCheckIn } from '~/composables/useSubEventCheckIn'
 import { useSubEventRoles } from '~/composables/useSubEventRoles'
 import { useFestival } from '~/composables/useFestival'
+import { bootLoadAttendee } from '~/composables/useBootLoad'
 import { usePermissions } from '@festival/shared/permissions'
+import { useWalletStore } from '@festival/shared/host/wallet'
+import { useVisiblePoll } from '@festival/shared/cache/visibility'
 import {
   isValidEvmAddress,
   shortenAddress,
+  walletAddressToH160,
 } from '@festival/shared/utils/address'
 import { resolveFullLocationLabel } from '@festival/shared/venue/floors'
 import { formatTimeBerlin } from '@festival/shared/utils/time'
@@ -50,6 +54,14 @@ watch(
 
 // ── Stats source + optimistic mutation target ──
 const { attendees } = useSubEventManage(addr)
+
+// Keep the roster live while the door screen is open (the creator is already
+// checked in, so the per-attendee badge poll never runs here).
+const wallet = useWalletStore()
+useVisiblePoll(() => {
+  if (!wallet.isConnected) return
+  return bootLoadAttendee(walletAddressToH160(wallet.address))
+}, 10_000)
 
 const checkedInCount = computed(
   () => attendees.value.filter((a) => a.isCheckedIn).length,

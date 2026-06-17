@@ -11,9 +11,12 @@ import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { festivalState } from '@festival/shared/cache/festival-state'
 import { addPending, dropPending, sessionScopedId, pendingSessionCheckins } from '@festival/shared/cache/pending'
+import { useVisiblePoll } from '@festival/shared/cache/visibility'
+import { bootLoadAdmin } from '~/composables/useBootLoad'
 import {
   h160ToSs58,
   ss58ToH160,
+  walletAddressToH160,
   isValidEvmAddress,
   isValidSs58,
   shortenAddress,
@@ -24,6 +27,7 @@ definePageMeta({ layout: 'festival' })
 const route = useRoute()
 const address = route.params.address as string
 const subAddress = route.params.subAddress as string
+const wallet = useWalletStore()
 
 // Session metadata from the already-loaded sub-events list
 const { subEvents, cancelSession, txStatus: cancelTxStatus } = useSubEvents(address)
@@ -122,7 +126,6 @@ async function performSessionCheckIn() {
 
   const pendingId = sessionScopedId(attendeeH160, subAddress)
   try {
-    const wallet = useWalletStore()
     await writeContract({
       address: subAddress as `0x${string}`,
       abi: FestivalSessionABI,
@@ -198,6 +201,13 @@ const visibleTabs = computed(() => {
 })
 
 const activeTab = ref('overview')
+
+// Keep the roster live while the check-in tab is open, as a foreground fallback
+// for registration/check-in events missed on a flaky socket.
+useVisiblePoll(() => {
+  if (activeTab.value !== 'checkin' || !wallet.isConnected) return
+  return bootLoadAdmin(address as `0x${string}`, walletAddressToH160(wallet.address))
+}, 10_000)
 
 function shortenAddr(addr: string) {
   return addr.slice(0, 8) + '…' + addr.slice(-4)
