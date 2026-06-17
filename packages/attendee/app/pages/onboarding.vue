@@ -63,9 +63,7 @@ useCheckInPoll();
       >
     </div>
 
-    <div class="flex-1 flex flex-col justify-start pt-[25px] pb-8">
-      <HomeLocation />
-    </div>
+    <div class="flex-1" />
   </div>
 </template>
 
