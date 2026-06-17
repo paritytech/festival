@@ -19,6 +19,7 @@ import { CATEGORY_STYLE } from "~/composables/useProgramTimeline";
 import {
   SESSION_CHECKIN_GRACE_MS,
   formatCountdown,
+  formatClosesIn,
   isSameDay,
   formatTimeBerlin,
   formatDateBerlin,
@@ -211,6 +212,12 @@ const countdownLabel = computed(() =>
   formatCountdown(sessionStartMs.value - nowMs.value),
 );
 
+// Once the session has ended we keep the CTA live through the grace window,
+// counting down how long is left to claim the badge ("Closes in N min").
+const closesInLabel = computed(() =>
+  formatClosesIn(collectDeadlineMs.value - nowMs.value),
+);
+
 const receivedLabel = computed(() =>
   receivedAt.value ? formatReceived(receivedAt.value) : "",
 );
@@ -324,7 +331,7 @@ function formatDay(d: Date): string {
           data-testid="session-collect-badge-cta"
           @click="openPassport"
         >
-          Collect Badge
+          Collect Badge<template v-if="isPastEnd"> · Closes in {{ closesInLabel }}</template>
         </button>
       </template>
     </template>
