@@ -1,4 +1,5 @@
 import { onUnmounted, getCurrentInstance, watch, type Ref, type WatchStopHandle } from 'vue'
+import { onMainClientReset } from '../host/client'
 import type { FestivalMetadata, SubEventMetadata } from '../metadata/schemas'
 import { hydrateSubEventMetadata } from '../metadata/schemas'
 import { useBulletinStorage } from '../metadata/bulletin'
@@ -59,10 +60,12 @@ export function useFestivalWatcher(
 
   let active: { unsubscribe: () => void } | null = null
   let disposed = false
+  let started = false
   let stopDeferWatch: WatchStopHandle | null = null
 
   function start() {
     if (disposed || active) return
+    started = true
     active = buildHandlers()
   }
 
@@ -72,6 +75,7 @@ export function useFestivalWatcher(
       stopDeferWatch()
       stopDeferWatch = null
     }
+    unregisterReset()
     if (active) {
       active.unsubscribe()
       active = null
@@ -82,14 +86,24 @@ export function useFestivalWatcher(
   // silently pause the WebSocket while backgrounded; on resume the existing
   // follow may be dead with no error emitted, so the visibility handler calls
   // this after reconciling to guarantee live updates resume.
+  //
+  // Also driven by resetMainClient(): watchContractEvents captured `api` from
+  // the now-destroyed client, so we must rebuild — buildHandlers() re-calls
+  // useMainClient() and binds the follow to the freshly built client.
   function restart() {
-    if (disposed) return
+    // Don't open the follow before the initial (possibly deferred) start has
+    // run — a reset during the boot-defer window must not pre-empt the gate.
+    if (disposed || !started) return
     if (active) {
       active.unsubscribe()
       active = null
     }
     active = buildHandlers()
   }
+
+  // Re-follow on the rebuilt client when a wedged connection is reset elsewhere
+  // (e.g. the session check-in recovery path).
+  const unregisterReset = onMainClientReset(restart)
 
   const normalizedFestival = festivalAddress.toLowerCase()
 
