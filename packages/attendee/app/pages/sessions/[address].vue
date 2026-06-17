@@ -294,7 +294,7 @@ function formatDay(d: Date): string {
     @toggle-bookmark="handleToggleBookmark"
     @open-location="locationViewOpen = true"
   >
-    <template v-if="isCreator && !isPastEnd" #topBarTrailing>
+    <template v-if="isCreator && isUpcoming" #topBarTrailing>
       <NuxtLink
         :to="`/my/manage/${addr}/edit`"
         class="w-10 h-10 flex items-center justify-center"

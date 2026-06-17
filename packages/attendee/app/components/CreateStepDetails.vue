@@ -3,6 +3,9 @@ import { computed } from 'vue'
 import type { FestivalDay } from '@festival/shared'
 import InputField from './ui/InputField.vue'
 
+const NAME_MAX_LENGTH = 120
+const SPEAKER_MAX_LENGTH = 120
+
 interface FormData {
   name: string
   speaker: string
@@ -42,30 +45,52 @@ defineExpose({ canProceed })
 <template>
   <div class="space-y-6 px-4">
     <!-- Speaker (optional — left blank, a fun "Anonymous <Animal>" is saved) -->
-    <InputField v-slot="{ inputId }" label="Speaker">
-      <input
-        :id="inputId"
-        data-testid="session-speaker-input"
-        :value="modelValue.speaker"
-        type="text"
-        placeholder="Leave blank to stay anonymous"
-        class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
-        @input="patch('speaker', ($event.target as HTMLInputElement).value)"
-      />
+    <InputField label="Speaker">
+      <template #label-trailing>
+        <span
+          class="text-xs leading-[18px] font-normal text-text-and-icons-secondary"
+          data-testid="session-speaker-counter"
+        >
+          {{ modelValue.speaker.length }}/{{ SPEAKER_MAX_LENGTH }}
+        </span>
+      </template>
+      <template #default="{ inputId }">
+        <input
+          :id="inputId"
+          data-testid="session-speaker-input"
+          :value="modelValue.speaker"
+          type="text"
+          :maxlength="SPEAKER_MAX_LENGTH"
+          placeholder="Leave blank to stay anonymous"
+          class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
+          @input="patch('speaker', ($event.target as HTMLInputElement).value)"
+        />
+      </template>
     </InputField>
 
     <!-- Session Name -->
-    <InputField v-slot="{ inputId }" label="Session Name" required>
-      <input
-        :id="inputId"
-        data-testid="session-name-input"
-        :value="modelValue.name"
-        type="text"
-        required
-        aria-required="true"
-        class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
-        @input="patch('name', ($event.target as HTMLInputElement).value)"
-      />
+    <InputField label="Session Name" required>
+      <template #label-trailing>
+        <span
+          class="text-xs leading-[18px] font-normal text-text-and-icons-secondary"
+          data-testid="session-name-counter"
+        >
+          {{ modelValue.name.length }}/{{ NAME_MAX_LENGTH }}
+        </span>
+      </template>
+      <template #default="{ inputId }">
+        <input
+          :id="inputId"
+          data-testid="session-name-input"
+          :value="modelValue.name"
+          type="text"
+          required
+          aria-required="true"
+          :maxlength="NAME_MAX_LENGTH"
+          class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
+          @input="patch('name', ($event.target as HTMLInputElement).value)"
+        />
+      </template>
     </InputField>
 
     <SessionDatePicker
