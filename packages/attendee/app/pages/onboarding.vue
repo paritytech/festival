@@ -17,21 +17,23 @@ useCheckInPoll();
     class="min-h-full flex flex-col bg-bg-surface-main"
     data-testid="onboarding-checked-in"
   >
-    <div class="flex flex-col items-center px-4 pt-15">
+    <div class="flex-1 min-h-0 flex flex-col items-center px-4 pt-15">
       <div
         role="img"
         aria-hidden="true"
-        class="onboarding-illustration w-full max-w-sm"
+        class="onboarding-illustration w-full max-w-sm flex-1 min-h-0"
         data-testid="onboarding-intro-illustration"
       />
       <h1
-        class="font-semibold text-fg-primary text-center max-w-xs mt-[52px] text-onboarding-title"
+        class="shrink-0 font-semibold text-fg-primary text-center max-w-xs mt-[52px] text-2xl leading-snug"
         data-testid="onboarding-intro-heading"
       >
         Chat / Browse / Play<br />
         All within Polkadot App
       </h1>
     </div>
+    <!-- Reserve the bottom 20% of the screen as empty margin. -->
+    <div class="h-[20dvh] shrink-0" aria-hidden="true" />
   </div>
 
   <div
@@ -63,9 +65,7 @@ useCheckInPoll();
       >
     </div>
 
-    <div class="flex-1 flex flex-col justify-start pt-[25px] pb-8">
-      <HomeLocation />
-    </div>
+    <div class="flex-1" />
   </div>
 </template>
 
