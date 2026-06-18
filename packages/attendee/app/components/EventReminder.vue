@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { ScheduleEntry, VenueMarker, VenueZone } from '@festival/shared/metadata/schemas'
 import { resolveShortLocationLabel } from '@festival/shared/venue/floors'
 import { formatTimeBerlin, toBerlinDateKey, parseFestivalDate } from '@festival/shared/utils/time'
+import { scheduleEntryCategory } from '~/composables/useProgramTimeline'
 
 const props = withDefaults(defineProps<{
   entries: ScheduleEntry[]
@@ -21,8 +22,16 @@ type ReminderState =
   | { type: 'next-at'; entry: ScheduleEntry; time: string }
   | { type: 'pre-festival'; entry: ScheduleEntry; days: number; hours: number; minutes: number }
 
+// This is the festival "talks" reminder. Only official talks belong here:
+// activations run all day next to the talks and must stay out of the card (see
+// the SessionCategory docs), and community sub-events are never passed in.
+const officialEntries = computed(() =>
+  props.entries.filter(e => scheduleEntryCategory(e) === 'official'),
+)
+
 const state = computed<ReminderState>(() => {
-  const { entries, now } = props
+  const { now } = props
+  const entries = officialEntries.value
   if (!entries.length) return { type: 'hidden' }
 
   const nowBerlin = toBerlinDateKey(new Date(now))
