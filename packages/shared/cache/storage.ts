@@ -1,3 +1,4 @@
+import { getHostLocalStorage } from '@parity/product-sdk-host'
 import { isInHost } from '../host/detect'
 
 export interface CacheStorage {
@@ -7,12 +8,11 @@ export interface CacheStorage {
 }
 
 function createHostStorage(): CacheStorage {
-  // Lazy import to avoid loading the host SDK in standalone
-  let storage: any = null
+  // Lazy-resolve the host storage handle; null outside a host container.
+  let storage: Awaited<ReturnType<typeof getHostLocalStorage>> = null
   async function getHostStorage() {
     if (!storage) {
-      const { hostLocalStorage } = await import('@novasamatech/host-api-wrapper')
-      storage = hostLocalStorage
+      storage = await getHostLocalStorage()
     }
     return storage
   }
@@ -21,8 +21,9 @@ function createHostStorage(): CacheStorage {
     async readJSON<T>(key: string): Promise<T | null> {
       try {
         const s = await getHostStorage()
+        if (!s) return null
         const result = await s.readJSON(key)
-        return result ?? null
+        return (result ?? null) as T | null
       } catch {
         return null
       }
@@ -30,6 +31,7 @@ function createHostStorage(): CacheStorage {
     async writeJSON(key: string, value: unknown): Promise<void> {
       try {
         const s = await getHostStorage()
+        if (!s) return
         await s.writeJSON(key, value)
       } catch (e) {
         console.warn('[CacheStorage] Host write failed:', e)
@@ -38,6 +40,7 @@ function createHostStorage(): CacheStorage {
     async clear(key: string): Promise<void> {
       try {
         const s = await getHostStorage()
+        if (!s) return
         await s.clear(key)
       } catch (e) {
         console.warn('[CacheStorage] Host clear failed:', e)

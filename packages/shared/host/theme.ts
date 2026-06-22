@@ -1,5 +1,5 @@
 import { ref, readonly, type Ref } from 'vue'
-import { createThemeProvider, type ThemeMode } from '@novasamatech/host-api-wrapper'
+import { getThemeProvider, type ThemeMode } from '@parity/product-sdk-host'
 import { isInHost } from './detect'
 
 export type ThemeSlug = 'berlin-night' | 'berlin-day' | 'lisbon' | 'malta' | 'tokyo'
@@ -41,11 +41,17 @@ const themeVariant = ref<ThemeVariant>('Dark')
 let started = false
 let unsubscribe: (() => void) | null = null
 
-function start() {
+async function start() {
   if (started || typeof window === 'undefined' || !isInHost()) return
   started = true
 
-  const provider = createThemeProvider()
+  const provider = await getThemeProvider()
+  if (!provider) {
+    // Host SDK unavailable — allow a later retry.
+    started = false
+    return
+  }
+
   const sub = provider.subscribeTheme((payload) => {
     themeSlug.value = pickTheme(payload)
     themeVariant.value = payload.variant
@@ -65,7 +71,8 @@ export function useHostTheme(): {
   themeSlug: Readonly<Ref<ThemeSlug>>
   variant: Readonly<Ref<ThemeVariant>>
 } {
-  start()
+  // Fire-and-forget: the subscription updates the refs once it resolves.
+  void start()
   return {
     themeSlug: readonly(themeSlug),
     variant: readonly(themeVariant),

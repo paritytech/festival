@@ -1,5 +1,4 @@
-import { notificationManager } from '@novasamatech/host-api-wrapper'
-import { PushNotificationError } from '@novasamatech/host-api'
+import { getNotificationManager, PushNotificationError } from '@parity/product-sdk-host'
 import { isInHost } from './detect'
 
 export type NotificationId = number
@@ -30,8 +29,11 @@ export async function pushNotification(
 ): Promise<NotificationId | ScheduleLimitReached | null> {
   if (!isInHost()) return null
 
+  const mgr = await getNotificationManager()
+  if (!mgr) return null
+
   try {
-    return await notificationManager.push(input)
+    return await mgr.push(input)
   } catch (err) {
     if (err instanceof PushNotificationError.ScheduleLimitReached) {
       return SCHEDULE_LIMIT_REACHED
@@ -47,8 +49,12 @@ export async function pushNotification(
  */
 export async function cancelNotification(id: NotificationId): Promise<void> {
   if (!isInHost()) return
+
+  const mgr = await getNotificationManager()
+  if (!mgr) return
+
   try {
-    await notificationManager.cancel(id)
+    await mgr.cancel(id)
   } catch (err) {
     console.warn('[Notifications] Cancel failed:', err)
   }

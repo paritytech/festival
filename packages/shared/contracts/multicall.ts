@@ -91,7 +91,7 @@ export async function batchRead(
   })
 
   // Single dry-run to Multicall3
-  const { api } = useMainClient()
+  const { api } = await useMainClient()
 
   const at = options?.at ?? 'best'
 
