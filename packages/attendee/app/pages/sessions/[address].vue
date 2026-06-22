@@ -1,24 +1,26 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useSubEvents } from "~/composables/useSubEvents";
 import { useSubEventRoles } from "~/composables/useSubEventRoles";
 import { useRegistration } from "~/composables/useRegistration";
 import { useFestival } from "~/composables/useFestival";
 import { useFlagSession } from "~/composables/useFlagSession";
+import { usePassGate } from "~/composables/usePassGate";
 import { useHiddenSessions } from "~/composables/useHiddenSessions";
 import { useBookmarks } from "~/composables/useBookmarks";
-import { useNow } from "~/composables/useNow";
-import { useSessionWatcher } from "~/composables/useSessionWatcher";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
+import { useRafNow } from "~/composables/useRafNow";
+import { useCelebratedSessions } from "~/composables/useCelebratedSessions";
+import { useSessionCheckInPoll } from "~/composables/useSessionCheckInPoll";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
-import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
-import { resolveLocationLabel } from "@festival/shared/venue/floors";
+import { resolveFullLocationLabel } from "@festival/shared/venue/floors";
+import { useVenueMap } from "~/composables/useVenueMap";
 import { useBulletinImage } from "~/composables/useBulletinImage";
+import { CATEGORY_STYLE } from "~/composables/useProgramTimeline";
 import {
   SESSION_CHECKIN_GRACE_MS,
   formatCountdown,
+  formatClosesIn,
   isSameDay,
   formatTimeBerlin,
   formatDateBerlin,
@@ -33,6 +35,7 @@ definePageMeta({
 });
 
 const route = useRoute();
+const router = useRouter();
 const addr = route.params.address as string;
 // `?from=create` tells us the user landed here from the create-flow success
 // screen. Browser history points back into the create page, which would be
@@ -40,6 +43,16 @@ const addr = route.params.address as string;
 const backTo = computed(() =>
   route.query.from === "create" ? "/program" : undefined,
 );
+
+// `?updated=1` is set by the edit flow on a successful save. Surface the toast
+// here (after redirect), then strip the flag so a reload doesn't replay it.
+const showUpdatedToast = ref(false);
+onMounted(() => {
+  if (route.query.updated === "1") {
+    showUpdatedToast.value = true;
+    router.replace({ path: route.path, query: {} });
+  }
+});
 const wallet = useWalletStore();
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
 const { subEvents, isLoading: subEventsLoading, reload: reloadSubEvents } =
@@ -61,7 +74,7 @@ const subEvent = computed(() =>
 );
 const { roles: subEventRoles } = useSubEventRoles(addr);
 const hasManageAccess = computed(() => subEventRoles.value.length > 0);
-const now = useNow();
+const now = useRafNow();
 const { isBookmarked, toggleBookmark } = useBookmarks();
 
 const reportSheetVisible = ref(false);
@@ -77,26 +90,44 @@ const { isHidden } = useHiddenSessions();
 const passportOpen = ref(false);
 const badgeEarnedOpen = ref(false);
 const locationViewOpen = ref(false);
-// "Received: 18 June, 12:03" line on the badge-earned screen. Stamped at the
-// moment the CheckedIn event lands; the precise on-chain timestamp is not
-// available client-side without an extra read.
+// "Received: 18 June, 12:03" line on the badge-earned screen. Stamped when the
+// check-in is first observed; the precise on-chain timestamp is not available
+// client-side without an extra read.
 const receivedAt = ref<Date | null>(null);
-// Always-on while page mounted: catches CheckedIn for the badge-earned
-// animation AND live-applies session metadata updates to useSubEvents.
-const { checkedIn: watcherCheckedIn } = useSessionWatcher(addr);
+const { hasCelebrated, markCelebrated } = useCelebratedSessions();
 
-watch(watcherCheckedIn, (caught) => {
-  if (!caught) return;
-  receivedAt.value = new Date();
-  passportOpen.value = false;
-  // Creators auto-check-in at session creation and don't earn a "badge" in the
-  // collectible sense. Skip the celebration animation for them.
-  if (!isCreator.value) {
-    badgeEarnedOpen.value = true;
-  }
-  // Reconcile cache in the background. Animation is event-driven.
-  reloadSubEvents().catch(() => {});
+// Foreground fallback for a missed CheckedIn event, so the badge still fires.
+useSessionCheckInPoll(addr);
+
+// Declared before the celebration watcher below: that watcher runs with
+// `immediate: true`, so it reads isCreator synchronously during setup when the
+// user is already checked in (e.g. the creator).
+const isCreator = computed(() => {
+  if (!subEvent.value || !wallet.isConnected) return false;
+  const userH160 = isValidEvmAddress(wallet.address)
+    ? wallet.address.toLowerCase()
+    : ss58ToH160(wallet.address).toLowerCase();
+  return subEvent.value.creator.toLowerCase() === userH160;
 });
+
+// Badge celebration: fire once when the user becomes checked in for this
+// session. Driven by shared state (the app-level watcher feeds it), so it's
+// immune to follow drops and event replays; the persisted per-session guard
+// means it plays at most once, ever. Creators auto-check-in at creation and
+// don't earn a collectible badge — skip them.
+watch(
+  () => subEvent.value?.isCheckedIn ?? false,
+  (checkedIn) => {
+    if (!checkedIn || isCreator.value || hasCelebrated(addr)) return;
+    markCelebrated(addr);
+    receivedAt.value = new Date();
+    passportOpen.value = false;
+    badgeEarnedOpen.value = true;
+    // Pull the freshly minted session POAP for the badge view.
+    reloadSubEvents().catch(() => {});
+  },
+  { immediate: true },
+);
 
 function handleToggleBookmark() {
   if (!subEvent.value) return;
@@ -120,25 +151,7 @@ function dismissBadgeEarned() {
   badgeEarnedOpen.value = false;
 }
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
-
-const venueZones = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.zones?.length
-  ) {
-    return festivalMetadata.value.venueMap.zones;
-  }
-  return DEFAULT_ZONES;
-});
+const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 const speakerLabel = computed(() => {
   const speakers = subEvent.value?.metadata.speakers ?? [];
@@ -161,9 +174,10 @@ const dayLabel = computed(() => {
 
 const locationLabel = computed(() => {
   if (!subEvent.value?.metadata.location) return "";
-  return resolveLocationLabel(
+  return resolveFullLocationLabel(
     subEvent.value.metadata.location,
     venueMarkers.value,
+    venueZones.value,
   );
 });
 
@@ -171,14 +185,6 @@ const locationLabel = computed(() => {
 const festivalPoapImageUrl = useBulletinImage(
   () => festivalMetadata.value?.festivalPoapImage || festivalMetadata.value?.image || null,
 );
-
-const isCreator = computed(() => {
-  if (!subEvent.value || !wallet.isConnected) return false;
-  const userH160 = isValidEvmAddress(wallet.address)
-    ? wallet.address.toLowerCase()
-    : ss58ToH160(wallet.address).toLowerCase();
-  return subEvent.value.creator.toLowerCase() === userH160;
-});
 
 const canReport = computed(() => {
   if (!subEvent.value) return false;
@@ -213,6 +219,12 @@ const countdownLabel = computed(() =>
   formatCountdown(sessionStartMs.value - nowMs.value),
 );
 
+// Once the session has ended we keep the CTA live through the grace window,
+// counting down how long is left to claim the badge ("Closes in N min").
+const closesInLabel = computed(() =>
+  formatClosesIn(collectDeadlineMs.value - nowMs.value),
+);
+
 const receivedLabel = computed(() =>
   receivedAt.value ? formatReceived(receivedAt.value) : "",
 );
@@ -223,9 +235,13 @@ function formatReceived(d: Date): string {
   return `${day}, ${time}`;
 }
 
+const gate = usePassGate("report a session");
+
 function openReportSheet() {
-  resetFlag();
-  reportSheetVisible.value = true;
+  gate.run(() => {
+    resetFlag();
+    reportSheetVisible.value = true;
+  });
 }
 
 async function confirmReport() {
@@ -262,8 +278,8 @@ function formatDay(d: Date): string {
     :image-url="festivalPoapImageUrl"
     :banner-value="speakerLabel"
     :banner-label="speakerLabel ? 'Session Speaker' : undefined"
-    category="Community"
-    category-color="var(--color-community)"
+    :category="CATEGORY_STYLE.community.label"
+    :category-color="CATEGORY_STYLE.community.color"
     :title="subEvent.metadata.name"
     :description="subEvent.metadata.description"
     :day-label="dayLabel"
@@ -278,7 +294,7 @@ function formatDay(d: Date): string {
     @toggle-bookmark="handleToggleBookmark"
     @open-location="locationViewOpen = true"
   >
-    <template v-if="isCreator && !isPastEnd" #topBarTrailing>
+    <template v-if="isCreator && isUpcoming" #topBarTrailing>
       <NuxtLink
         :to="`/my/manage/${addr}/edit`"
         class="w-10 h-10 flex items-center justify-center"
@@ -298,13 +314,34 @@ function formatDay(d: Date): string {
     </template>
 
     <template #action>
-      <NuxtLink
-        v-if="isCreator || hasManageAccess"
-        :to="`/my/manage/${addr}/check-in`"
-        class="block w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold text-center"
-      >
-        Check People In
-      </NuxtLink>
+      <template v-if="isCreator || hasManageAccess">
+        <button
+          v-if="isUpcoming"
+          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-white/10 text-white/60 cursor-default"
+          disabled
+          data-testid="session-check-in-pending"
+        >
+          Check People In · Opens in {{ countdownLabel }}
+        </button>
+
+        <NuxtLink
+          v-else-if="isLive"
+          :to="`/my/manage/${addr}/check-in`"
+          class="block w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold text-center"
+          data-testid="session-check-in-cta"
+        >
+          Check People In<template v-if="isPastEnd"> · Closes in {{ closesInLabel }}</template>
+        </NuxtLink>
+
+        <button
+          v-else
+          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-white/10 text-white/60 cursor-default"
+          disabled
+          data-testid="session-check-in-ended"
+        >
+          Session ended
+        </button>
+      </template>
 
       <template v-else-if="!subEvent.isCheckedIn">
         <button
@@ -322,7 +359,7 @@ function formatDay(d: Date): string {
           data-testid="session-collect-badge-cta"
           @click="openPassport"
         >
-          Collect Badge
+          Collect Badge<template v-if="isPastEnd"> · Closes in {{ closesInLabel }}</template>
         </button>
       </template>
     </template>
@@ -337,7 +374,14 @@ function formatDay(d: Date): string {
     @done="handleReportDone"
   />
 
-  <PassportOverlay v-if="passportOpen" :force-show-qr="true" @close="closePassport" />
+  <ActivationModal
+    :visible="gate.state.value !== 'none'"
+    v-bind="gate.modalProps.value"
+    @primary="gate.onPrimary"
+    @secondary="gate.onSecondary"
+  />
+
+  <SessionQrOverlay v-if="passportOpen" @close="closePassport" />
 
   <BadgeEarnedScreen
     v-if="badgeEarnedOpen && subEvent"
@@ -350,9 +394,18 @@ function formatDay(d: Date): string {
   <SessionLocationView
     v-if="locationViewOpen && subEvent?.metadata.location"
     :location="subEvent.metadata.location"
-    :session-address="addr"
+    :detail-path="`/sessions/${addr}`"
     :markers="venueMarkers"
     :zones="venueZones"
     @close="locationViewOpen = false"
   />
+
+  <div class="fixed bottom-28 left-4 right-4 md:left-[calc(var(--col-l)+1rem)] md:right-[calc(var(--col-r)+1rem)] z-[1000] pointer-events-none">
+    <SuccessToast
+      :visible="showUpdatedToast"
+      variant="check"
+      message="Session Updated Successfully"
+      @hide="showUpdatedToast = false"
+    />
+  </div>
 </template>

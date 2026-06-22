@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, useTemplateRef, nextTick } from "vue";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
-import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
 import type { PickedLocation } from "@festival/shared/venue/floors";
 import { useFestival } from "~/composables/useFestival";
+import { useVenueMap } from "~/composables/useVenueMap";
 import { usePoaps } from "~/composables/usePoaps";
 import { useRegistration } from "~/composables/useRegistration";
 import { useSubEvents } from "~/composables/useSubEvents";
+import { usePassGate } from "~/composables/usePassGate";
+import { useSessionLimit } from "~/composables/useSessionLimit";
 import { useNow } from "~/composables/useNow";
 import type { TxStatus } from "@festival/shared/contracts/write";
 import type { SubEventMetadata } from "@festival/shared/metadata/schemas";
@@ -14,14 +15,15 @@ import { randomAnonymousSpeakerName } from "@festival/shared/metadata/anonymousS
 import { writeContract } from "@festival/shared/contracts/write";
 import { FestivalABI } from "@festival/shared/contracts/abis";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
 import { useBulletinStorage } from "@festival/shared/metadata/bulletin";
 import { formatTxError } from "@festival/shared/contracts/errors";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
+import { festivalState } from "@festival/shared/cache/festival-state";
+import { addPending, dropPending, draftSessionEntry } from "@festival/shared/cache/pending";
 import {
   encodeCoordLocation,
-  resolveLocationLabel,
+  resolveFullLocationLabel,
 } from "@festival/shared/venue/floors";
 import {
   getValidFestivalDays,
@@ -38,6 +40,8 @@ const { metadata: festivalMetadata, details: festivalDetails } = useFestival();
 const { festivalPoaps } = usePoaps();
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
 const { subEvents, reload: reloadSubEvents } = useSubEvents();
+const gate = usePassGate("create a session");
+const { fullDateKeys } = useSessionLimit();
 
 watch(
   isCheckedIn,
@@ -152,25 +156,7 @@ const endTimeLabel = computed(() =>
 
 // ── Venue markers ──
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
-
-const venueZones = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.zones?.length
-  ) {
-    return festivalMetadata.value.venueMap.zones;
-  }
-  return DEFAULT_ZONES;
-});
+const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 // ── Navigation ──
 
@@ -217,6 +203,7 @@ function buildMetadata(): SubEventMetadata {
   const location = pickedLocation.value
     ? encodeCoordLocation(
         pickedLocation.value.floorId,
+        pickedLocation.value.zoneId,
         pickedLocation.value.x,
         pickedLocation.value.y,
       )
@@ -236,13 +223,13 @@ function buildMetadata(): SubEventMetadata {
 // ── Success screen helpers ──
 
 const pickedLocationLabel = computed(() => {
-  if (!pickedLocation.value) return "";
-  const encoded = encodeCoordLocation(
-    pickedLocation.value.floorId,
-    pickedLocation.value.x,
-    pickedLocation.value.y,
+  const loc = pickedLocation.value;
+  if (!loc) return "";
+  return resolveFullLocationLabel(
+    encodeCoordLocation(loc.floorId, loc.zoneId, loc.x, loc.y),
+    venueMarkers.value,
+    venueZones.value,
   );
-  return resolveLocationLabel(encoded, venueMarkers.value);
 });
 
 const isCreatingSession = computed(
@@ -289,16 +276,15 @@ async function submit() {
     }
   }
 
+  gate.run(doCreate);
+}
+
+async function doCreate() {
+  if (form.startMinutesOfDay == null || form.endMinutesOfDay == null) return;
+  // CID of the in-flight draft, visible to the catch for rollback.
+  let pendingCid: `0x${string}` | null = null;
   txStatus.value = "preparing";
   try {
-    if (!hasDeployedContracts()) {
-      await new Promise((r) => setTimeout(r, 1200));
-      txStatus.value = "finalized";
-      createdAddress.value =
-        "0xsub" + Math.random().toString(16).slice(2, 10) + "0".repeat(30);
-      return;
-    }
-
     if (!wallet.isConnected) throw new Error("Wallet not connected");
 
     const myFestivalPoap = festivalPoaps.value[0];
@@ -334,6 +320,13 @@ async function submit() {
       ),
     );
 
+    const creatorH160 = (
+      isValidEvmAddress(wallet.address)
+        ? wallet.address.toLowerCase()
+        : ss58ToH160(wallet.address).toLowerCase()
+    ) as `0x${string}`;
+    pendingCid = bytes32;
+
     await writeContract({
       address: FESTIVAL_ADDRESS as `0x${string}`,
       abi: FestivalABI,
@@ -343,23 +336,37 @@ async function submit() {
       walletAddress: wallet.address,
       onStatus: (s) => {
         txStatus.value = s;
+        // The draft renders in lists immediately; the confirmed entry with
+        // this CID supersedes it, and the catch below rolls it back.
+        if (s === "broadcasting") {
+          addPending(
+            "session",
+            bytes32,
+            draftSessionEntry(bytes32, startTs, endTs, creatorH160, metadata),
+          );
+        }
       },
     });
 
-    // Try to find the created sub-event address
+    // The tx succeeded, so the draft has done its job either way.
+    dropPending("session", bytes32);
+    // Resolve the created address by its CID, which is unique to this
+    // creation. Prefer a live match, fall back to a cancelled one for the
+    // rare create then instant cancel case.
     try {
       await reloadSubEvents();
-      const userAddr = isValidEvmAddress(wallet.address)
-        ? wallet.address.toLowerCase()
-        : ss58ToH160(wallet.address).toLowerCase();
-      const myEntry = subEvents.value.find(
-        (se) => se.creator.toLowerCase() === userAddr,
-      );
-      createdAddress.value = myEntry?.address ?? FESTIVAL_ADDRESS;
+      const byCid = (live: boolean) =>
+        festivalState.sessions.find(
+          (s) =>
+            (!live || !s.details.cancelled) &&
+            s.details.metadataCid.toLowerCase() === bytes32.toLowerCase(),
+        );
+      createdAddress.value = (byCid(true) ?? byCid(false))?.address ?? FESTIVAL_ADDRESS;
     } catch {
       createdAddress.value = FESTIVAL_ADDRESS;
     }
   } catch (e: any) {
+    if (pendingCid) dropPending("session", pendingCid);
     txStatus.value = "error";
     error.value = formatTxError(e);
   }
@@ -480,21 +487,7 @@ async function submit() {
           <line x1="6" y1="6" x2="18" y2="18" />
         </svg>
         <!-- Back arrow (steps 2-3) -->
-        <svg
-          v-else
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="text-white"
-        >
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
+        <BackIcon v-else class="text-text-and-icons-primary" />
       </button>
 
       <!-- Centered title -->
@@ -507,7 +500,7 @@ async function submit() {
     </div>
 
     <div v-if="currentStep < 4" class="px-4 pb-4">
-      <StepProgressBar :steps="4" :current-step="currentStep" />
+      <StepProgressBar :steps="3" :current-step="currentStep" />
     </div>
 
     <!-- Step content -->
@@ -531,6 +524,7 @@ async function submit() {
           :festival-days="festivalDays"
           :valid-start-slots="validStartSlots"
           :valid-end-slots="validEndSlots"
+          :full-date-keys="fullDateKeys"
           @update:model-value="Object.assign(form, $event)"
         />
       </div>
@@ -575,7 +569,14 @@ async function submit() {
       />
     </div>
 
-    <div class="sticky bottom-0 z-10 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-background">
+    <!-- Step 3 (badge) supplies its own actions (intro "Create Badge" button and
+         the full-screen editor's own header), so the wizard footer is hidden
+         there — otherwise its empty bg-background bar overlaps the editor's
+         bottom toolbar. -->
+    <div
+      v-if="currentStep !== 3"
+      class="sticky bottom-0 z-10 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-background"
+    >
       <!-- Step 1: Next -->
       <button
         v-if="currentStep === 1"
@@ -633,6 +634,13 @@ async function submit() {
     :zones="venueZones"
     @done="handlePickerDone"
     @cancel="pickerOpen = false"
+  />
+
+  <ActivationModal
+    :visible="gate.state.value !== 'none'"
+    v-bind="gate.modalProps.value"
+    @primary="gate.onPrimary"
+    @secondary="gate.onSecondary"
   />
 </template>
 

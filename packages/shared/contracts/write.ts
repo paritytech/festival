@@ -8,6 +8,7 @@ import { Binary, type PolkadotSigner, type TxEvent } from 'polkadot-api'
 import { useMainClient } from '../host/client'
 import { ss58ToH160 } from '../utils/address'
 import { decodeContractError } from './errors'
+import { withTimeout, TimeoutError } from './retry'
 
 /**
  * Headroom on dry-run estimates before they become real tx limits. Weight
@@ -27,6 +28,14 @@ const DRY_RUN_STORAGE_DEPOSIT = 500_000_000_000n
  */
 const FALLBACK_WEIGHT_LIMIT = { ref_time: 500_000_000_000n, proof_size: 3_000_000n }
 const FALLBACK_STORAGE_DEPOSIT = 50_000_000_000n
+/**
+ * Per-attempt cap on the pre-tx reads (account mapping + dry-run). On a flapping
+ * host-routed connection these calls can be orphaned and never settle; without
+ * a cap the submit hangs on "Checking in…" forever (the same failure mode as
+ * the validation read). The signing/broadcast/watch phase is deliberately NOT
+ * timed — it waits on the user and the chain.
+ */
+const PRE_TX_READ_TIMEOUT_MS = 8000
 
 export type TxStatus = 'idle' | 'preparing' | 'signing' | 'broadcasting' | 'in-block' | 'finalized' | 'error'
 
@@ -126,7 +135,10 @@ export async function writeContract({
   // Revive.OriginalAccount keyed by the account's derived H160. ss58ToH160
   // (from @parity/product-sdk-address) matches pallet-revive's AccountId32Mapper
   // derivation (keccak256(account_id)[12..], or the 0xEE-suffixed EVM address).
-  const mapping = await api.query.Revive.OriginalAccount.getValue(ss58ToH160(walletAddress))
+  const mapping = await withTimeout(
+    api.query.Revive.OriginalAccount.getValue(ss58ToH160(walletAddress)),
+    PRE_TX_READ_TIMEOUT_MS,
+  )
   const isMapped = mapping != null
 
   // Dry-run for gas estimation + early revert detection. Only works for mapped
@@ -136,14 +148,14 @@ export async function writeContract({
   let dryRunRevertError: string | null = null
   if (isMapped) {
     try {
-      const dryRun = await api.apis.ReviveApi.call(
+      const dryRun = await withTimeout(api.apis.ReviveApi.call(
         walletAddress,
         address.toLowerCase(),
         value ?? 0n,
         undefined,
         DRY_RUN_STORAGE_DEPOSIT,
         Binary.fromHex(calldata),
-      )
+      ), PRE_TX_READ_TIMEOUT_MS)
       if (dryRun.result.success && !(dryRun.result.value.flags & 1)) {
         weightLimit = {
           ref_time: (dryRun.weight_required.ref_time * WEIGHT_MULTIPLIER_NUM) / WEIGHT_MULTIPLIER_DEN,
@@ -175,6 +187,10 @@ export async function writeContract({
         dryRunRevertError = 'Transaction would fail: contract call rejected by chain runtime.'
       }
     } catch (err) {
+      // A stalled dry-run should retry, not silently sign+broadcast with
+      // fallback gas on a flapping connection. Genuine dry-run failures
+      // (e.g. unmapped accounts) still fall through to conservative estimates.
+      if (err instanceof TimeoutError) throw err
       console.warn('[writeContract] Dry-run failed, using conservative estimates:', err)
     }
   }

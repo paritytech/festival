@@ -4,7 +4,6 @@ import type { TxStatus } from '@festival/shared/contracts/write'
 import { writeContract } from '@festival/shared/contracts/write'
 import { FestivalABI } from '@festival/shared/contracts/abis'
 import { FESTIVAL_ADDRESS } from '@festival/shared/contracts/addresses'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { useBulletinStorage } from '@festival/shared/metadata/bulletin'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
@@ -104,13 +103,6 @@ export function useFestivalCreate() {
     txStatus.value = 'preparing'
 
     try {
-      if (!hasDeployedContracts()) {
-        await new Promise(r => setTimeout(r, 1500))
-        txStatus.value = 'finalized'
-        createdAddress.value = '0x' + 'ab'.repeat(20)
-        return
-      }
-
       const metadata = buildMetadata()
       const { storePlaintext, storeImage } = useBulletinStorage()
 

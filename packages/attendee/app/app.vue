@@ -5,16 +5,23 @@ import SuccessToast from '~/components/SuccessToast.vue'
 import { useBookmarks } from '~/composables/useBookmarks'
 import { bootApp } from '@festival/shared/host/boot'
 import { useWalletStore } from '@festival/shared/host/wallet'
-import { walletAddressToH160 } from '@festival/shared/utils/address'
+import { walletAddressToH160, ss58ToH160, isValidEvmAddress } from '@festival/shared/utils/address'
 import { useRegistration } from '~/composables/useRegistration'
 import { useFestival } from '~/composables/useFestival'
 import { useSubEvents } from '~/composables/useSubEvents'
 import { usePoaps } from '~/composables/usePoaps'
 import { bootLoadAttendee } from '~/composables/useBootLoad'
+import { refreshUserFestivalPoaps, refreshUserSessionPoaps } from '~/composables/usePoapRefresh'
+import { startCachePersistence, hydrateLastKnown } from '@festival/shared/cache/festival-state'
+import { startPendingReconcile } from '@festival/shared/cache/pending'
 import { useFestivalWatcher } from '@festival/shared/cache/useFestivalWatcher'
 import { useVisibilityReconcile } from '@festival/shared/cache/visibility'
 import { useAnnouncements } from '~/composables/useAnnouncements'
+import { useFestivalPass } from '~/composables/useFestivalPass'
 import { APP_SCROLLER_KEY } from '~/composables/appScroller'
+import FestivalPassScreen from '~/components/FestivalPassScreen.vue'
+import ActivationModal from '~/components/ActivationModal.vue'
+import BadgeEarnedFestivalScreen from '~/components/BadgeEarnedFestivalScreen.vue'
 import { FESTIVAL_ADDRESS } from '@festival/shared/contracts/addresses'
 import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 
@@ -24,6 +31,7 @@ const isConfigured = hasDeployedContracts()
 const registration = useRegistration(FESTIVAL_ADDRESS)
 const { isRegistered } = registration
 const festival = useFestival()
+const { metadata: festivalMetadata } = festival
 // Mounted for their reactive side effects (watchers, image resolvers).
 useSubEvents()
 usePoaps()
@@ -38,10 +46,46 @@ if (buildHash) {
 const wallet = useWalletStore()
 const showAccountPicker = ref(false)
 
+// Festival Pass + Badge overlays live at the shell so they aren't tied to
+// <KeepAlive>'d page state. The composable's overlayGate also requires
+// route.path === '/' — together, the overlay can only exist while the user
+// is actually on home.
+const {
+  shouldShowPass,
+  shouldShowBadge,
+  isActivating: isPassActivating,
+  isExploding: isPassExploding,
+  activatedAtMs,
+  activationFailed,
+  activate: onActivatePass,
+  retryActivation: onRetryActivation,
+  defer: onDeferPass,
+  dismissBadge: onBadgeNext,
+} = useFestivalPass()
+
+const userH160 = computed(() => {
+  if (!wallet.isConnected) return null
+  if (!hasDeployedContracts()) return '0x' + '0'.repeat(39) + '1'
+  return isValidEvmAddress(wallet.address)
+    ? wallet.address.toLowerCase()
+    : ss58ToH160(wallet.address).toLowerCase()
+})
+
 // Cold-load the entire festival state in two Multicall round-trips. We
 // skip the initial fire when the wallet hasn't connected yet — the
 // `wallet.address` watcher below will run it once the user resolves,
 // avoiding a duplicate bootLoad (initial + on-connect).
+// Persist every festivalState mutation (watcher events, optimistic flips, boot
+// reads), not just boot-load success, so a cold restart paints last-known state.
+startCachePersistence()
+
+// Cache-first paint: hydrate last-known state immediately, before the wallet
+// resolves, so a slow or failed connection doesn't leave the UI blank.
+void hydrateLastKnown(FESTIVAL_ADDRESS)
+
+// Promote/GC optimistic pending entries as the confirmed tier catches up.
+startPendingReconcile()
+
 function fireBootLoad() {
   if (!wallet.isConnected) return
   const userH160 = walletAddressToH160(wallet.address)
@@ -57,18 +101,34 @@ const announcements = useAnnouncements()
 // race with our `ReviveApi.call` reads — bootLoad-first means at least the
 // initial state lands before the watcher's heavier follow-init might trip
 // the host's rate limiter.
-useFestivalWatcher(FESTIVAL_ADDRESS, {
+const watcher = useFestivalWatcher(FESTIVAL_ADDRESS, {
   deferWhileLoading: festival.isLoading,
   onChannelMetadataUpdated: () => { void announcements.reload() },
+  // Live-populate the user's own POAP on check-in so the badge appears at once,
+  // instead of waiting for the next reconcile. Gated to self.
+  onCheckedIn: (attendee) => {
+    if (!wallet.isConnected) return
+    const me = walletAddressToH160(wallet.address)
+    if (attendee.toLowerCase() === me.toLowerCase()) void refreshUserFestivalPoaps(me)
+  },
+  onSessionCheckedIn: (sessionAddress, attendee) => {
+    if (!wallet.isConnected) return
+    const me = walletAddressToH160(wallet.address)
+    if (attendee.toLowerCase() === me.toLowerCase()) void refreshUserSessionPoaps(me, sessionAddress)
+  },
 })
 
 // Visibility change as safety net — catches events lost during WebSocket
-// suspension. Reconciliation runs the same bootLoad with `at: 'finalized'`
-// so we converge to ground-truth state.
-useVisibilityReconcile(() => {
+// suspension. Reads at best, like every other state source (watcher, tx
+// tracking): all festival state is monotonic, so a finalized read could only
+// regress fresher best-derived state (e.g. revert a just-landed check-in for
+// the length of the finality lag).
+useVisibilityReconcile(async () => {
   const userH160 = wallet.isConnected ? walletAddressToH160(wallet.address) : null
   void announcements.reloadIfChanged()
-  return bootLoadAttendee(userH160, { at: 'finalized' })
+  await bootLoadAttendee(userH160)
+  // The chainHead follow may have died silently while backgrounded; re-open it.
+  watcher?.restart()
 })
 
 function shortenAddr(addr: string) {
@@ -308,5 +368,33 @@ const bookmarkAlertMessage = computed(() => {
   <LoadingSplash
     v-if="showSplash && (allowed || isDev) && isConfigured"
     @done="onSplashDone"
+  />
+
+  <!-- Festival Pass + Badge overlays. Gated to route.path === '/' inside the
+       composable's overlayGate — they cannot paint on any other route. -->
+  <FestivalPassScreen
+    v-if="shouldShowPass"
+    :address="userH160 ?? ''"
+    :is-activating="isPassActivating"
+    :is-exploding="isPassExploding"
+    @activate="onActivatePass"
+  />
+  <ActivationModal
+    variant="error"
+    :visible="shouldShowPass && activationFailed"
+    title="Activation failed"
+    message="Something went wrong activating your pass. Try again, or do it later — some features will ask you to activate when you use them."
+    primary-label="Try again"
+    secondary-label="Do it later"
+    :busy="isPassActivating"
+    @primary="onRetryActivation"
+    @secondary="onDeferPass"
+  />
+  <BadgeEarnedFestivalScreen
+    v-if="shouldShowBadge"
+    :address="userH160 ?? ''"
+    :festival-name="festivalMetadata?.name || 'Web3 Summit'"
+    :received-at-ms="activatedAtMs ?? undefined"
+    @next="onBadgeNext"
   />
 </template>

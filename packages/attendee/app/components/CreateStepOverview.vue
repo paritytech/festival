@@ -3,9 +3,13 @@ import { computed, useTemplateRef, watch } from 'vue'
 import { decodeBadgeHex } from '@festival/shared/utils/badge'
 import { formatDateBerlin } from '@festival/shared/utils/time'
 import { formatTimeLabel } from '@festival/shared'
+import { truncate } from '@festival/shared/utils/text'
+
+const PREVIEW_NAME_MAX_CHARS = 32
+const PREVIEW_SPEAKER_MAX_CHARS = 32
 import {
-  describePickedLocation,
-  formatPickedLocationLong,
+  encodeCoordLocation,
+  resolveFullLocationLabel,
   type PickedLocation,
 } from '@festival/shared/venue/floors'
 import type { VenueMarker, VenueZone } from '@festival/shared/metadata/schemas'
@@ -58,13 +62,15 @@ const timeLabel = computed(() => {
   return `${formatTimeLabel(props.startMinutesOfDay)} - ${formatTimeLabel(props.endMinutesOfDay)}`
 })
 
-const locationLabel = computed(() =>
-  props.pickedLocation
-    ? formatPickedLocationLong(
-        describePickedLocation(props.pickedLocation, props.venueMarkers, props.venueZones),
-      )
-    : '',
-)
+const locationLabel = computed(() => {
+  const loc = props.pickedLocation
+  if (!loc) return ''
+  return resolveFullLocationLabel(
+    encodeCoordLocation(loc.floorId, loc.zoneId, loc.x, loc.y),
+    props.venueMarkers,
+    props.venueZones,
+  )
+})
 </script>
 
 <template>
@@ -94,7 +100,7 @@ const locationLabel = computed(() =>
           @click="$emit('edit', 1)"
         />
       </header>
-      <h3 class="text-2xl leading-8 font-semibold text-text-and-icons-primary">{{ name }}</h3>
+      <h3 class="text-2xl leading-8 font-semibold text-text-and-icons-primary">{{ truncate(name, PREVIEW_NAME_MAX_CHARS) }}</h3>
       <p
         v-if="description"
         class="text-sm leading-5 font-normal text-text-and-icons-primary whitespace-pre-line"
@@ -105,7 +111,7 @@ const locationLabel = computed(() =>
       <div class="mt-3 space-y-3">
         <div v-if="speaker">
           <p class="text-xs leading-[18px] text-text-and-icons-secondary">Session Speaker</p>
-          <p class="text-lg font-semibold text-text-and-icons-primary">{{ speaker }}</p>
+          <p class="text-lg font-semibold text-text-and-icons-primary">{{ truncate(speaker, PREVIEW_SPEAKER_MAX_CHARS) }}</p>
         </div>
         <div>
           <p class="text-xs leading-[18px] text-text-and-icons-secondary">Session Date</p>

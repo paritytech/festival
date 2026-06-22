@@ -420,13 +420,35 @@ function makeStyle(
   };
 }
 
+// dotli serves our app through a service worker, which returns the worker file
+// without the Cross-Origin-* headers the origin sets; the document's COEP then
+// makes the browser reject it as a worker (NS_ERROR_BLOCKED_BY_POLICY). A
+// controlling service worker is unique to dotli here — electron and wkwebview
+// load the bundle directly, with none — so only there do we run the worker from
+// a same-origin Blob URL, which bypasses the service worker.
+let resolvedWorkerUrl: string | null = null;
+async function resolveMaplibreWorkerUrl(): Promise<string> {
+  if (resolvedWorkerUrl) return resolvedWorkerUrl;
+  if (navigator.serviceWorker?.controller) {
+    try {
+      const res = await fetch(maplibreWorkerUrl);
+      resolvedWorkerUrl = URL.createObjectURL(await res.blob());
+      return resolvedWorkerUrl;
+    } catch {
+      // Fall back to the file URL below.
+    }
+  }
+  resolvedWorkerUrl = maplibreWorkerUrl;
+  return resolvedWorkerUrl;
+}
+
 export async function createVenueMap(
   container: HTMLElement,
   opts: VenueMapOptions = {},
 ): Promise<VenueMapHandle> {
   const mod = await import("maplibre-gl/dist/maplibre-gl-csp");
   const maplibregl: typeof import("maplibre-gl") = mod.default ?? mod;
-  maplibregl.setWorkerUrl(maplibreWorkerUrl);
+  maplibregl.setWorkerUrl(await resolveMaplibreWorkerUrl());
 
   container.classList.add("venue-map");
   if (!opts.interactive) container.classList.add("is-static");
@@ -848,7 +870,6 @@ export async function createVenueMap(
   function buildMarkerHtml(m: VenueMarker): string {
     const category = normalizeCategory(m.category);
     const type = normalizeType(category, m.type);
-    const spec = getCategory(category);
     const glyph = getMarkerIcon(category, type);
     if (!MARKER_ICONS[`${category}/${type}`]) {
       // Loud warning so missing icons surface in dev instead of silently
@@ -858,13 +879,8 @@ export async function createVenueMap(
         `[venue map] no MARKER_ICONS entry for ${category}/${type} — using base/room fallback`,
       );
     }
-    const labelHtml =
-      spec.hasLabel && m.label
-        ? `<span class="vmarker__label">${escapeHtml(m.label)}</span>`
-        : "";
     return `<div class="vmarker" data-category="${category}" data-type="${type}" data-marker-id="${escapeHtml(m.id)}">
       <span class="vmarker__icon" aria-hidden="true">${glyph}</span>
-      ${labelHtml}
     </div>`;
   }
 
@@ -1137,7 +1153,16 @@ export async function createVenueMap(
       allowMinLat >= allowMaxLat
         ? midLat
         : Math.max(allowMinLat, Math.min(allowMaxLat, c.lat));
-    if (lng !== c.lng || lat !== c.lat) map.setCenter([lng, lat]);
+    if (lng !== c.lng || lat !== c.lat) {
+      // Glide the correction instead of teleporting, so zooming/panning into
+      // a border rubber-bands back like a native map. Guard re-entry so the
+      // ease's own moveend doesn't re-trigger this clamp.
+      isApplyingCameraIntent = true;
+      map.once("moveend", () => {
+        isApplyingCameraIntent = false;
+      });
+      map.easeTo({ center: [lng, lat], duration: 150, essential: true });
+    }
   }
 
   /** Linearly scales the zone-label font size from LABEL_MIN_PX at fit zoom
@@ -1213,6 +1238,14 @@ export async function createVenueMap(
     const zoomDelta =
       focusOpts.targetZoomDelta ?? Math.max(category.revealTier - 1, 1);
     const maxZoom = Math.min(fitZoom + zoomDelta, map.getMaxZoom());
+    // The asymmetric bottom padding deliberately offsets the centre upward so
+    // the pin clears the detail sheet. Guard against clampCameraCenter, which
+    // measures from the symmetric viewport and would otherwise snap that
+    // offset back on the fly's moveend.
+    isApplyingCameraIntent = true;
+    map.once("moveend", () => {
+      isApplyingCameraIntent = false;
+    });
     map.fitBounds(tinyBoundsAround(lng, lat), {
       maxZoom,
       padding: {
@@ -1234,6 +1267,11 @@ export async function createVenueMap(
       fitZoom + (focusOpts.targetZoomDelta ?? 2),
       map.getMaxZoom(),
     );
+    // See doFocusMarker: shield the padded focus offset from clampCameraCenter.
+    isApplyingCameraIntent = true;
+    map.once("moveend", () => {
+      isApplyingCameraIntent = false;
+    });
     map.fitBounds(tinyBoundsAround(lng, lat), {
       maxZoom,
       padding: {

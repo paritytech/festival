@@ -4,9 +4,7 @@ import { useSubEventManage } from "~/composables/useSubEventManage";
 import { useSubEvents } from "~/composables/useSubEvents";
 import { useFestival } from "~/composables/useFestival";
 import { useNow } from "~/composables/useNow";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
-import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
+import { useVenueMap } from "~/composables/useVenueMap";
 import type { SubEventMetadata } from "@festival/shared/metadata/schemas";
 import { randomAnonymousSpeakerName } from "@festival/shared/metadata/anonymousSpeaker";
 import { isValidEvmAddress } from "@festival/shared/utils/address";
@@ -14,8 +12,7 @@ import { decodeBadgeHex } from "@festival/shared/utils/badge";
 import {
   encodeCoordLocation,
   parseCoordLocation,
-  describePickedLocation,
-  formatPickedLocationLong,
+  resolveFullLocationLabel,
   type PickedLocation,
 } from "@festival/shared/venue/floors";
 import {
@@ -29,6 +26,9 @@ import {
 } from "@festival/shared";
 import VenueMap from "~/components/VenueMap.vue";
 import InputField from "~/components/ui/InputField.vue";
+
+const NAME_MAX_LENGTH = 120;
+const SPEAKERS_MAX_LENGTH = 120;
 
 definePageMeta({
   validate: (route) => isValidEvmAddress(route.params.address as string),
@@ -59,7 +59,7 @@ const {
   handleUpdateMetadata,
   handleCancel,
 } = useSubEventManage(addr);
-const { metadata: festivalMetadata, details: festivalDetails } = useFestival();
+const { details: festivalDetails } = useFestival();
 
 const now = useNow();
 
@@ -98,25 +98,7 @@ const festivalDays = computed(() => {
 
 // ── Venue markers ──
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
-
-const venueZones = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.zones?.length
-  ) {
-    return festivalMetadata.value.venueMap.zones;
-  }
-  return DEFAULT_ZONES;
-});
+const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 const badgePixels = computed(() => {
   const hex = metadata.value?.badgeHex;
@@ -136,7 +118,6 @@ const form = reactive({
 
 const submitValidationError = ref<SessionTimeValidationFailReason | null>(null);
 
-const showUpdatedToast = ref(false);
 const pendingSnapshot = ref<{
   name: string;
   description: string;
@@ -149,9 +130,10 @@ const pendingSnapshot = ref<{
 
 watch(txStatus, (s) => {
   if ((s === "in-block" || s === "finalized") && pendingSnapshot.value) {
-    showUpdatedToast.value = true;
-    Object.assign(original, pendingSnapshot.value);
+    // Edit applied (optimistic overlay is live). Land on the session page and
+    // let it surface the success toast.
     pendingSnapshot.value = null;
+    navigateTo(`/sessions/${addr}?updated=1`, { replace: true });
   } else if (s === "error") {
     pendingSnapshot.value = null;
   }
@@ -199,23 +181,19 @@ const previewMapRef =
   useTemplateRef<InstanceType<typeof VenueMap>>("previewMapRef");
 
 const pickedLocationLabel = computed(() => {
-  if (!pickedLocation.value) return "";
-  return formatPickedLocationLong(
-    describePickedLocation(
-      pickedLocation.value,
-      venueMarkers.value,
-      venueZones.value,
-    ),
+  const loc = pickedLocation.value;
+  if (!loc) return "";
+  return resolveFullLocationLabel(
+    encodeCoordLocation(loc.floorId, loc.zoneId, loc.x, loc.y),
+    venueMarkers.value,
+    venueZones.value,
   );
 });
 
 const currentLocationEncoded = computed(() => {
-  if (!pickedLocation.value) return "";
-  return encodeCoordLocation(
-    pickedLocation.value.floorId,
-    pickedLocation.value.x,
-    pickedLocation.value.y,
-  );
+  const loc = pickedLocation.value;
+  if (!loc) return "";
+  return encodeCoordLocation(loc.floorId, loc.zoneId, loc.x, loc.y);
 });
 
 function handlePickerDone(loc: PickedLocation) {
@@ -227,17 +205,10 @@ function handlePickerCancel() {
   pickerOpen.value = false;
 }
 
-// On the preview map, recenter on the pin and (if zoneId is missing from
-// pre-fill) resolve it now that the SVG is mounted, so the label upgrades from
-// "Custom location" to the proper zone name.
 function handlePreviewReady() {
   const loc = pickedLocation.value;
   if (!loc) return;
   previewMapRef.value?.focusSpot(loc, { targetZoomDelta: 1, animate: false });
-  if (loc.zoneId === null) {
-    const zoneId = previewMapRef.value?.getZoneAt(loc.x, loc.y) ?? null;
-    if (zoneId) pickedLocation.value = { ...loc, zoneId };
-  }
 }
 
 // ── Pre-fill form from metadata ──
@@ -280,13 +251,9 @@ watch(
       form.startMinutesOfDay = berlinMinutesFromTs(Number(d.startTime));
       form.endMinutesOfDay = berlinMinutesFromTs(Number(d.endTime));
 
-      // Pre-fill location. zoneId is resolved later, after the preview map mounts
-      // and we can hit-test the SVG via getZoneAt.
       if (m.location) {
         const coord = parseCoordLocation(m.location);
-        if (coord) {
-          pickedLocation.value = { ...coord, zoneId: null };
-        }
+        if (coord) pickedLocation.value = coord;
       }
 
       // Store originals for dirty tracking
@@ -374,6 +341,7 @@ async function submit() {
   const location = pickedLocation.value
     ? encodeCoordLocation(
         pickedLocation.value.floorId,
+        pickedLocation.value.zoneId,
         pickedLocation.value.x,
         pickedLocation.value.y,
       )
@@ -493,26 +461,48 @@ async function submit() {
       </div>
 
       <!-- Speakers -->
-      <InputField v-slot="{ inputId }" label="Speakers">
-        <input
-          :id="inputId"
-          v-model="form.speakers"
-          type="text"
-          placeholder="Alice, Bob"
-          class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
-        />
+      <InputField label="Speakers">
+        <template #label-trailing>
+          <span
+            class="text-xs leading-[18px] font-normal text-text-and-icons-secondary"
+            data-testid="session-speakers-counter"
+          >
+            {{ form.speakers.length }}/{{ SPEAKERS_MAX_LENGTH }}
+          </span>
+        </template>
+        <template #default="{ inputId }">
+          <input
+            :id="inputId"
+            v-model="form.speakers"
+            type="text"
+            :maxlength="SPEAKERS_MAX_LENGTH"
+            placeholder="Alice, Bob"
+            class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
+          />
+        </template>
       </InputField>
 
       <!-- Session Name -->
-      <InputField v-slot="{ inputId }" label="Session Name" required>
-        <input
-          :id="inputId"
-          v-model="form.name"
-          type="text"
-          required
-          aria-required="true"
-          class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
-        />
+      <InputField label="Session Name" required>
+        <template #label-trailing>
+          <span
+            class="text-xs leading-[18px] font-normal text-text-and-icons-secondary"
+            data-testid="session-name-counter"
+          >
+            {{ form.name.length }}/{{ NAME_MAX_LENGTH }}
+          </span>
+        </template>
+        <template #default="{ inputId }">
+          <input
+            :id="inputId"
+            v-model="form.name"
+            type="text"
+            required
+            aria-required="true"
+            :maxlength="NAME_MAX_LENGTH"
+            class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
+          />
+        </template>
       </InputField>
 
       <!-- Submit-time revalidation banner -->
@@ -526,10 +516,11 @@ async function submit() {
         </p>
       </div>
 
+      <!-- Time is immutable on-chain after creation: display-only here. -->
       <SessionDatePicker
         :days="festivalDays"
         :model-value="form.dateKey"
-        @update:model-value="form.dateKey = $event"
+        readonly
       />
 
       <SessionTimePicker
@@ -537,9 +528,7 @@ async function submit() {
         :end-minutes-of-day="form.endMinutesOfDay"
         :valid-start-slots="validStartSlots"
         :valid-end-slots="validEndSlots"
-        :disabled="!form.dateKey"
-        @update:start-minutes-of-day="form.startMinutesOfDay = $event"
-        @update:end-minutes-of-day="form.endMinutesOfDay = $event"
+        readonly
       />
 
       <SessionDescriptionField v-model="form.description" />
@@ -582,7 +571,7 @@ async function submit() {
 
           <button
             type="button"
-            class="absolute left-4 right-4 bottom-4 z-[1000] py-4 bg-white text-black rounded-2xl text-sm font-semibold shadow-lg"
+            class="absolute left-4 right-4 bottom-4 z-10 py-4 bg-white text-black rounded-2xl text-sm font-semibold shadow-lg"
             @click="pickerOpen = true"
           >
             Change Location
@@ -613,7 +602,7 @@ async function submit() {
     <!-- Sticky submit (only when dirty) -->
     <div
       v-if="isDirty"
-      class="sticky bottom-0 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-background"
+      class="sticky bottom-0 z-20 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-background"
     >
       <button
         class="w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
@@ -637,15 +626,6 @@ async function submit() {
         }}
       </button>
     </div>
-  </div>
-
-  <div class="fixed bottom-28 left-4 right-4 md:left-[calc(var(--col-l)+1rem)] md:right-[calc(var(--col-r)+1rem)] z-[1000] pointer-events-none">
-    <SuccessToast
-      :visible="showUpdatedToast"
-      variant="check"
-      message="Session Updated Successfully"
-      @hide="showUpdatedToast = false"
-    />
   </div>
 
   <!-- ── Change Location picker (full-screen modal, teleported to body) ── -->

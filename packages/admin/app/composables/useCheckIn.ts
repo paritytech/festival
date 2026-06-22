@@ -2,13 +2,11 @@ import { ref } from "vue";
 import type { TxStatus } from "@festival/shared/contracts/write";
 import { writeContract } from "@festival/shared/contracts/write";
 import { FestivalABI } from "@festival/shared/contracts/abis";
-import {
-  hasDeployedContracts,
-  readIsRegistered,
-} from "@festival/shared/contracts/festival-reads";
+import { readIsRegistered } from "@festival/shared/contracts/festival-reads";
 import { batchRead } from "@festival/shared/contracts/multicall";
 import { formatTxError } from "@festival/shared/contracts/errors";
 import { useWalletStore } from "@festival/shared/host/wallet";
+import { addPending, dropPending } from "@festival/shared/cache/pending";
 import {
   shortenAddress,
   ss58ToH160,
@@ -93,12 +91,6 @@ export function useCheckIn(festivalAddress: string) {
     error.value = null;
     step.value = "validating-account";
 
-    if (!hasDeployedContracts()) {
-      accountStatus.value = { registered: false, checkedIn: false };
-      step.value = "confirming";
-      return;
-    }
-
     try {
       const attendeeH160 = ss58ToH160(address);
       const [registered, checkedIn] = (await batchRead([
@@ -129,22 +121,11 @@ export function useCheckIn(festivalAddress: string) {
     txStatus.value = "preparing";
     error.value = null;
 
-    if (!hasDeployedContracts()) {
-      await new Promise((r) => setTimeout(r, 800));
-      txStatus.value = "finalized";
-      addRecentCheckin({
-        address: shortenAddress(attendeeSS58.value),
-        name: "Check-In",
-        time: "just now",
-        method: "qr",
-      });
-      step.value = "success";
-      return;
-    }
-
+    // Captured before the tx so a late failure still drops the right key,
+    // even if the operator already moved on to the next attendee.
+    const attendeeH160 = ss58ToH160(attendeeSS58.value);
     try {
       const wallet = useWalletStore();
-      const attendeeH160 = ss58ToH160(attendeeSS58.value);
       const registered = accountStatus.value?.registered ?? false;
       const fnName = registered ? "checkIn" : "manualCheckIn";
 
@@ -157,6 +138,9 @@ export function useCheckIn(festivalAddress: string) {
         walletAddress: wallet.address,
         onStatus: (s) => {
           txStatus.value = s;
+          // Attendee list shows the check-in immediately; the overlay rolls
+          // back on failure and is GC'd once the CheckedIn event confirms.
+          if (s === "broadcasting") addPending("checkin", attendeeH160);
           if (s === "in-block") {
             addRecentCheckin({
               address: shortenAddress(attendeeSS58.value!),
@@ -169,6 +153,7 @@ export function useCheckIn(festivalAddress: string) {
         },
       });
     } catch (e: any) {
+      dropPending("checkin", attendeeH160);
       txStatus.value = "error";
       error.value = formatTxError(e);
       errorSource.value = "transaction";
@@ -180,18 +165,6 @@ export function useCheckIn(festivalAddress: string) {
   async function manualCheckInOnly(address: string) {
     txStatus.value = "preparing";
     error.value = null;
-
-    if (!hasDeployedContracts()) {
-      await new Promise((r) => setTimeout(r, 800));
-      txStatus.value = "finalized";
-      addRecentCheckin({
-        address: toDisplaySs58(address),
-        name: "Manual",
-        time: "just now",
-        method: "manual",
-      });
-      return;
-    }
 
     try {
       const wallet = useWalletStore();
@@ -211,6 +184,7 @@ export function useCheckIn(festivalAddress: string) {
         walletAddress: wallet.address,
         onStatus: (s) => {
           txStatus.value = s;
+          if (s === "broadcasting") addPending("checkin", attendeeH160);
           if (s === "in-block") {
             addRecentCheckin({
               address: toDisplaySs58(address),
@@ -222,6 +196,7 @@ export function useCheckIn(festivalAddress: string) {
         },
       });
     } catch (e: any) {
+      dropPending("checkin", toH160(address));
       txStatus.value = "error";
       error.value = formatTxError(e);
       throw new Error(error.value);

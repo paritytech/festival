@@ -7,7 +7,6 @@ import { useRoles, ROLE_OPTIONS } from '~/composables/useRoles'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { writeContract } from '@festival/shared/contracts/write'
 import { FestivalABI } from '@festival/shared/contracts/abis'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { h160ToSs58, isValidEvmAddress, shortenAddress } from '@festival/shared/utils/address'
@@ -78,14 +77,6 @@ async function handleUpdateCapacity() {
   capacityTxStatus.value = 'preparing'
 
   try {
-    if (!hasDeployedContracts()) {
-      await new Promise(r => setTimeout(r, 800))
-      if (details.value) details.value.capacity = newCapacity.value
-      capacityTxStatus.value = 'finalized'
-      newCapacity.value = undefined
-      return
-    }
-
     const wallet = useWalletStore()
     const targetCapacity = newCapacity.value
     await writeContract({
@@ -122,14 +113,6 @@ async function handleCancel() {
   cancelTxStatus.value = 'preparing'
 
   try {
-    if (!hasDeployedContracts()) {
-      await new Promise(r => setTimeout(r, 800))
-      if (details.value) details.value.cancelled = true
-      cancelTxStatus.value = 'finalized'
-      showCancelConfirm.value = false
-      return
-    }
-
     const wallet = useWalletStore()
     await writeContract({
       address: address as `0x${string}`,

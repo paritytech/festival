@@ -17,6 +17,15 @@ const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const WEIGHT_LIMIT = { ref_time: 18446744073709551615n, proof_size: 18446744073709551615n }
 const STORAGE_LIMIT = 18446744073709551615n
 
+/**
+ * Cap on inner calls per aggregate3 dry-run. A single dry-run that bundles too
+ * many inner CALL frames exceeds the Revive pallet's per-call resource ceiling
+ * and fails with Err(Module{Revive}) ("dry-run returned failure"). Festivals
+ * with hundreds of POAPs hit this on cold load; chunking keeps each dry-run
+ * under the limit. 100 leaves headroom for heavier-return calls.
+ */
+const MAX_CALLS_PER_BATCH = 100
+
 export interface ReadCall {
   address: `0x${string}`
   abi: Abi
@@ -53,6 +62,18 @@ export async function batchRead(
       results.push(await readContract({ address: c.address, abi: c.abi, functionName: c.functionName, args: c.args, at: options?.at }))
     }
     return results
+  }
+
+  // Large batch: split into chunks so no single dry-run exceeds the Revive
+  // per-call resource ceiling. Chunks run in parallel; results are concatenated
+  // in order so callers see one flat array indexed like `calls`.
+  if (calls.length > MAX_CALLS_PER_BATCH) {
+    const chunks: ReadCall[][] = []
+    for (let i = 0; i < calls.length; i += MAX_CALLS_PER_BATCH) {
+      chunks.push(calls.slice(i, i + MAX_CALLS_PER_BATCH))
+    }
+    const chunkResults = await Promise.all(chunks.map((chunk) => batchRead(chunk, options)))
+    return chunkResults.flat()
   }
 
   // Encode each sub-call's calldata

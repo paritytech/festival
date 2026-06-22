@@ -124,7 +124,7 @@ function onBack() {
     >
       <div class="min-w-0 flex-1">
         <p class="text-xs text-text-muted">{{ bannerLabel }}</p>
-        <p class="text-sm font-medium text-text-and-icons-primary mt-0.5 truncate">{{ bannerValue }}</p>
+        <p class="text-sm font-medium text-text-and-icons-primary mt-0.5 break-words">{{ bannerValue }}</p>
       </div>
       <div
         v-if="category"

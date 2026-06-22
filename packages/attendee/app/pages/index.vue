@@ -4,37 +4,43 @@ import { useFestival } from "~/composables/useFestival";
 import { useNow } from "~/composables/useNow";
 import { useRegistration } from "~/composables/useRegistration";
 import { useSchedule } from "~/composables/useSchedule";
-import { useSubEvents } from "~/composables/useSubEvents";
+import { useSubEvents, type AttendeeSubEvent } from "~/composables/useSubEvents";
+import { useSessionLimit } from "~/composables/useSessionLimit";
 import { usePoaps } from "~/composables/usePoaps";
+import { useFestivalPass } from "~/composables/useFestivalPass";
+import { usePassGate } from "~/composables/usePassGate";
 import { useOnboardingSeen } from "~/composables/useOnboardingSeen";
 import {
   useProgramTimeline,
   isItemOngoing,
   isItemPast,
   getItemId,
+  getItemCategory,
+  CATEGORY_STYLE,
 } from "~/composables/useProgramTimeline";
 import type { TimelineItem } from "~/composables/useProgramTimeline";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { useFestivalPass } from "~/composables/useFestivalPass";
-import FestivalPassScreen from "~/components/FestivalPassScreen.vue";
-import BadgeEarnedFestivalScreen from "~/components/BadgeEarnedFestivalScreen.vue";
-import NotificationActivationScreen from "~/components/NotificationActivationScreen.vue";
-import SuccessToast from "~/components/SuccessToast.vue";
 import {
-  getMarkerLocationLabel,
-  resolveLocationLabel,
+  LOCATION_LABEL_MAX_CHARS,
+  resolveShortLocationLabel,
 } from "@festival/shared/venue/floors";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
+import { useVenueMap } from "~/composables/useVenueMap";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
 import { formatTimeBerlin } from "@festival/shared/utils/time";
+import { truncate } from "@festival/shared/utils/text";
 
 const { metadata: festivalMetadata } = useFestival();
 const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
 const { entries: scheduleEntries } = useSchedule();
 const { subEvents } = useSubEvents();
 const { collectibleSubEventPoaps } = usePoaps();
+const { passStatus } = useFestivalPass();
+const passGate = usePassGate("use all Web3 Summit features");
+
+function onActivatePass() {
+  passGate.run(() => {});
+}
 const { has: hasSeenOnboarding } = useOnboardingSeen();
 const buildScheduleTo = computed(() =>
   hasSeenOnboarding("build-schedule") ? "/program" : "/program/welcome",
@@ -47,69 +53,44 @@ const hostSessionTo = computed(() =>
 );
 const { myList } = useProgramTimeline();
 const wallet = useWalletStore();
-const {
-  shouldShowPass,
-  shouldShowBadge,
-  shouldShowNotifications,
-  isActivating: isPassActivating,
-  isExploding: isPassExploding,
-  activatedAtMs,
-  allocationWarning,
-  activate: onActivatePass,
-  advanceToNotifications: onBadgeNext,
-  dismissNotifications: onDismissNotifications,
-} = useFestivalPass();
 
 // ── Reactive clock (shared singleton). Drives EventReminder + My List ──
 const nowDate = useNow();
 const now = computed(() => nowDate.value.getTime());
 
-const venueMarkers = computed(() => {
-  if (
-    hasDeployedContracts() &&
-    festivalMetadata.value?.venueMap?.markers?.length
-  ) {
-    return festivalMetadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
+const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 // ── Section 4: Host your own session / My session card ──
 
 const userH160 = computed(() => {
   if (!wallet.isConnected) return null;
-  if (!hasDeployedContracts()) return "0x" + "0".repeat(39) + "1";
   return isValidEvmAddress(wallet.address)
     ? wallet.address.toLowerCase()
     : ss58ToH160(wallet.address).toLowerCase();
 });
 
-const mySession = computed(() => {
-  if (!userH160.value) return null;
+const mySessions = computed<AttendeeSubEvent[]>(() => {
+  if (!userH160.value) return [];
   const nowSec = now.value / 1000;
-  const mine = subEvents.value
+  return subEvents.value
     .filter(
       (se) =>
         se.creator.toLowerCase() === userH160.value && se.endTime > nowSec,
     )
     .sort((a, b) => a.startTime - b.startTime);
-  return mine[0] || null;
 });
 
-const mySessionOngoing = computed(() => {
-  if (!mySession.value) return false;
-  const now = Date.now();
-  return (
-    mySession.value.startTime * 1000 <= now &&
-    mySession.value.endTime * 1000 > now
-  );
-});
+const { canHostMore: canHostMoreSessions } = useSessionLimit();
 
-const mySessionSubtitle = computed(() => {
-  if (!mySession.value) return "";
-  const joiners = `${mySession.value.registeredCount} Joiner${mySession.value.registeredCount !== 1 ? "s" : ""}`;
-  if (mySessionOngoing.value) return `Session ongoing · ${joiners}`;
-  const diff = mySession.value.startTime * 1000 - Date.now();
+function isSessionOngoing(session: AttendeeSubEvent): boolean {
+  const t = Date.now();
+  return session.startTime * 1000 <= t && session.endTime * 1000 > t;
+}
+
+function getSessionSubtitle(session: AttendeeSubEvent): string {
+  const joiners = `${session.registeredCount} Joiner${session.registeredCount !== 1 ? "s" : ""}`;
+  if (isSessionOngoing(session)) return `Session ongoing · ${joiners}`;
+  const diff = session.startTime * 1000 - Date.now();
   if (diff <= 0) return joiners;
   const totalMin = Math.floor(diff / 60_000);
   const h = Math.floor(totalMin / 60);
@@ -119,7 +100,7 @@ const mySessionSubtitle = computed(() => {
   else if (h > 0) countdown = `Start within ${h}h`;
   else countdown = `Start within ${m} min`;
   return `${countdown} · ${joiners}`;
-});
+}
 
 // ── My List (bookmarked + registered sessions) ──
 
@@ -128,9 +109,11 @@ const myListItems = computed(() =>
 );
 
 function getMyListAccentColor(item: TimelineItem): string {
-  if (item.type === "official")
+  const category = getItemCategory(item);
+  // Official entries dim when they're not ongoing; the colored ones keep their color.
+  if (category === "official")
     return isItemOngoing(item) ? "#fafaf9" : "#57534e";
-  return "#9462FA"; // --color-community
+  return CATEGORY_STYLE[category].color;
 }
 
 function getMyListTitle(item: TimelineItem): string {
@@ -153,16 +136,21 @@ function getMyListTimeLabel(item: TimelineItem): string {
 
 function getMyListLocation(item: TimelineItem): string {
   if (!venueMarkers.value.length) return "";
+  let label = "";
   if (item.type === "official" && item.entry.venueMarkerId) {
-    return getMarkerLocationLabel(item.entry.venueMarkerId, venueMarkers.value);
-  }
-  if (item.type === "community" && item.subEvent.metadata.location) {
-    return resolveLocationLabel(
+    label = resolveShortLocationLabel(
+      item.entry.venueMarkerId,
+      venueMarkers.value,
+      venueZones.value,
+    );
+  } else if (item.type === "community" && item.subEvent.metadata.location) {
+    label = resolveShortLocationLabel(
       item.subEvent.metadata.location,
       venueMarkers.value,
+      venueZones.value,
     );
   }
-  return "";
+  return truncate(label, LOCATION_LABEL_MAX_CHARS);
 }
 
 function getMyListRoute(item: TimelineItem): string {
@@ -188,12 +176,48 @@ function getMyListRoute(item: TimelineItem): string {
     <EventReminder
       :entries="scheduleEntries"
       :venue-markers="venueMarkers"
+      :venue-zones="venueZones"
       :now="now"
       :festival-name="festivalMetadata?.name || 'Web3 Summit'"
     />
 
-    <!-- 2. Passport -->
-    <HomePassport />
+    <!-- 2. Passport. When the pass is deferred, a dark "Activate your pass"
+         card sits behind the passport and peeks out at the bottom; both are
+         bound by one rounded, clipped container. -->
+    <div
+      v-if="passStatus === 'deferred'"
+      class="relative my-6 rounded-3xl overflow-hidden"
+    >
+      <button
+        type="button"
+        class="absolute inset-0 flex items-end bg-surface-2 text-activations"
+        data-testid="activate-pass-cta"
+        aria-label="Activate your pass"
+        @click="onActivatePass"
+      >
+        <span class="flex w-full items-center justify-between px-5 h-14">
+          <span class="text-lg font-semibold">Activate your pass</span>
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              d="M5 12h14M13 6l6 6-6 6"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
+      </button>
+      <HomePassport class="relative z-[1] mb-14" />
+    </div>
+    <HomePassport v-else class="my-6" />
 
     <!-- 2.5. Location (kept up top only when not yet checked in;
          once checked in it moves to the bottom of the page). -->
@@ -328,29 +352,53 @@ function getMyListRoute(item: TimelineItem): string {
       </div>
     </template>
 
-    <!-- 4. My List -->
+    <!-- 4. My Sessions -->
+    <div v-if="isCheckedIn && mySessions.length">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold text-text-and-icons-primary">My Sessions</h3>
+        <NuxtLink
+          v-if="canHostMoreSessions"
+          :to="hostSessionTo"
+          class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-and-icons-primary"
+          aria-label="Host a session"
+        >
+          <PlusIcon :size="18" />
+        </NuxtLink>
+      </div>
+      <div class="space-y-2">
+        <NuxtLink
+          v-for="session in mySessions"
+          :key="session.address"
+          :to="`/sessions/${session.address}`"
+          class="block rounded-2xl bg-white px-4 py-2.5"
+        >
+          <div class="flex items-center gap-3">
+            <div
+              v-if="session.metadata.badgePixels"
+              class="w-12 h-12 rounded-xl overflow-hidden shrink-0"
+            >
+              <BadgeCanvas :pixels="session.metadata.badgePixels" :size="48" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-black truncate">
+                {{ session.metadata.name }}
+              </p>
+              <p class="text-xs text-black/50 mt-0.5">{{ getSessionSubtitle(session) }}</p>
+            </div>
+          </div>
+        </NuxtLink>
+      </div>
+    </div>
+
+    <!-- 5. My List -->
     <div v-if="isCheckedIn && myListItems.length">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-lg font-semibold text-text-and-icons-primary">My List</h3>
         <NuxtLink
           to="/program?tab=mylist"
-          class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center"
+          class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-and-icons-primary"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="text-text-and-icons-primary"
-          >
-            <line x1="5" y1="12" x2="19" y2="12" />
-            <polyline points="12 5 19 12 12 19" />
-          </svg>
+          <ArrowRightIcon />
         </NuxtLink>
       </div>
       <div
@@ -376,11 +424,11 @@ function getMyListRoute(item: TimelineItem): string {
                 {{ getMyListTitle(item) }}
               </p>
             </div>
-            <div class="flex items-center justify-between mt-0.5">
-              <span class="text-xs text-text-muted">{{
+            <div class="flex items-start justify-between gap-2 mt-0.5">
+              <span class="text-xs text-text-muted whitespace-nowrap shrink-0">{{
                 getMyListTimeLabel(item)
               }}</span>
-              <span class="text-xs text-text-muted">{{
+              <span class="text-xs text-text-muted text-left">{{
                 getMyListLocation(item)
               }}</span>
             </div>
@@ -392,47 +440,9 @@ function getMyListRoute(item: TimelineItem): string {
     <template v-if="isCheckedIn">
 
       <div class="space-y-6">
-      <!-- 5. Host your own session / My session -->
+      <!-- Host your own session (fallback when user has no sessions) -->
       <NuxtLink
-        v-if="mySession"
-        :to="`/sessions/${mySession.address}`"
-        class="block rounded-2xl bg-white px-4 py-2.5"
-      >
-        <div class="flex items-center gap-3">
-          <div
-            v-if="mySession.metadata.badgePixels"
-            class="w-12 h-12 rounded-xl overflow-hidden shrink-0"
-          >
-            <BadgeCanvas :pixels="mySession.metadata.badgePixels" :size="48" />
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-black truncate">
-              {{ mySession.metadata.name }}
-            </p>
-            <p class="text-xs text-black/50 mt-0.5">{{ mySessionSubtitle }}</p>
-          </div>
-          <NuxtLink
-            v-if="!mySessionOngoing"
-            :to="`/my/manage/${mySession.address}/edit`"
-            class="shrink-0"
-            @click.stop
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M3 17.46v3.04c0 .28.22.5.5.5h3.04c.13 0 .26-.05.35-.15L17.81 9.94l-3.75-3.75L3.15 17.1a.49.49 0 0 0-.15.36Z"
-                fill="black"
-              />
-              <path
-                d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83a1 1 0 0 0 0-1.41Z"
-                fill="black"
-              />
-            </svg>
-          </NuxtLink>
-        </div>
-      </NuxtLink>
-
-      <NuxtLink
-        v-else
+        v-if="!mySessions.length && canHostMoreSessions"
         :to="hostSessionTo"
         class="block rounded-3xl bg-magenta relative overflow-hidden"
       >
@@ -549,44 +559,17 @@ function getMyListRoute(item: TimelineItem): string {
       </NuxtLink>
 
       </div>
-      <!-- 8. Location (moves to bottom once the user is checked in) -->
+      <!-- 8. Festival chat -->
+      <HomeFestivalChat />
+      <!-- 9. Location (moves to bottom once the user is checked in) -->
       <HomeLocation />
     </template>
   </div>
 
-  <!-- Festival Pass + Badge overlays. shouldShow*/visibility is owned by
-       useFestivalPass; gates collapse in standalone / pre-checkin / disconnect. -->
-  <FestivalPassScreen
-    v-if="shouldShowPass"
-    :address="userH160 ?? ''"
-    :is-activating="isPassActivating"
-    :is-exploding="isPassExploding"
-    @activate="onActivatePass"
+  <ActivationModal
+    :visible="passGate.state.value !== 'none'"
+    v-bind="passGate.modalProps.value"
+    @primary="passGate.onPrimary"
+    @secondary="passGate.onSecondary"
   />
-  <BadgeEarnedFestivalScreen
-    v-if="shouldShowBadge"
-    :address="userH160 ?? ''"
-    :festival-name="festivalMetadata?.name || 'Web3 Summit'"
-    :received-at-ms="activatedAtMs ?? undefined"
-    @next="onBadgeNext"
-  />
-  <NotificationActivationScreen
-    v-if="shouldShowNotifications"
-    @dismiss="onDismissNotifications"
-  />
-
-  <!-- Partial-allocation warning. SuccessToast auto-hides; activate() clears
-       it on the next attempt. -->
-  <Teleport to="body">
-    <div
-      class="fixed bottom-28 left-4 right-4 md:left-[calc(var(--col-l)+1rem)] md:right-[calc(var(--col-r)+1rem)] z-[2120] pointer-events-none"
-    >
-      <SuccessToast
-        :visible="!!allocationWarning"
-        variant="star"
-        :message="allocationWarning ?? ''"
-        @hide="allocationWarning = null"
-      />
-    </div>
-  </Teleport>
 </template>

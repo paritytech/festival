@@ -3,11 +3,11 @@ import type { SubEventMetadata } from '@festival/shared/metadata/schemas'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { writeContract } from '@festival/shared/contracts/write'
 import { FestivalABI } from '@festival/shared/contracts/abis'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { walletAddressToH160 } from '@festival/shared/utils/address'
-import { festivalState } from '@festival/shared/cache/festival-state'
+import { festivalState, type SessionEntry } from '@festival/shared/cache/festival-state'
+import { addPending, dropPending, hasPending, pendingSessions, pendingSessionEdit, draftSessionEntry } from '@festival/shared/cache/pending'
 import { bootLoadAdmin } from './useBootLoad'
 
 export interface SubEventListItem {
@@ -35,18 +35,34 @@ const FLAG_THRESHOLD_FALLBACK = 5
 export function useSubEvents(_festivalAddress: string) {
   const txStatus = ref<TxStatus>('idle')
 
-  const subEvents = computed<SubEventListItem[]>(() =>
-    festivalState.sessions.map((s) => ({
+  const subEvents = computed<SubEventListItem[]>(() => {
+    const toView = (s: SessionEntry): SubEventListItem => ({
       address: s.address,
-      metadata: s.metadata ?? { ...DEFAULT_METADATA, name: `Sub-Event ${s.address.slice(0, 8)}` },
+      // Our own in-flight edit renders immediately; superseded once the chain CID catches up.
+      metadata: pendingSessionEdit(s.address)?.metadata ?? s.metadata ?? { ...DEFAULT_METADATA, name: `Sub-Event ${s.address.slice(0, 8)}` },
       registeredCount: Number(s.details.registeredCount),
       startTime: Number(s.details.startTime),
       endTime: Number(s.details.endTime),
-      cancelled: s.details.cancelled,
+      // A cancel tx in flight on this device shows as cancelled immediately;
+      // it rolls back if the tx fails and is GC'd once the chain confirms.
+      cancelled: s.details.cancelled || hasPending('cancelSession', s.address),
       flagCount: Number(s.details.flagCount),
       flagThreshold: Number(s.details.flagThreshold) || FLAG_THRESHOLD_FALLBACK,
-    })),
-  )
+    })
+
+    const confirmed = festivalState.sessions.map(toView)
+    // Cancelled sessions don't count: a same-metadata recreate shares their
+    // CID and must not hide the new draft.
+    const confirmedCids = new Set(
+      festivalState.sessions
+        .filter((s) => !s.details.cancelled)
+        .map((s) => s.details.metadataCid.toLowerCase()),
+    )
+    const drafts = pendingSessions()
+      .filter((s) => !confirmedCids.has(s.details.metadataCid.toLowerCase()))
+      .map(toView)
+    return [...confirmed, ...drafts]
+  })
 
   const isLoading = computed(() => festivalState.loading)
 
@@ -62,6 +78,7 @@ export function useSubEvents(_festivalAddress: string) {
     startTimestamp: bigint,
     endTimestamp: bigint,
     festivalPoapTokenId: bigint,
+    draftMetadata?: SubEventMetadata,
   ): Promise<string | null> {
     txStatus.value = 'preparing'
     try {
@@ -73,11 +90,32 @@ export function useSubEvents(_festivalAddress: string) {
         args: [metadataCid, startTimestamp, endTimestamp, festivalPoapTokenId],
         signer: wallet.getSigner(),
         walletAddress: wallet.address,
-        onStatus: (s) => { txStatus.value = s },
+        onStatus: (s) => {
+          txStatus.value = s
+          // Draft renders in the list immediately; the confirmed entry with
+          // this CID supersedes it and promotion GCs the draft.
+          if (s === 'broadcasting') {
+            addPending('session', metadataCid, draftSessionEntry(
+              metadataCid, startTimestamp, endTimestamp,
+              walletAddressToH160(wallet.address), draftMetadata,
+            ))
+          }
+        },
       })
       await reload()
-      return subEvents.value[subEvents.value.length - 1]?.address || null
+      // The tx succeeded, so the draft has done its job either way.
+      dropPending('session', metadataCid)
+      // The created session is the live one carrying this CID. Fall back to a
+      // cancelled match for the rare create then instant cancel case.
+      const byCid = (live: boolean) =>
+        festivalState.sessions.find(
+          (s) =>
+            (!live || !s.details.cancelled) &&
+            s.details.metadataCid.toLowerCase() === metadataCid.toLowerCase(),
+        )
+      return (byCid(true) ?? byCid(false))?.address ?? null
     } catch (e) {
+      dropPending('session', metadataCid)
       txStatus.value = 'error'
       throw new Error(formatTxError(e))
     }
@@ -85,15 +123,7 @@ export function useSubEvents(_festivalAddress: string) {
 
   async function cancelSession(sessionAddress: string): Promise<void> {
     txStatus.value = 'preparing'
-    const target = sessionAddress.toLowerCase()
     try {
-      if (!hasDeployedContracts()) {
-        await new Promise((r) => setTimeout(r, 800))
-        txStatus.value = 'finalized'
-        markCancelledLocally(target)
-        return
-      }
-
       const wallet = useWalletStore()
       await writeContract({
         address: _festivalAddress as `0x${string}`,
@@ -102,21 +132,20 @@ export function useSubEvents(_festivalAddress: string) {
         args: [sessionAddress as `0x${string}`],
         signer: wallet.getSigner(),
         walletAddress: wallet.address,
-        onStatus: (s) => { txStatus.value = s },
+        onStatus: (s) => {
+          txStatus.value = s
+          // Optimistic via the pending overlay, never a direct state write:
+          // under the cancelled-latch a speculative write could outlive a
+          // failed tx forever. The overlay rolls back on failure instead.
+          if (s === 'broadcasting') addPending('cancelSession', sessionAddress)
+        },
       })
 
-      markCancelledLocally(target)
       reload()
     } catch (e) {
+      dropPending('cancelSession', sessionAddress)
       txStatus.value = 'error'
       throw new Error(formatTxError(e))
-    }
-  }
-
-  function markCancelledLocally(targetLower: string) {
-    const entry = festivalState.sessions.find((s) => s.address.toLowerCase() === targetLower)
-    if (entry) {
-      entry.details = { ...entry.details, cancelled: true }
     }
   }
 

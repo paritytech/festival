@@ -5,14 +5,16 @@ import { useSubEventManage } from '~/composables/useSubEventManage'
 import { useSubEventCheckIn } from '~/composables/useSubEventCheckIn'
 import { useSubEventRoles } from '~/composables/useSubEventRoles'
 import { useFestival } from '~/composables/useFestival'
+import { bootLoadAttendee } from '~/composables/useBootLoad'
 import { usePermissions } from '@festival/shared/permissions'
+import { useWalletStore } from '@festival/shared/host/wallet'
+import { useVisiblePoll } from '@festival/shared/cache/visibility'
 import {
   isValidEvmAddress,
-  isSameAddress,
   shortenAddress,
-  ss58ToH160,
+  walletAddressToH160,
 } from '@festival/shared/utils/address'
-import { resolveLocationLabel } from '@festival/shared/venue/floors'
+import { resolveFullLocationLabel } from '@festival/shared/venue/floors'
 import { formatTimeBerlin } from '@festival/shared/utils/time'
 
 definePageMeta({
@@ -20,7 +22,6 @@ definePageMeta({
 })
 
 const route = useRoute()
-const router = useRouter()
 const addr = route.params.address as string
 
 // ── Guard: session must exist in the festival's list ──
@@ -54,6 +55,14 @@ watch(
 // ── Stats source + optimistic mutation target ──
 const { attendees } = useSubEventManage(addr)
 
+// Keep the roster live while the door screen is open (the creator is already
+// checked in, so the per-attendee badge poll never runs here).
+const wallet = useWalletStore()
+useVisiblePoll(() => {
+  if (!wallet.isConnected) return
+  return bootLoadAttendee(walletAddressToH160(wallet.address))
+}, 10_000)
+
 const checkedInCount = computed(
   () => attendees.value.filter((a) => a.isCheckedIn).length,
 )
@@ -61,10 +70,11 @@ const checkedInCount = computed(
 // ── Location line (no mock fallback) ──
 const { metadata: festivalMetadata } = useFestival()
 const venueMarkers = computed(() => festivalMetadata.value?.venueMap?.markers ?? [])
+const venueZones = computed(() => festivalMetadata.value?.venueMap?.zones ?? [])
 const locationLabel = computed(() => {
   const loc = session.value?.metadata.location
   if (!loc || !venueMarkers.value.length) return ''
-  return resolveLocationLabel(loc, venueMarkers.value)
+  return resolveFullLocationLabel(loc, venueMarkers.value, venueZones.value)
 })
 
 const timeRange = computed(() => {
@@ -78,7 +88,6 @@ const timeRange = computed(() => {
 const {
   step,
   attendeeSS58,
-  accountStatus,
   error: checkInError,
   recentCheckins,
   reset,
@@ -93,24 +102,10 @@ onMounted(() => {
   if (step.value === 'idle') startScanning()
 })
 
-// ── Optimistic attendees mutation + auto-reset after success ──
+// Auto-rescan after a successful check-in. The roster updates itself via the
+// pending overlay + watcher, so there's nothing to mutate here.
 watch(step, (s) => {
   if (s !== 'success') return
-  if (!attendeeSS58.value) return
-
-  const wasRegistered = accountStatus.value?.registered ?? true
-  try {
-    const h160 = ss58ToH160(attendeeSS58.value)
-    const existing = attendees.value.find((a) => isSameAddress(a.address, h160))
-    if (existing) {
-      existing.isCheckedIn = true
-    } else if (!wasRegistered) {
-      attendees.value.push({ address: h160, isCheckedIn: true })
-    }
-  } catch {
-    // malformed address. Skip mutation, counts will fix up on next reload
-  }
-
   setTimeout(() => {
     if (step.value === 'success') startScanning()
   }, 1500)
@@ -151,14 +146,7 @@ function onScannerError(msg: string) {
   <div class="-mx-4 min-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom))] flex flex-col">
     <!-- Header -->
     <div class="flex items-center px-4 pt-4 pb-3">
-      <button
-        class="w-10 h-10 flex items-center justify-center -ml-2"
-        @click="router.back()"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-      </button>
+      <BackButton class="text-text-and-icons-primary" />
     </div>
 
     <!-- Title + time/location -->
@@ -183,13 +171,14 @@ function onScannerError(msg: string) {
     <div class="px-4 mb-4">
       <div class="relative w-full aspect-square rounded-2xl overflow-hidden border border-white/12 bg-black">
         <QRScanner
-          :active="scannerActive"
+          v-if="scannerActive"
+          :active="true"
           class="w-full h-full"
           @scan="handleScan"
           @error="onScannerError"
         />
         <div
-          v-if="!scannerActive"
+          v-else
           class="absolute inset-0 flex items-center justify-center bg-surface-2/60"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-white/40">

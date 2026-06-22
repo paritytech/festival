@@ -6,7 +6,16 @@ import PillButton from './ui/PillButton.vue'
 const props = defineProps<{
   days: FestivalDay[]
   modelValue: string | null
+  /** Berlin dateKeys the user can't pick (e.g. per-day session cap reached). */
+  disabledDateKeys?: Set<string>
+  /** Display-only: show the chosen day but block opening the picker (edit flow,
+   * where session time is immutable on-chain). */
+  readonly?: boolean
 }>()
+
+function isDisabled(dateKey: string): boolean {
+  return props.disabledDateKeys?.has(dateKey) ?? false
+}
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -19,7 +28,7 @@ const selectedDay = computed(() =>
 )
 
 function toggle() {
-  if (props.days.length === 0) return
+  if (props.readonly || props.days.length === 0) return
   expanded.value = !expanded.value
 }
 
@@ -30,6 +39,7 @@ function shortLabel(longLabel: string): string {
 }
 
 function selectDay(dateKey: string) {
+  if (isDisabled(dateKey)) return
   emit('update:modelValue', dateKey)
   expanded.value = false
 }
@@ -68,7 +78,7 @@ watch(
       <PillButton
         :data-testid="selectedDay ? 'session-date-pill' : 'session-date-add'"
         :aria-pressed="expanded"
-        :disabled="days.length === 0"
+        :disabled="days.length === 0 || readonly"
         size="md"
         tone="glass"
         :variant="selectedDay ? 'filled' : expanded ? 'active' : 'idle'"
@@ -84,7 +94,9 @@ watch(
         :key="day.dateKey"
         type="button"
         :data-testid="`session-date-option-${day.dateKey}`"
-        class="w-full flex items-center justify-between p-4 rounded-xl text-sm font-medium transition-colors bg-surface-2 text-text-and-icons-primary"
+        :disabled="isDisabled(day.dateKey)"
+        :aria-disabled="isDisabled(day.dateKey)"
+        class="w-full flex items-center justify-between p-4 rounded-xl text-sm font-medium transition-colors bg-surface-2 text-text-and-icons-primary disabled:opacity-40 disabled:cursor-not-allowed"
         @click="selectDay(day.dateKey)"
       >
         <span>{{ day.label }}</span>

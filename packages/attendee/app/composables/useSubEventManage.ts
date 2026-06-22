@@ -1,12 +1,9 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { SubEventDetails } from '@festival/shared/contracts/types'
 import type { SubEventMetadata } from '@festival/shared/metadata/schemas'
 import { hydrateSubEventMetadata } from '@festival/shared/metadata/schemas'
 import type { TxStatus } from '@festival/shared/contracts/write'
-import {
-  hasDeployedContracts,
-  isNonZeroCid,
-} from '@festival/shared/contracts/festival-reads'
+import { isNonZeroCid } from '@festival/shared/contracts/festival-reads'
 import { FestivalSessionABI, FestivalABI } from '@festival/shared/contracts/abis'
 import { batchRead } from '@festival/shared/contracts/multicall'
 import { ROLES } from '@festival/shared/contracts/types'
@@ -18,8 +15,10 @@ import { formatTxError } from '@festival/shared/contracts/errors'
 import { useBulletinStorage } from '@festival/shared/metadata/bulletin'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { setCachedMetadata } from '@festival/shared/cache/cid-cache'
-import { ss58ToH160, isValidSs58, isValidEvmAddress } from '@festival/shared/utils/address'
-import { MOCK_SUB_EVENT_METADATA, MOCK_ATTENDEES } from '@festival/shared/mocks'
+import { festivalState } from '@festival/shared/cache/festival-state'
+import { addPending, dropPending, pendingSessionCheckins } from '@festival/shared/cache/pending'
+import { ss58ToH160, walletAddressToH160, isValidSs58, isValidEvmAddress } from '@festival/shared/utils/address'
+import { bootLoadAttendee } from './useBootLoad'
 import { useSubEvents } from './useSubEvents'
 
 export interface RoleHolder {
@@ -30,8 +29,21 @@ export interface RoleHolder {
 export function useSubEventManage(address: string) {
   const details = ref<SubEventDetails | null>(null)
   const metadata = ref<SubEventMetadata | null>(null)
-  const attendees = ref<{ address: `0x${string}`; isCheckedIn: boolean }[]>([])
   const holders = ref<RoleHolder[]>([])
+
+  // Roster is a view over the confirmed tier (fed by bootLoad, the watcher, the
+  // visibility reconcile and the check-in poll) OR'd with this device's in-flight
+  // check-ins, so it self-heals and reflects check-ins from any device.
+  const attendees = computed<{ address: `0x${string}`; isCheckedIn: boolean }[]>(() => {
+    const entry = festivalState.sessions.find((s) => s.address.toLowerCase() === address.toLowerCase())
+    const rows = (entry?.attendees ?? []).map((a) => ({ address: a.address, isCheckedIn: a.isCheckedIn }))
+    for (const attendee of pendingSessionCheckins(address)) {
+      const existing = rows.find((r) => r.address.toLowerCase() === attendee.toLowerCase())
+      if (existing) existing.isCheckedIn = true
+      else rows.push({ address: attendee as `0x${string}`, isCheckedIn: true })
+    }
+    return rows
+  })
   const isLoading = ref(true)
   const txStatus = ref<TxStatus>('idle')
   const error = ref<string | null>(null)
@@ -39,40 +51,20 @@ export function useSubEventManage(address: string) {
   async function load() {
     isLoading.value = true
     try {
-      if (!hasDeployedContracts()) {
-        metadata.value = MOCK_SUB_EVENT_METADATA
-        details.value = {
-          metadataCid: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
-          creator: '0x0000000000000000000000000000000001' as `0x${string}`,
-          poapContract: '0x0000000000000000000000000000000002' as `0x${string}`,
-          parentFestival: '0x0000000000000000000000000000000003' as `0x${string}`,
-          startTime: BigInt(Math.floor(new Date('2026-06-15T10:30:00Z').getTime() / 1000)),
-          endTime: BigInt(Math.floor(new Date('2026-06-15T12:00:00Z').getTime() / 1000)),
-          capacity: 30,
-          price: 0n,
-          cancelled: false,
-          registeredCount: BigInt(MOCK_ATTENDEES.slice(0, 2).length),
-        }
-        attendees.value = MOCK_ATTENDEES.slice(0, 2).map(a => ({
-          address: a.address as `0x${string}`,
-          isCheckedIn: a.isCheckedIn,
-        }))
-        holders.value = [{
-          address: '0x0000000000000000000000000000000001',
-          roles: ['Admin', 'Manager', 'Check-In', 'Treasurer'],
-        }]
-        return
-      }
-
       const addr = address as `0x${string}`
 
-      // Batch initial reads: session details + attendees (2 reads → 1 round-trip)
-      const [rawDetails, rawAttendees] = await batchRead([
-        { address: addr, abi: FestivalSessionABI, functionName: 'getEventDetails' },
-        { address: addr, abi: FestivalSessionABI, functionName: 'getAttendees' },
-      ]) as [
-        readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, bigint, bigint, boolean, bigint],
-        readonly [`0x${string}`[], boolean[]],
+      // Reconcile the confirmed tier the roster reads from, in parallel with
+      // this session's own details (used by the edit/cancel flow).
+      const wallet = useWalletStore()
+      const userH160 = wallet.isConnected ? walletAddressToH160(wallet.address) : null
+      const [, raw] = await Promise.all([
+        bootLoadAttendee(userH160),
+        batchRead([
+          { address: addr, abi: FestivalSessionABI, functionName: 'getEventDetails' },
+        ]),
+      ])
+      const rawDetails = raw[0] as readonly [
+        `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, bigint, bigint, boolean, bigint,
       ]
 
       details.value = {
@@ -85,11 +77,6 @@ export function useSubEventManage(address: string) {
         cancelled: rawDetails[6],
         registeredCount: rawDetails[7],
       } as any
-
-      attendees.value = rawAttendees[0].map((a, i) => ({
-        address: a,
-        isCheckedIn: rawAttendees[1][i],
-      }))
 
       if (isNonZeroCid(details.value!.metadataCid)) {
         try {
@@ -155,12 +142,6 @@ export function useSubEventManage(address: string) {
     error.value = null
     txStatus.value = 'preparing'
     try {
-      if (!hasDeployedContracts()) {
-        await new Promise(r => setTimeout(r, 800))
-        if (details.value) details.value.capacity = newCapacity
-        txStatus.value = 'finalized'
-        return
-      }
       // TODO: updateSessionCapacity not yet available in session-writes
       throw new Error('Capacity update not yet implemented for sessions')
       setTimeout(() => { txStatus.value = 'idle' }, 2000)
@@ -174,17 +155,15 @@ export function useSubEventManage(address: string) {
     error.value = null
     txStatus.value = 'preparing'
     try {
-      if (!hasDeployedContracts()) {
-        await new Promise(r => setTimeout(r, 800))
-        if (details.value) details.value.cancelled = true
-        txStatus.value = 'finalized'
-        return
-      }
       const parentFestival = details.value?.parentFestival
       if (!parentFestival) throw new Error('Parent festival address unavailable')
       await cancelSession({
         ...getWriteOpts(s => {
           txStatus.value = s
+          // Optimistic via the pending overlay; never written into the
+          // confirmed tier, where the cancelled-latch would make a failed
+          // cancel permanent. Rolls back in the catch below.
+          if (s === 'broadcasting') addPending('cancelSession', address)
           if (s === 'in-block' && details.value) {
             details.value = { ...details.value, cancelled: true }
             useSubEvents().reload()
@@ -195,6 +174,7 @@ export function useSubEventManage(address: string) {
       })
       setTimeout(() => { txStatus.value = 'idle' }, 2000)
     } catch (e) {
+      dropPending('cancelSession', address)
       txStatus.value = 'error'
       error.value = formatTxError(e)
     }
@@ -204,11 +184,6 @@ export function useSubEventManage(address: string) {
     error.value = null
     txStatus.value = 'preparing'
     try {
-      if (!hasDeployedContracts()) {
-        await new Promise(r => setTimeout(r, 800))
-        txStatus.value = 'finalized'
-        return
-      }
       // TODO: withdrawSessionFunds not yet available in session-writes
       throw new Error('Fund withdrawal not yet implemented for sessions')
     } catch (e) {
@@ -224,19 +199,6 @@ export function useSubEventManage(address: string) {
       const targetH160 = isValidEvmAddress(targetAddress)
         ? targetAddress as `0x${string}`
         : isValidSs58(targetAddress) ? ss58ToH160(targetAddress) : targetAddress as `0x${string}`
-
-      if (!hasDeployedContracts()) {
-        await new Promise(r => setTimeout(r, 800))
-        txStatus.value = 'finalized'
-        const roleName = ROLE_OPTIONS.find(r => r.value === role)?.label || 'Unknown'
-        const existing = holders.value.find(h => h.address === targetAddress)
-        if (existing) {
-          if (!existing.roles.includes(roleName)) existing.roles.push(roleName)
-        } else {
-          holders.value.push({ address: targetAddress, roles: [roleName] })
-        }
-        return
-      }
 
       const roleName = ROLE_OPTIONS.find(r => r.value === role)?.label || 'Unknown'
       await grantSessionRole({
@@ -269,20 +231,6 @@ export function useSubEventManage(address: string) {
         ? targetAddress as `0x${string}`
         : isValidSs58(targetAddress) ? ss58ToH160(targetAddress) : targetAddress as `0x${string}`
 
-      if (!hasDeployedContracts()) {
-        await new Promise(r => setTimeout(r, 800))
-        txStatus.value = 'finalized'
-        const roleName = ROLE_OPTIONS.find(r => r.value === role)?.label || 'Unknown'
-        const existing = holders.value.find(h => h.address === targetAddress)
-        if (existing) {
-          existing.roles = existing.roles.filter(r => r !== roleName)
-          if (existing.roles.length === 0) {
-            holders.value = holders.value.filter(h => h.address !== targetAddress)
-          }
-        }
-        return
-      }
-
       const revokeRoleName = ROLE_OPTIONS.find(r => r.value === role)?.label || 'Unknown'
       await revokeSessionRole({
         ...getWriteOpts(s => {
@@ -311,13 +259,6 @@ export function useSubEventManage(address: string) {
     error.value = null
     txStatus.value = 'preparing'
     try {
-      if (!hasDeployedContracts()) {
-        await new Promise(r => setTimeout(r, 800))
-        metadata.value = hydrateSubEventMetadata(newMetadata)
-        txStatus.value = 'finalized'
-        return
-      }
-
       const { storePlaintext } = useBulletinStorage()
       const result = await storePlaintext(newMetadata)
 
@@ -325,18 +266,27 @@ export function useSubEventManage(address: string) {
       await setCachedMetadata(result.cid, newMetadata)
 
       txStatus.value = 'signing'
+      const hydrated = hydrateSubEventMetadata(newMetadata)
       await updateSessionCid({
         ...getWriteOpts(s => {
           txStatus.value = s
-          // Apply optimistic metadata only once tx is in a block
-          if (s === 'in-block') {
-            metadata.value = hydrateSubEventMetadata(newMetadata)
+          // Optimistic overlay so every shared view (program, detail, home,
+          // admin list) reflects the edit at once; GC'd when the chain CID
+          // catches up, rolled back in the catch on failure.
+          if (s === 'broadcasting') {
+            addPending('editSession', address, undefined, {
+              metadata: hydrated,
+              metadataCid: result.bytes32,
+            })
           }
+          // Local form copy for the edit page itself.
+          if (s === 'in-block') metadata.value = hydrated
         }),
         newCid: result.bytes32,
       })
       setTimeout(() => { txStatus.value = 'idle' }, 2000)
     } catch (e) {
+      dropPending('editSession', address)
       txStatus.value = 'error'
       error.value = formatTxError(e)
     }

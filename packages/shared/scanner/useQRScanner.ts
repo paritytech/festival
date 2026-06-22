@@ -28,7 +28,14 @@ export function useQRScanner() {
 
       const config = {
         fps: 10,
-        qrbox: { width: 250, height: 250 },
+        // Size the scan box to the actual viewfinder so it stays centered. A
+        // fixed box drifts off-centre when the video is taller or shorter than
+        // the box.
+        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const size = Math.max(150, Math.floor(minEdge * 0.7));
+          return { width: size, height: size };
+        },
         videoConstraints: {
           facingMode: "environment",
           width: { ideal: 1920 },

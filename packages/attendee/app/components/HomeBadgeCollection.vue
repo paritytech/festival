@@ -21,12 +21,9 @@ function onImageError(url: string) {
   <div v-if="poaps.length">
     <!-- Header -->
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold text-white">Badge Collection</h3>
-      <NuxtLink to="/my/badges" class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white">
-          <line x1="5" y1="12" x2="19" y2="12" />
-          <polyline points="12 5 19 12 12 19" />
-        </svg>
+      <h3 class="text-lg font-semibold text-text-and-icons-primary">Badge Collection</h3>
+      <NuxtLink to="/my/badges" class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-and-icons-primary">
+        <ArrowRightIcon />
       </NuxtLink>
     </div>
 

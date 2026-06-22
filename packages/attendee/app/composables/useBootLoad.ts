@@ -5,20 +5,41 @@ import {
   FESTIVAL_POAP_ADDRESS,
   SUB_EVENT_POAP_ADDRESS,
 } from '@festival/shared/contracts/addresses'
-import {
-  hasDeployedContracts,
-  isNonZeroCid,
-} from '@festival/shared/contracts/festival-reads'
+import { isNonZeroCid } from '@festival/shared/contracts/festival-reads'
 import type { FestivalDetails, SessionDetails, POAPData } from '@festival/shared/contracts/types'
 import type { FestivalMetadata, SubEventMetadata } from '@festival/shared/metadata/schemas'
 import { hydrateSubEventMetadata } from '@festival/shared/metadata/schemas'
 import { useBulletinStorage } from '@festival/shared/metadata/bulletin'
 import { fetchInChunks } from '@festival/shared/utils/chunked'
-import { festivalState, hydrateFromCache, persistToCache, type SessionEntry } from '@festival/shared/cache/festival-state'
+import { festivalState, hydrateFromCache, persistToCache, applyFestivalMetadata, type SessionEntry } from '@festival/shared/cache/festival-state'
+import { mergeAttendees, mergeSessions, mergePoaps, maxBig, keepPositive } from '@festival/shared/cache/merge'
 
 interface BootLoadOptions {
   /** Block tag for the chain reads. Default 'best' for snappy UX. */
   at?: 'best' | 'finalized'
+}
+
+// Single-flight with one trailing rerun. At most one load runs at a time, so
+// concurrent triggers (check-in poll, visibility reconcile, post-tx reloads)
+// never interleave writes into the festivalState singleton. Calls arriving
+// mid-flight coalesce into a single follow-up run with the latest arguments,
+// and resolve when that run completes — every caller is guaranteed a load
+// whose chain reads started no earlier than its call, so a reload() fired
+// after a tx lands always observes the tx.
+let current: Promise<void> | null = null
+let trailing: Promise<void> | null = null
+let trailingArgs: [`0x${string}` | null, BootLoadOptions] | null = null
+
+/**
+ * A load that started for the previous account must not write user fields
+ * after a switch, so every user write checks this first. Global festival
+ * state stays safe to write from any run.
+ */
+function userStillCurrent(userAddress: `0x${string}` | null): boolean {
+  return (
+    (festivalState.user.address?.toLowerCase() ?? null) ===
+    (userAddress?.toLowerCase() ?? null)
+  )
 }
 
 /**
@@ -30,15 +51,55 @@ interface BootLoadOptions {
  * R2 — per session (details, attendees, POAP token list) and per festival POAP
  *      token (getPOAPData).
  * R3 — per session POAP token (getPOAPData), only when any exist.
+ *
+ * Concurrent loads are safe: every write into festivalState goes through the
+ * monotonic merge (see cache/merge.ts), so interleaved or out-of-order runs
+ * can only upgrade state, never regress it — no single-flight guard needed.
  */
-export async function bootLoadAttendee(
+export function bootLoadAttendee(
   userAddress: `0x${string}` | null,
   options: BootLoadOptions = {},
 ): Promise<void> {
-  if (!hasDeployedContracts()) return
+  if (!current) {
+    current = runBootLoad(userAddress, options).finally(() => {
+      current = null
+    })
+    return current
+  }
 
+  trailingArgs = [userAddress, options]
+  if (!trailing) {
+    // runBootLoad never rejects (errors land in festivalState.error), but the
+    // catch keeps a future regression from wedging the trailing slot shut.
+    trailing = current.catch(() => {}).then(() => {
+      const [user, opts] = trailingArgs!
+      trailingArgs = null
+      trailing = null
+      return bootLoadAttendee(user, opts)
+    })
+  }
+  return trailing
+}
+
+async function runBootLoad(
+  userAddress: `0x${string}` | null,
+  options: BootLoadOptions,
+): Promise<void> {
   festivalState.loading = true
   festivalState.error = null
+
+  // Account switch: the previous user's per-user fields must not leak into
+  // the new user's view or win the per-user merges below — resetting makes
+  // those merges start from empty for a new account.
+  const sameUser =
+    (festivalState.user.address?.toLowerCase() ?? null) ===
+    (userAddress?.toLowerCase() ?? null)
+  if (!sameUser) {
+    festivalState.user.ticketTokenId = 0n
+    festivalState.user.festivalPoaps = []
+    festivalState.user.sessionPoaps = []
+    festivalState.user.roles = []
+  }
   festivalState.user.address = userAddress
 
   // Cache-first paint. Show last-known data instantly while chain reads run.
@@ -119,33 +180,51 @@ async function runRound1(
   }))
 
   // Metadata is fetched off-chain (Bulletin) below and stays null until it lands.
+  // Attendees merge (check-in latches) and registeredCount only advances, so a
+  // stale read can't drop a just-applied registration/check-in.
   festivalState.festival = {
     address: FESTIVAL_ADDRESS,
-    details,
+    details: {
+      ...details,
+      registeredCount: maxBig(
+        festivalState.festival?.details.registeredCount ?? 0n,
+        details.registeredCount,
+      ),
+    },
     metadata: festivalState.festival?.metadata ?? null,
-    attendees,
+    attendees: mergeAttendees(festivalState.festival?.attendees ?? [], attendees),
   }
 
-  festivalState.user.ticketTokenId = ticketRaw
+  // A stale read can't take a known ticket back to zero (no unregister on-chain).
+  if (userStillCurrent(userAddress)) {
+    festivalState.user.ticketTokenId = keepPositive(festivalState.user.ticketTokenId, ticketRaw)
+  }
 
   // Stub session entries up front so consumers (e.g. the session detail page)
-  // can resolve `getByAddress(addr)` immediately; R2 fills in the details.
-  festivalState.sessions = sessionsRaw.map((address) => ({
-    address,
-    details: {
-      metadataCid: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
-      creator: '0x0000000000000000000000000000000000000000' as `0x${string}`,
-      poapContract: '0x0000000000000000000000000000000000000000' as `0x${string}`,
-      parentFestival: FESTIVAL_ADDRESS,
-      startTime: 0n,
-      endTime: 0n,
-      cancelled: false,
-      registeredCount: 0n,
-    },
-    metadata: null,
-    attendees: [],
-    poapTokenIds: [],
-  }))
+  // can resolve `getByAddress(addr)` immediately; R2 upgrades them via merge.
+  // mergeSessions keeps any already-real entry from regressing to a stub.
+  festivalState.sessions = mergeSessions(
+    festivalState.sessions,
+    sessionsRaw.map((address) => ({
+      address,
+      details: {
+        metadataCid: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
+        creator: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+        poapContract: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+        parentFestival: FESTIVAL_ADDRESS,
+        startTime: 0n,
+        endTime: 0n,
+        cancelled: false,
+        registeredCount: 0n,
+        // Zero so keepPositive never lets a stub beat the real chain value.
+        flagCount: 0n,
+        flagThreshold: 0n,
+      },
+      metadata: null,
+      attendees: [],
+      poapTokenIds: [],
+    })),
+  )
 
   // Off-chain fetch; doesn't count against the chainHead rate budget. Fire and forget.
   if (isNonZeroCid(details.metadataCid)) {
@@ -229,19 +308,25 @@ async function runRound2(
     }
   })
 
-  festivalState.sessions = sessionEntries
+  festivalState.sessions = mergeSessions(festivalState.sessions, sessionEntries)
 
-  // Festival POAP data, filtered to the connected user.
+  // Festival POAP data, filtered to the connected user. Union with what we
+  // already hold: mints are monotonic, so a stale read can't drop a POAP.
   const festPoapDataOffset = sessionAddrs.length * STRIDE
   const userLower = userAddress?.toLowerCase() ?? null
-  festivalState.user.festivalPoaps = festPoapTokenIds
-    .map((tokenId, idx) => {
-      const data = results[festPoapDataOffset + idx] as POAPData
-      return { poapContract: FESTIVAL_POAP_ADDRESS, tokenId, data }
-    })
-    .filter((entry) =>
-      userLower ? entry.data.attendee.toLowerCase() === userLower : false,
+  if (userStillCurrent(userAddress)) {
+    festivalState.user.festivalPoaps = mergePoaps(
+      festivalState.user.festivalPoaps,
+      festPoapTokenIds
+        .map((tokenId, idx) => {
+          const data = results[festPoapDataOffset + idx] as POAPData
+          return { poapContract: FESTIVAL_POAP_ADDRESS, tokenId, data }
+        })
+        .filter((entry) =>
+          userLower ? entry.data.attendee.toLowerCase() === userLower : false,
+        ),
     )
+  }
 
   // Per-session Bulletin metadata fetches; off-chain, no chainHead rate cost.
   const metadataTargets = sessionEntries.filter((e) => isNonZeroCid(e.details.metadataCid))
@@ -287,15 +372,20 @@ async function runRound3(
     }
   }
 
-  festivalState.user.sessionPoaps = flat
-    .filter((f) =>
-      userLower ? f.data.attendee.toLowerCase() === userLower : false,
+  if (userStillCurrent(userAddress)) {
+    festivalState.user.sessionPoaps = mergePoaps(
+      festivalState.user.sessionPoaps,
+      flat
+        .filter((f) =>
+          userLower ? f.data.attendee.toLowerCase() === userLower : false,
+        )
+        .map((f) => ({
+          poapContract: SUB_EVENT_POAP_ADDRESS,
+          tokenId: f.tokenId,
+          data: f.data,
+        })),
     )
-    .map((f) => ({
-      poapContract: SUB_EVENT_POAP_ADDRESS,
-      tokenId: f.tokenId,
-      data: f.data,
-    }))
+  }
 }
 
 async function fetchSessionMetadata(
@@ -318,9 +408,8 @@ async function fetchFestivalMetadata(cid: `0x${string}`): Promise<void> {
   try {
     const { retrievePlaintext } = useBulletinStorage()
     const meta = await retrievePlaintext<FestivalMetadata>(cid)
-    if (festivalState.festival) {
-      festivalState.festival.metadata = meta
-    }
+    // Guarded on the CID we fetched, so a slow read can't clobber a newer update.
+    applyFestivalMetadata(meta, cid)
   } catch (e) {
     console.warn('[bootLoadAttendee] festival metadata fetch failed:', e)
   }

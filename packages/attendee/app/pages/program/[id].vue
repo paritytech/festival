@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { useSchedule } from "~/composables/useSchedule";
+import { scheduleEntryCategory, CATEGORY_STYLE } from "~/composables/useProgramTimeline";
 import { useBookmarks } from "~/composables/useBookmarks";
 import { useFestival } from "~/composables/useFestival";
 import { useRegistration } from "~/composables/useRegistration";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
-import { DEFAULT_ZONES } from "@festival/shared/venue/zones";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
-import { getMarkerLocationLabel } from "@festival/shared/venue/floors";
+import { resolveFullLocationLabel } from "@festival/shared/venue/floors";
+import { useVenueMap } from "~/composables/useVenueMap";
 import { useBulletinImage } from "~/composables/useBulletinImage";
 import { formatTimeBerlin, formatDateBerlin, parseFestivalDate, isSameDay } from "@festival/shared/utils/time";
 
@@ -21,6 +20,10 @@ const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
 
 const entry = computed(() => entries.value.find((e) => e.id === id));
 
+const categoryStyle = computed(
+  () => CATEGORY_STYLE[entry.value ? scheduleEntryCategory(entry.value) : "official"],
+);
+
 watch(
   [entry, festivalLoading],
   ([found, loading]) => {
@@ -31,20 +34,9 @@ watch(
 );
 
 const showToast = ref(false);
+const locationViewOpen = ref(false);
 
-const venueMarkers = computed(() => {
-  if (hasDeployedContracts() && metadata.value?.venueMap?.markers?.length) {
-    return metadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
-
-const venueZones = computed(() => {
-  if (hasDeployedContracts() && metadata.value?.venueMap?.zones?.length) {
-    return metadata.value.venueMap.zones;
-  }
-  return DEFAULT_ZONES;
-});
+const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 const bookmarked = computed(() => (entry.value ? isBookmarked(entry.value.id) : false));
 
@@ -79,7 +71,11 @@ const dayLabel = computed(() => {
 
 const locationLabel = computed(() => {
   if (!entry.value?.venueMarkerId) return "";
-  return getMarkerLocationLabel(entry.value.venueMarkerId, venueMarkers.value);
+  return resolveFullLocationLabel(
+    entry.value.venueMarkerId,
+    venueMarkers.value,
+    venueZones.value,
+  );
 });
 
 // Resolves through the host preimage manager, so it stays a blob URL in the host.
@@ -116,7 +112,8 @@ function handleToggle() {
     :image-url="imageUrl"
     :banner-value="speakerLabel"
     banner-label="Speaker"
-    category="Official"
+    :category="categoryStyle.label"
+    :category-color="categoryStyle.color"
     :title="entry.title"
     :description="entry.description"
     :day-label="dayLabel"
@@ -129,6 +126,16 @@ function handleToggle() {
     :ongoing="ongoing"
     :ended="ended"
     @toggle-bookmark="handleToggle"
+    @open-location="locationViewOpen = true"
+  />
+
+  <SessionLocationView
+    v-if="locationViewOpen && entry?.venueMarkerId"
+    :location="entry.venueMarkerId"
+    :detail-path="`/program/${entry.id}`"
+    :markers="venueMarkers"
+    :zones="venueZones"
+    @close="locationViewOpen = false"
   />
 
   <div

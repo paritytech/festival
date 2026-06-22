@@ -10,10 +10,10 @@ import { useFestival } from "~/composables/useFestival";
 import { useNow } from "~/composables/useNow";
 import { useRegistration } from "~/composables/useRegistration";
 import { useSavedItems } from "~/composables/useSavedItems";
+import { useSessionLimit } from "~/composables/useSessionLimit";
 import { useOnboardingSeen } from "~/composables/useOnboardingSeen";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
-import { MOCK_VENUE_MAP } from "@festival/shared/mocks";
-import { hasDeployedContracts } from "@festival/shared/contracts/festival-reads";
+import { useVenueMap } from "~/composables/useVenueMap";
 import { toBerlinDateKey, berlinHourOf } from "@festival/shared/utils/time";
 import type {
   TimelineDay,
@@ -31,6 +31,7 @@ const { has: hasSeenOnboarding } = useOnboardingSeen();
 const hostSessionTo = computed(() =>
   hasSeenOnboarding("host-session") ? "/sessions/create" : "/sessions/host",
 );
+const { canHostMore: canHostMoreSessions } = useSessionLimit();
 
 // `displayedCount` lags the real count on increments so the number ticks up
 // exactly when the flying-ghost lands; decrements apply immediately. The
@@ -130,12 +131,7 @@ const activeDays = computed<TimelineDay[]>(() =>
   activeTab.value === "program" ? days.value : myListDays.value,
 );
 
-const venueMarkers = computed(() => {
-  if (hasDeployedContracts() && metadata.value?.venueMap?.markers?.length) {
-    return metadata.value.venueMap.markers;
-  }
-  return MOCK_VENUE_MAP.markers;
-});
+const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 function onScroll() {
   const y = scroller.value?.scrollTop ?? 0;
@@ -287,12 +283,7 @@ watch(
   { immediate: true },
 );
 
-const subEventsEnabled = computed(() => {
-  if (hasDeployedContracts() && metadata.value) {
-    return metadata.value.subEventsEnabled !== false;
-  }
-  return true;
-});
+const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== false);
 </script>
 
 <template>
@@ -365,12 +356,16 @@ const subEventsEnabled = computed(() => {
           <span class="text-xs text-text-muted">Sessions Type</span>
           <div class="flex items-center gap-3 text-xs">
             <span class="flex items-center gap-1.5">
-              <span class="w-[3px] h-3.5 rounded-full bg-white" />
+              <span class="w-[3px] h-3.5 rounded-full bg-official" />
               <span class="text-white">Official</span>
             </span>
             <span class="flex items-center gap-1.5">
               <span class="w-[3px] h-3.5 rounded-full bg-community" />
               <span class="text-white">Community</span>
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="w-[3px] h-3.5 rounded-full bg-activations" />
+              <span class="text-white">Activations</span>
             </span>
           </div>
         </div>
@@ -407,6 +402,7 @@ const subEventsEnabled = computed(() => {
                 <ProgramCard
                   :item="item"
                   :venue-markers="venueMarkers"
+                  :venue-zones="venueZones"
                   :is-bookmarked="isBookmarked(getItemId(item))"
                   :now="nowMs"
                   @toggle-bookmark="toggleBookmark"
@@ -424,6 +420,8 @@ const subEventsEnabled = computed(() => {
               :key="getItemId(item)"
               :item="item"
               :venue-markers="venueMarkers"
+              :venue-zones="venueZones"
+              location-format="full"
               :is-bookmarked="isBookmarked(getItemId(item))"
               :now="nowMs"
               @toggle-bookmark="toggleBookmark"
@@ -479,7 +477,7 @@ const subEventsEnabled = computed(() => {
 
     <!-- Host your own session: collapsible button (Program tab only) -->
     <NuxtLink
-      v-if="subEventsEnabled && isCheckedIn && activeTab === 'program'"
+      v-if="subEventsEnabled && isCheckedIn && activeTab === 'program' && canHostMoreSessions"
       :to="hostSessionTo"
       class="fixed right-4 md:right-[calc(var(--col-r)+1rem)] z-40 bg-white rounded-full h-14 flex items-center px-5 text-black shadow-lg overflow-hidden transition-all duration-300 ease-in-out md:max-w-[calc(var(--col-w)-2rem)] bottom-[calc(var(--safe-bottom)+75px)] md:bottom-[calc(var(--safe-bottom)+1rem)]"
       :style="{

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { ScheduleEntry } from '@festival/shared/metadata/schemas'
-import type { VenueMarker } from '@festival/shared/metadata/schemas'
-import { getMarkerLocationLabel } from '@festival/shared/venue/floors'
+import type { ScheduleEntry, VenueMarker, VenueZone } from '@festival/shared/metadata/schemas'
+import { resolveShortLocationLabel } from '@festival/shared/venue/floors'
 import { formatTimeBerlin, toBerlinDateKey, parseFestivalDate } from '@festival/shared/utils/time'
 
 const props = withDefaults(defineProps<{
   entries: ScheduleEntry[]
   venueMarkers: VenueMarker[]
+  venueZones: VenueZone[]
   now: number
   festivalName?: string
 }>(), {
@@ -115,7 +115,7 @@ const locationLabel = computed(() => {
   const s = state.value
   if (s.type === 'hidden') return ''
   if (!s.entry.venueMarkerId) return ''
-  return getMarkerLocationLabel(s.entry.venueMarkerId, props.venueMarkers)
+  return resolveShortLocationLabel(s.entry.venueMarkerId, props.venueMarkers, props.venueZones)
 })
 
 const entry = computed(() =>

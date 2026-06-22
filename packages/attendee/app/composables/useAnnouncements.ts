@@ -1,4 +1,5 @@
 import { ref, computed, watch } from 'vue'
+import { usePersistentRef } from '@festival/shared/cache/persistent'
 import type { ChannelMetadata, AnnouncementBody } from '@festival/shared/metadata/schemas'
 import { fetchAnnouncementBodies } from '@festival/shared/metadata/announcementBodies'
 import { loadChannelFromChain } from '@festival/shared/metadata/channel'
@@ -24,9 +25,8 @@ const error = ref<string | null>(null)
 // delivered automatically once the user checks in.
 const LAST_READ_KEY = `conferenceApp:lastReadCid:${channelId}`
 
-const lastReadCid = ref<string | null>(
-  typeof window === 'undefined' ? null : window.localStorage.getItem(LAST_READ_KEY),
-)
+// Durable across WebView eviction; write-through is automatic.
+const lastReadCid = usePersistentRef<string | null>(LAST_READ_KEY, null)
 
 // Computed
 const announcements = computed<string[]>(() => channel.value?.announcements ?? [])
@@ -116,9 +116,6 @@ function markRead() {
   const newest = items[items.length - 1]
   if (!newest) return
   lastReadCid.value = newest
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(LAST_READ_KEY, newest)
-  }
 }
 
 export function useAnnouncements() {

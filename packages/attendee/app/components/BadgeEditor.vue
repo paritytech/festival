@@ -276,7 +276,7 @@ const gridBgColor = computed(() => {
     </p>
 
     <!-- Bottom toolbar -->
-    <div class="flex items-center justify-around px-12 pb-[calc(var(--safe-bottom)+16px)]">
+    <div class="flex items-center justify-around px-12 mt-auto pb-[calc(var(--safe-bottom)+16px)]">
       <!-- Pencil -->
       <button
         class="w-14 h-14 rounded-full flex items-center justify-center transition-colors"

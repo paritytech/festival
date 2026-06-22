@@ -1,7 +1,6 @@
 import { AbiEvent } from 'ox'
 import { useMainClient } from '../host/client'
 import { FestivalABI } from '../contracts/abis'
-import { hasDeployedContracts } from '../contracts/festival-reads'
 
 function bytesToHex(bytes: Uint8Array): `0x${string}` {
   let hex = '0x'
@@ -49,7 +48,14 @@ for (const name of WATCHED_EVENTS) {
 }
 
 /**
- * Subscribe to Revive.ContractEmitted events for a Festival contract.
+ * Resolve the handlers for a contract that emitted an event, by its lowercased
+ * H160 address. Return null to ignore the event. Called per event so the set of
+ * watched contracts can grow (e.g. new sessions) without re-subscribing.
+ */
+export type HandlerResolver = (contractHex: string) => FestivalEventHandlers | null
+
+/**
+ * Subscribe to Revive.ContractEmitted events across one or more contracts.
  *
  * Uses PAPI v2's `watchBest()`. One emission per best block, with all matching
  * events for that block. We process only `type === 'new'` (drop reorg replays
@@ -57,27 +63,20 @@ for (const name of WATCHED_EVENTS) {
  * (POAP mint, registration, metadata-CID update, capacity bump, cancellation),
  * so re-applying on reorg recovery is a no-op.
  *
+ * `resolve` maps an emitting contract address to its handlers, so a single
+ * follow can serve the festival and every session contract at once.
+ *
  * Auto-retries on transient errors (BlockNotPinnedError).
  */
-export function watchFestivalEvents(
-  festivalAddress: `0x${string}`,
-  handlers: FestivalEventHandlers,
+export function watchContractEvents(
+  resolve: HandlerResolver,
 ): { unsubscribe: () => void } {
-  if (!hasDeployedContracts()) {
-    return { unsubscribe: () => {} }
-  }
-
-  // useMainClient() is now async (the host provider resolves lazily), but this
-  // function keeps its synchronous `{ unsubscribe }` contract — the client is
-  // resolved inside subscribe() on first run.
-  type MainApi = Awaited<ReturnType<typeof useMainClient>>['api']
-  let api: MainApi | null = null
-  const normalizedAddress = festivalAddress.toLowerCase()
+  const { api } = useMainClient()
   let subscription: { unsubscribe: () => void } | null = null
   let retryTimeout: ReturnType<typeof setTimeout> | null = null
   let stopped = false
 
-  function dispatchEvent(name: string, decoded: any) {
+  function dispatchEvent(handlers: FestivalEventHandlers, name: string, decoded: any) {
     switch (name) {
       case 'MetadataUpdated':
         handlers.onMetadataUpdated?.(decoded.newCid as `0x${string}`)
@@ -116,7 +115,8 @@ export function watchFestivalEvents(
       const contractHex = (typeof body.contract === 'string'
         ? body.contract
         : (body.contract as any).asHex?.() ?? '') as string
-      if (contractHex.toLowerCase() !== normalizedAddress) return
+      const handlers = resolve(contractHex.toLowerCase())
+      if (!handlers) return
       if (!body?.topics || !body?.data) return
 
       const topics = body.topics.map((t: any): `0x${string}` =>
@@ -131,7 +131,7 @@ export function watchFestivalEvents(
 
       try {
         const decoded = AbiEvent.decode(match.abi, { data, topics }) as any
-        dispatchEvent(match.name, decoded)
+        dispatchEvent(handlers, match.name, decoded)
       } catch {
         // Decode failed. Skip event
       }
@@ -210,4 +210,18 @@ export function watchFestivalEvents(
       }
     },
   }
+}
+
+/**
+ * Watch a single Festival contract. Thin wrapper over {@link watchContractEvents}
+ * that resolves to the given handlers only for `festivalAddress`.
+ */
+export function watchFestivalEvents(
+  festivalAddress: `0x${string}`,
+  handlers: FestivalEventHandlers,
+): { unsubscribe: () => void } {
+  const normalizedAddress = festivalAddress.toLowerCase()
+  return watchContractEvents((contractHex) =>
+    contractHex === normalizedAddress ? handlers : null,
+  )
 }

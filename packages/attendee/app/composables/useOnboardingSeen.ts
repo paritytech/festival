@@ -1,33 +1,16 @@
-import { ref } from 'vue'
+import { usePersistentRef } from '@festival/shared/cache/persistent'
 
-const STORAGE_KEY = 'festival-onboarding-seen'
-
-function load(): Set<string> {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    return new Set(stored ? JSON.parse(stored) : [])
-  } catch {
-    return new Set()
-  }
-}
-
-function persist(s: Set<string>) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([...s]))
-}
-
-const seen = ref<Set<string>>(
-  typeof window !== 'undefined' ? load() : new Set(),
-)
+// Stored as a string array (unchanged on-disk format); durable, write-through.
+const seen = usePersistentRef<string[]>('festival-onboarding-seen', [])
 
 export function useOnboardingSeen() {
   function has(key: string): boolean {
-    return seen.value.has(key)
+    return seen.value.includes(key)
   }
 
   function markSeen(key: string) {
-    if (seen.value.has(key)) return
-    seen.value = new Set([...seen.value, key])
-    persist(seen.value)
+    if (seen.value.includes(key)) return
+    seen.value.push(key)
   }
 
   return { has, markSeen }

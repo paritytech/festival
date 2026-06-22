@@ -2,22 +2,15 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { isHappeningNow, timeUntil, formatTimeBerlin, parseFestivalDate } from '@festival/shared/utils/time'
 import type { ScheduleEntry } from '@festival/shared/metadata/schemas'
-import { MOCK_VENUE_MAP } from '@festival/shared/mocks'
-import { hasDeployedContracts } from '@festival/shared/contracts/festival-reads'
-import { getMarkerLocationLabel } from '@festival/shared/venue/floors'
-import { useFestival } from '~/composables/useFestival'
+import { resolveShortLocationLabel } from '@festival/shared/venue/floors'
+import { useVenueMap } from '~/composables/useVenueMap'
+import { scheduleEntryCategory, CATEGORY_STYLE } from '~/composables/useProgramTimeline'
 
 const props = defineProps<{
   schedule: ScheduleEntry[]
 }>()
 
-const { metadata } = useFestival()
-const venueMarkers = computed(() => {
-  if (hasDeployedContracts() && metadata.value?.venueMap?.markers?.length) {
-    return metadata.value.venueMap.markers
-  }
-  return MOCK_VENUE_MAP.markers
-})
+const { markers: venueMarkers, zones: venueZones } = useVenueMap()
 
 const ROTATE_INTERVAL = 5000 // 5 seconds per card
 const PAUSE_DURATION = 15000 // 15s pause after manual interaction
@@ -51,6 +44,9 @@ const isLive = computed(() => liveEntries.value.length > 0)
 const totalCards = computed(() => spotlightEntries.value.length)
 const currentIndex = ref(0)
 const currentEntry = computed(() => spotlightEntries.value[currentIndex.value] || null)
+const currentCategory = computed(() =>
+  currentEntry.value ? CATEGORY_STYLE[scheduleEntryCategory(currentEntry.value)] : null,
+)
 
 // Progress bar (0 to 1 over ROTATE_INTERVAL)
 const progress = ref(0)
@@ -228,16 +224,17 @@ watch(totalCards, () => {
         <!-- Location link -->
         <div v-if="currentEntry.venueMarkerId" class="mt-2">
           <span class="text-xs text-primary">
-            📍 {{ getMarkerLocationLabel(currentEntry.venueMarkerId!, venueMarkers) }}
+            📍 {{ resolveShortLocationLabel(currentEntry.venueMarkerId!, venueMarkers, venueZones) }}
           </span>
         </div>
 
         <!-- Category -->
-        <div class="mt-2">
+        <div v-if="currentCategory" class="mt-2">
           <span
-            class="text-[10px] px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary"
+            class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary"
           >
-            Official
+            <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: currentCategory.color }" />
+            {{ currentCategory.label }}
           </span>
         </div>
       </div>

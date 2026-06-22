@@ -1,28 +1,13 @@
-import { ref } from 'vue'
+import { usePersistentRef } from '@festival/shared/cache/persistent'
 
-const STORAGE_KEY = 'festival-hidden-sessions'
-
-function loadHidden(): string[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    return stored ? JSON.parse(stored) : []
-  } catch {
-    return []
-  }
-}
-
-function persistHidden(addresses: string[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(addresses))
-}
-
-const hiddenAddresses = ref<string[]>(typeof window !== 'undefined' ? loadHidden() : [])
+// Durable across mobile WebView eviction; write-through is automatic.
+const hiddenAddresses = usePersistentRef<string[]>('festival-hidden-sessions', [])
 
 export function useHiddenSessions() {
   function hide(address: string) {
     const lower = address.toLowerCase()
     if (!hiddenAddresses.value.includes(lower)) {
       hiddenAddresses.value.push(lower)
-      persistHidden(hiddenAddresses.value)
     }
   }
 

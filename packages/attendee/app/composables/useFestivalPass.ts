@@ -1,12 +1,17 @@
 /**
- * Festival Pass orchestrator. Shows the activation overlay once per user.
- * Activation is tracked in two places, and the pass hides if either says
- * activated:
+ * Festival Pass orchestrator. Owns a per-user `passStatus`:
  *
- *   - localStorage `festivalPass:{festivalAddr}:{userAddr}=activated` — fast
- *     path, also set on any chain read seeing PGAS > 0 (recovers a wipe or
- *     cross-device case).
- *   - PGAS balance on Asset Hub — chain fallback when localStorage is empty.
+ *   - 'active'    — allowances granted; never re-claims (a repeat claim scales
+ *                   an extra host slot).
+ *   - 'unclaimed' — confirmed no allowance, never deferred; overlay auto-opens.
+ *   - 'deferred'  — user chose "Do it later" after a failed claim; app stays
+ *                   usable, gated actions re-prompt via ensureAllowance().
+ *   - 'unknown'   — chain read still in flight.
+ *
+ * `active` always wins. It is signalled by either the localStorage flag or a
+ * PGAS > 0 chain read (recovers a wipe / cross-device case). The localStorage
+ * key holds 'activated' | 'deferred'; 'activated' is written only on a
+ * confirmed full grant.
  *
  * No in-app refill flow for users who spend PGAS to zero.
  */
@@ -19,27 +24,32 @@ import { checkAllowancesOnChain } from '@festival/shared/host/allowances'
 import { FESTIVAL_ADDRESS } from '@festival/shared/contracts/addresses'
 import { useRegistration } from './useRegistration'
 
+type PassFlag = 'activated' | 'deferred'
+type PassStatus = 'unknown' | 'active' | 'unclaimed' | 'deferred'
+
 // Module-level state survives page nav. `phase` is reconciled against
-// `hasActivated` on every mount via the watcher below.
+// `passStatus` on every mount via the watcher below.
 const pgasGranted = ref<boolean | null>(null)
 const hasActivatedFlag = ref(false) // mirrors localStorage for the current user
+const hasDeferredFlag = ref(false)
+const activationFailed = ref(false) // drives the overlay's "Activation failed" modal
 const phase = ref<
-  'idle' | 'pass' | 'activating' | 'exploding' | 'badge' | 'notifications'
+  'idle' | 'pass' | 'activating' | 'exploding' | 'badge'
 >('idle')
 const activatedAtMs = ref<number | null>(null)
-const allocationWarning = ref<string | null>(null)
 
 function storageKey(userAddr: string): string {
   return `festivalPass:${FESTIVAL_ADDRESS}:${userAddr}`
 }
 
-function readActivatedFlag(userAddr: string): boolean {
-  if (typeof window === 'undefined') return false
+function readPassFlag(userAddr: string): PassFlag | null {
+  if (typeof window === 'undefined') return null
   try {
-    return window.localStorage.getItem(storageKey(userAddr)) === 'activated'
+    const v = window.localStorage.getItem(storageKey(userAddr))
+    return v === 'activated' || v === 'deferred' ? v : null
   } catch {
     // localStorage disabled (Safari private, quota, etc.). Chain check covers us.
-    return false
+    return null
   }
 }
 
@@ -52,6 +62,20 @@ function writeActivatedFlag(userAddr: string): void {
     }
   }
   hasActivatedFlag.value = true
+  hasDeferredFlag.value = false
+}
+
+function writeDeferredFlag(userAddr: string): void {
+  if (hasActivatedFlag.value) return // activation supersedes deferral
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(storageKey(userAddr), 'deferred')
+    } catch {
+      // Ignored — deferral just won't survive a reload; the failed modal
+      // remains reachable so the user is never locked out.
+    }
+  }
+  hasDeferredFlag.value = true
 }
 
 // Resources we request via wallet.claimAllowances. Keep in sync with `wallet.ts`.
@@ -135,27 +159,24 @@ export function useFestivalPass() {
   }
   latestRefresh = refreshAllowance
 
-  // Combined activation signal: either localStorage flag set, or chain says
-  // PGAS > 0. Once true (for this address), the pass screen never shows.
-  const hasActivated = computed(
-    () => hasActivatedFlag.value || pgasGranted.value === true,
-  )
+  const passStatus = computed<PassStatus>(() => {
+    if (hasActivatedFlag.value || pgasGranted.value === true) return 'active'
+    if (hasDeferredFlag.value) return 'deferred'
+    if (pgasGranted.value === false) return 'unclaimed'
+    return 'unknown'
+  })
+  const isPassActive = computed(() => passStatus.value === 'active')
+  const canClaim = computed(() => passStatus.value !== 'active')
 
-  // Strict "confirmed not activated" signal. `pgasGranted` starts as `null`
-  // until the chain read resolves, so `!hasActivated` alone would flash the
-  // pass on a 2nd device whose first read is still in flight after activation
-  // on another device. Mounting the overlay requires `=== false`.
-  const isUnactivatedConfirmed = computed(
-    () => !hasActivatedFlag.value && pgasGranted.value === false,
-  )
-
-  // Hydrates the localStorage flag for the current user and triggers the
+  // Hydrates the localStorage flags for the current user and triggers the
   // chain read. Resets state on disconnect / pre-checkin.
   watch(
     [address, isCheckedIn],
     ([addr, checked]) => {
+      activationFailed.value = false
       if (!addr || !checked) {
         hasActivatedFlag.value = false
+        hasDeferredFlag.value = false
         pgasGranted.value = null
         if (phase.value !== 'idle') {
           phase.value = 'idle'
@@ -166,7 +187,9 @@ export function useFestivalPass() {
         }
         return
       }
-      hasActivatedFlag.value = readActivatedFlag(addr)
+      const flag = readPassFlag(addr)
+      hasActivatedFlag.value = flag === 'activated'
+      hasDeferredFlag.value = flag === 'deferred'
       // Reset to "unknown" so a previous account's grant state can't carry over.
       pgasGranted.value = null
       void refreshAllowance()
@@ -176,16 +199,15 @@ export function useFestivalPass() {
 
   // immediate:true reconciles a stale phase on mount — e.g. the visibility
   // listener flipped activation while no consumer was watching, which would
-  // otherwise leave the pass overlay lingering.
+  // otherwise leave the pass overlay lingering. Only 'unclaimed' auto-opens;
+  // 'deferred' never re-blocks.
   watch(
-    [hasActivated, isUnactivatedConfirmed, isCheckedIn],
-    ([activated, unactivated, checked]) => {
+    [passStatus, isCheckedIn],
+    ([status, checked]) => {
       if (!checked) return
-      if (unactivated && phase.value === 'idle') {
+      if (status === 'unclaimed' && phase.value === 'idle') {
         phase.value = 'pass'
-      } else if (activated && phase.value === 'pass') {
-        // Activation detected outside the activate() flow (cross-device,
-        // late chain confirmation). Drop the overlay without ceremony.
+      } else if (status === 'active' && phase.value === 'pass') {
         phase.value = 'idle'
       }
     },
@@ -213,42 +235,38 @@ export function useFestivalPass() {
 
   // ── Activation flow ──────────────────────────────────────────────────────
 
+  // Shared claim. Host outcomes are authoritative: every activation-critical
+  // resource `Allocated` means granted. No phase/UI side effects beyond
+  // persisting a full grant — callers own the presentation.
+  async function claimAndConfirm(claimAddr: string): Promise<boolean> {
+    const claim = await wallet.claimAllowances()
+    // Bail on a mid-flow account change rather than credit a different user.
+    if (address.value !== claimAddr) return false
+    const granted =
+      claim.outcomes !== null &&
+      claim.outcomes.filter(isActivationCritical).every((o) => o.tag === 'Allocated')
+    if (granted) {
+      writeActivatedFlag(claimAddr)
+      activatedAtMs.value = Date.now()
+    } else {
+      console.warn('[useFestivalPass] allocation not granted:', claim.outcomes)
+    }
+    return granted
+  }
+
+  // Overlay path: claims with the full celebration on success, surfaces the
+  // "Activation failed" modal on reject/fail.
   async function activate(): Promise<void> {
     if (phase.value !== 'pass') return
-    // Pin the activation to the account that tapped the button; bail on
-    // any mid-flow account change rather than celebrate a different user's
-    // grant.
     const claimAddr = address.value
     if (!claimAddr) return
     phase.value = 'activating'
-    allocationWarning.value = null
+    activationFailed.value = false
     try {
-      const claim = await wallet.claimAllowances()
-      if (address.value !== claimAddr) {
-        phase.value = 'pass'
-        return
-      }
-      // Host outcomes are authoritative: every activation-critical resource
-      // `Allocated` means granted, no chain read needed. Passive
-      // refreshAllowance on mount/visibility covers wipe-recovery later.
-      const granted =
-        claim.outcomes !== null &&
-        claim.outcomes.filter(isActivationCritical).every((o) => o.tag === 'Allocated')
-      if (claim.outcomes) {
-        const missing = claim.outcomes.filter(
-          (o) => isActivationCritical(o) && o.tag !== 'Allocated',
-        )
-        if (missing.length > 0) {
-          console.warn('[useFestivalPass] partial allocation outcomes:', missing)
-          allocationWarning.value =
-            "We couldn't fully activate your pass. Please tap Activate again."
-        }
-      }
-      // Bail if disconnect/route-change reset phase under us.
+      const granted = await claimAndConfirm(claimAddr)
+      // Bail if disconnect/account-change reset phase under us.
       if (phase.value !== 'activating') return
       if (granted) {
-        writeActivatedFlag(claimAddr)
-        activatedAtMs.value = Date.now()
         phase.value = 'exploding'
         if (explodeTimer !== null) clearTimeout(explodeTimer)
         explodeTimer = setTimeout(() => {
@@ -257,10 +275,40 @@ export function useFestivalPass() {
         }, EXPLODE_DURATION_MS)
       } else {
         phase.value = 'pass'
+        activationFailed.value = true
       }
     } catch (err) {
       console.error('[useFestivalPass] activate failed:', err)
+      if (phase.value !== 'activating') return
       phase.value = 'pass'
+      activationFailed.value = true
+    }
+  }
+
+  function retryActivation(): void {
+    activationFailed.value = false
+    void activate()
+  }
+
+  function defer(): void {
+    const addr = address.value
+    if (addr) writeDeferredFlag(addr)
+    activationFailed.value = false
+    if (phase.value === 'pass' || phase.value === 'activating') {
+      phase.value = 'idle'
+    }
+  }
+
+  // Imperative gated-action path: claim without overlay or animation.
+  async function ensureAllowance(): Promise<boolean> {
+    if (isPassActive.value) return true
+    const claimAddr = address.value
+    if (!claimAddr) return false
+    try {
+      return await claimAndConfirm(claimAddr)
+    } catch (err) {
+      console.error('[useFestivalPass] ensureAllowance failed:', err)
+      return false
     }
   }
 
@@ -274,31 +322,21 @@ export function useFestivalPass() {
     }
   }
 
-  // Gating to the badge phase is what makes this fire once per fresh claim —
-  // no separate seen-flag needed.
-  function advanceToNotifications(): void {
-    if (phase.value === 'badge') {
-      phase.value = 'notifications'
-      if (explodeTimer !== null) {
-        clearTimeout(explodeTimer)
-        explodeTimer = null
-      }
-    }
-  }
-
-  function dismissNotifications(): void {
-    if (phase.value === 'notifications') {
-      phase.value = 'idle'
-    }
-  }
-
   // ── Exposed surface ──────────────────────────────────────────────────────
 
-  // Every overlay phase requires the user still in host + connected + checked-in;
-  // disconnect mid-flow drops the overlay rather than re-coloring it against
-  // an empty address.
+  // Every overlay phase requires the user still in host + connected + checked-in
+  // AND that we are actually on the home route. The route gate is a hard
+  // backstop: FestivalPassScreen teleports to <body>, so without this gate a
+  // stale composable instance (e.g. one anchored in a kept-alive page) could
+  // paint the overlay over /onboarding or any other route.
+  const route = useRoute()
   const overlayGate = computed(
-    () => isInHost() && isConnected.value && isCheckedIn.value && !!address.value,
+    () =>
+      isInHost() &&
+      isConnected.value &&
+      isCheckedIn.value &&
+      !!address.value &&
+      route.path === '/',
   )
 
   const shouldShowPass = computed(
@@ -313,10 +351,6 @@ export function useFestivalPass() {
     () => overlayGate.value && phase.value === 'badge',
   )
 
-  const shouldShowNotifications = computed(
-    () => overlayGate.value && phase.value === 'notifications',
-  )
-
   const isActivating = computed(
     () => phase.value === 'activating' || isClaimingAllowances.value,
   )
@@ -324,17 +358,20 @@ export function useFestivalPass() {
   const isExploding = computed(() => phase.value === 'exploding')
 
   return {
+    passStatus,
+    isPassActive,
+    canClaim,
     shouldShowPass,
     shouldShowBadge,
-    shouldShowNotifications,
+    activationFailed,
     isActivating,
     isExploding,
     activatedAtMs,
-    allocationWarning,
     activate,
+    retryActivation,
+    defer,
+    ensureAllowance,
     dismissBadge,
-    advanceToNotifications,
-    dismissNotifications,
     refreshAllowance,
   }
 }
