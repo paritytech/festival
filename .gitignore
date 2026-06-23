@@ -43,3 +43,6 @@ playwright-report/
 
 # Guided deploy resume state (npm run setup) — non-secret, safe to delete
 .deploy/
+
+
+scripts/local/*
