@@ -85,11 +85,11 @@ const timeRange = computed(() => {
   if (props.item.type === "official") {
     const start = parseFestivalDate(props.item.entry.start);
     const end = parseFestivalDate(props.item.entry.end);
-    return `${formatTime(start)} - ${formatTime(end)}`;
+    return `${formatTimeBerlin(start)} - ${formatTimeBerlin(end)}`;
   }
   const start = new Date(props.item.subEvent.startTime * 1000);
   const end = new Date(props.item.subEvent.endTime * 1000);
-  return `${formatTime(start)} - ${formatTime(end)}`;
+  return `${formatTimeBerlin(start)} - ${formatTimeBerlin(end)}`;
 });
 
 const venueLabel = computed(() => {
@@ -154,10 +154,6 @@ const timeClass = computed(() => {
   if (ongoing.value) return 'text-text-and-icons-primary'
   return 'text-text-muted'
 })
-
-function formatTime(d: Date): string {
-  return formatTimeBerlin(d);
-}
 
 const { flyToCounter } = useMyListFlyAnimation();
 

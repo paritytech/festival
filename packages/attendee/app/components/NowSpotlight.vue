@@ -149,10 +149,6 @@ function getCountdown(entry: ScheduleEntry): string {
   return `Starts in ${hours}h ${mins % 60}m`
 }
 
-function formatTime(iso: string) {
-  return formatTimeBerlin(iso)
-}
-
 // Lifecycle
 onMounted(() => {
   nowTimer = setInterval(() => { now.value = Date.now() }, NOW_CHECK_INTERVAL)
@@ -217,7 +213,7 @@ watch(totalCards, () => {
             {{ currentEntry.speakers.join(', ') }}
           </span>
           <span class="text-xs text-text-muted">
-            {{ formatTime(currentEntry.start) }}–{{ formatTime(currentEntry.end) }}
+            {{ formatTimeBerlin(currentEntry.start) }}–{{ formatTimeBerlin(currentEntry.end) }}
           </span>
         </div>
 

@@ -162,7 +162,7 @@ const timeRange = computed(() => {
   if (!subEvent.value) return "";
   const start = new Date(subEvent.value.startTime * 1000);
   const end = new Date(subEvent.value.endTime * 1000);
-  return `${formatTime(start)} - ${formatTime(end)}`;
+  return `${formatTimeBerlin(start)} - ${formatTimeBerlin(end)}`;
 });
 
 const dayLabel = computed(() => {
@@ -259,10 +259,6 @@ function handleReportDone() {
   reportSheetVisible.value = false;
   resetFlag();
   navigateTo("/program", { replace: true });
-}
-
-function formatTime(d: Date): string {
-  return formatTimeBerlin(d);
 }
 
 function formatDay(d: Date): string {
