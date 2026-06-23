@@ -70,20 +70,10 @@ onUnmounted(() => {
           </svg>
         </div>
         <div class="star star-2 is-mid" :class="{ 'is-bursting': burst2 }">
-          <svg viewBox="0 0 335 335" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M301.402 32.7049L242.743 147.83L334.107 239.194L206.489 218.982L147.83 334.107L127.617 206.489L-2.84458e-06 186.277L115.125 127.618L94.9127 0.000169247L186.277 91.3642L301.402 32.7049Z"
-              fill="#FFFFFF"
-            />
-          </svg>
+          <StarBurstIcon />
         </div>
         <div class="star star-3 is-last" :class="{ 'is-bursting': burst3 }">
-          <svg viewBox="0 0 335 335" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M301.402 32.7049L242.743 147.83L334.107 239.194L206.489 218.982L147.83 334.107L127.617 206.489L-2.84458e-06 186.277L115.125 127.618L94.9127 0.000169247L186.277 91.3642L301.402 32.7049Z"
-              fill="#FFFFFF"
-            />
-          </svg>
+          <StarBurstIcon />
         </div>
       </div>
 
