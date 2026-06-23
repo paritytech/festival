@@ -27,7 +27,7 @@ import {
 } from "@festival/shared/venue/floors";
 import { useVenueMap } from "~/composables/useVenueMap";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
-import { formatTimeBerlin } from "@festival/shared/utils/time";
+import { formatTimeBerlin, MS_PER_MINUTE } from "@festival/shared/utils/time";
 import { truncate } from "@festival/shared/utils/text";
 
 const { metadata: festivalMetadata } = useFestival();
@@ -92,7 +92,7 @@ function getSessionSubtitle(session: AttendeeSubEvent): string {
   if (isSessionOngoing(session)) return `Session ongoing · ${joiners}`;
   const diff = session.startTime * 1000 - Date.now();
   if (diff <= 0) return joiners;
-  const totalMin = Math.floor(diff / 60_000);
+  const totalMin = Math.floor(diff / MS_PER_MINUTE);
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
   let countdown = "";

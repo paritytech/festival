@@ -13,6 +13,13 @@ contract Festival is NonTransferableERC721, AccessControlEnumerable {
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     bytes32 public constant VOLUNTEER_ROLE = keccak256("VOLUNTEER_ROLE");
 
+    // ── Session Constants ──
+
+    /// @dev Festival days are festival-relative buckets of this many seconds.
+    uint256 private constant SECONDS_PER_DAY = 86400;
+    /// @dev A creator may open at most this many sessions per festival day.
+    uint256 private constant MAX_SESSIONS_PER_CREATOR_PER_DAY = 2;
+
     // ── Errors ──
 
     error AlreadyRegistered();
@@ -232,9 +239,11 @@ contract Festival is NonTransferableERC721, AccessControlEnumerable {
         if (_startTimestamp < startTime) revert SessionStartsBeforeFestival();
         if (_endTimestamp > endTime) revert SessionEndsAfterFestival();
 
-        // Session limit: max 2 per creator per festival day
-        uint256 dayIndex = (uint256(_startTimestamp) - uint256(startTime)) / 86400;
-        if (sessionsPerDay[msg.sender][dayIndex] >= 2) revert SessionLimitReached();
+        // Session limit: max MAX_SESSIONS_PER_CREATOR_PER_DAY per creator per festival day
+        uint256 dayIndex = (uint256(_startTimestamp) - uint256(startTime)) / SECONDS_PER_DAY;
+        if (sessionsPerDay[msg.sender][dayIndex] >= MAX_SESSIONS_PER_CREATOR_PER_DAY) {
+            revert SessionLimitReached();
+        }
         sessionsPerDay[msg.sender][dayIndex]++;
 
         // Deploy session
@@ -294,7 +303,7 @@ contract Festival is NonTransferableERC721, AccessControlEnumerable {
             if (!session.hasRole(session.DEFAULT_ADMIN_ROLE(), msg.sender)) {
                 revert NotAuthorizedToCancelSession();
             }
-            uint256 dayIndex = (uint256(session.startTime()) - uint256(startTime)) / 86400;
+            uint256 dayIndex = (uint256(session.startTime()) - uint256(startTime)) / SECONDS_PER_DAY;
             sessionsPerDay[creator_][dayIndex]--;
         }
 

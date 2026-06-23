@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { isHappeningNow, timeUntil, formatTimeBerlin, parseFestivalDate } from '@festival/shared/utils/time'
+import { isHappeningNow, timeUntil, formatTimeBerlin, parseFestivalDate, MS_PER_MINUTE } from '@festival/shared/utils/time'
 import type { ScheduleEntry } from '@festival/shared/metadata/schemas'
 import { resolveShortLocationLabel } from '@festival/shared/venue/floors'
 import { useVenueMap } from '~/composables/useVenueMap'
@@ -142,7 +142,7 @@ function handleClick() {
 function getCountdown(entry: ScheduleEntry): string {
   const diff = parseFestivalDate(entry.start).getTime() - now.value
   if (diff <= 0) return ''
-  const mins = Math.floor(diff / 60000)
+  const mins = Math.floor(diff / MS_PER_MINUTE)
   if (mins < 1) return 'Starting now'
   if (mins < 60) return `Starts in ${mins} min`
   const hours = Math.floor(mins / 60)

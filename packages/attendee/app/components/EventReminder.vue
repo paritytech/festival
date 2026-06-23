@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import type { ScheduleEntry, VenueMarker, VenueZone } from '@festival/shared/metadata/schemas'
 import { resolveShortLocationLabel } from '@festival/shared/venue/floors'
-import { formatTimeBerlin, toBerlinDateKey, parseFestivalDate } from '@festival/shared/utils/time'
+import { formatTimeBerlin, toBerlinDateKey, parseFestivalDate, MS_PER_MINUTE } from '@festival/shared/utils/time'
 
 const props = withDefaults(defineProps<{
   entries: ScheduleEntry[]
@@ -38,7 +38,7 @@ const state = computed<ReminderState>(() => {
       (a, b) => parseFestivalDate(a.start).getTime() - parseFestivalDate(b.start).getTime(),
     )[0]
     const diffMs = parseFestivalDate(first.start).getTime() - now
-    const totalMinutes = Math.max(Math.floor(diffMs / 60_000), 0)
+    const totalMinutes = Math.max(Math.floor(diffMs / MS_PER_MINUTE), 0)
     const days = Math.floor(totalMinutes / (60 * 24))
     const hours = Math.floor((totalMinutes - days * 60 * 24) / 60)
     const minutes = totalMinutes - days * 60 * 24 - hours * 60
@@ -78,7 +78,7 @@ const state = computed<ReminderState>(() => {
   // Next session is not today → hidden (day is over or gap day)
   if (nextBerlin !== nowBerlin) return { type: 'hidden' }
 
-  const diffMin = Math.floor((parseFestivalDate(next.start).getTime() - now) / 60_000)
+  const diffMin = Math.floor((parseFestivalDate(next.start).getTime() - now) / MS_PER_MINUTE)
 
   if (diffMin < 30) {
     return { type: 'next-min', entry: next, minutes: Math.max(diffMin, 1) }
