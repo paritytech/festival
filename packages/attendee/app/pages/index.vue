@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import IconAdd from "~icons/ic/round-add";
+import IconArrowForward from "~icons/ic/round-arrow-forward";
+import IconLock from "~icons/ic/round-lock";
 import { useFestival } from "~/composables/useFestival";
 import { useNow } from "~/composables/useNow";
 import { useRegistration } from "~/composables/useRegistration";
@@ -197,22 +200,7 @@ function getMyListRoute(item: TimelineItem): string {
       >
         <span class="flex w-full items-center justify-between px-5 h-14">
           <span class="text-lg font-semibold">Activate your pass</span>
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-          >
-            <path
-              d="M5 12h14M13 6l6 6-6 6"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <IconArrowForward style="width: 22px; height: 22px" aria-hidden="true" />
         </span>
       </button>
       <HomePassport class="relative z-[1] mb-14" />
@@ -243,18 +231,7 @@ function getMyListRoute(item: TimelineItem): string {
         <div
           class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
         >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M18 8.5H17V6.5C17 3.74 14.76 1.5 12 1.5C9.24 1.5 7 3.74 7 6.5V8.5H6C4.9 8.5 4 9.4 4 10.5V20.5C4 21.6 4.9 22.5 6 22.5H18C19.1 22.5 20 21.6 20 20.5V10.5C20 9.4 19.1 8.5 18 8.5ZM12 17.5C10.9 17.5 10 16.6 10 15.5C10 14.4 10.9 13.5 12 13.5C13.1 13.5 14 14.4 14 15.5C14 16.6 13.1 17.5 12 17.5ZM9 8.5V6.5C9 4.84 10.34 3.5 12 3.5C13.66 3.5 15 4.84 15 6.5V8.5H9Z"
-              fill="#C600AA"
-            />
-          </svg>
+          <IconLock style="width: 18px; height: 18px; color: #c600aa" />
         </div>
         <img
           src="/host-schedule-img.svg"
@@ -281,18 +258,7 @@ function getMyListRoute(item: TimelineItem): string {
         <div
           class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
         >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M18 8.5H17V6.5C17 3.74 14.76 1.5 12 1.5C9.24 1.5 7 3.74 7 6.5V8.5H6C4.9 8.5 4 9.4 4 10.5V20.5C4 21.6 4.9 22.5 6 22.5H18C19.1 22.5 20 21.6 20 20.5V10.5C20 9.4 19.1 8.5 18 8.5ZM12 17.5C10.9 17.5 10 16.6 10 15.5C10 14.4 10.9 13.5 12 13.5C13.1 13.5 14 14.4 14 15.5C14 16.6 13.1 17.5 12 17.5ZM9 8.5V6.5C9 4.84 10.34 3.5 12 3.5C13.66 3.5 15 4.84 15 6.5V8.5H9Z"
-              fill="#728806"
-            />
-          </svg>
+          <IconLock style="width: 18px; height: 18px; color: #728806" />
         </div>
         <img
           src="/build-schedule-img.svg"
@@ -319,18 +285,7 @@ function getMyListRoute(item: TimelineItem): string {
         <div
           class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
         >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M18 8.5H17V6.5C17 3.74 14.76 1.5 12 1.5C9.24 1.5 7 3.74 7 6.5V8.5H6C4.9 8.5 4 9.4 4 10.5V20.5C4 21.6 4.9 22.5 6 22.5H18C19.1 22.5 20 21.6 20 20.5V10.5C20 9.4 19.1 8.5 18 8.5ZM12 17.5C10.9 17.5 10 16.6 10 15.5C10 14.4 10.9 13.5 12 13.5C13.1 13.5 14 14.4 14 15.5C14 16.6 13.1 17.5 12 17.5ZM9 8.5V6.5C9 4.84 10.34 3.5 12 3.5C13.66 3.5 15 4.84 15 6.5V8.5H9Z"
-              fill="#9462FA"
-            />
-          </svg>
+          <IconLock style="width: 18px; height: 18px; color: #9462fa" />
         </div>
         <img
           src="/collect.svg"
@@ -362,7 +317,7 @@ function getMyListRoute(item: TimelineItem): string {
           class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-and-icons-primary"
           aria-label="Host a session"
         >
-          <PlusIcon :size="18" />
+          <IconAdd style="width: 18px; height: 18px" />
         </NuxtLink>
       </div>
       <div class="space-y-2">
@@ -398,7 +353,7 @@ function getMyListRoute(item: TimelineItem): string {
           to="/program?tab=mylist"
           class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-and-icons-primary"
         >
-          <ArrowRightIcon />
+          <IconArrowForward style="width: 16px; height: 16px" />
         </NuxtLink>
       </div>
       <div
@@ -449,20 +404,7 @@ function getMyListRoute(item: TimelineItem): string {
         <div
           class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#C600AA"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+          <IconAdd style="width: 18px; height: 18px; color: #c600aa" />
         </div>
         <img
           src="/host-schedule-img.svg"
@@ -488,20 +430,7 @@ function getMyListRoute(item: TimelineItem): string {
         <div
           class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#728806"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+          <IconAdd style="width: 18px; height: 18px; color: #728806" />
         </div>
         <img
           src="/build-schedule-img.svg"
@@ -528,20 +457,7 @@ function getMyListRoute(item: TimelineItem): string {
         <div
           class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#9462FA"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+          <IconAdd style="width: 18px; height: 18px; color: #9462fa" />
         </div>
         <img
           src="/collect.svg"

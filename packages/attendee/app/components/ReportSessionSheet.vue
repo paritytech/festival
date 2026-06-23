@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import IconFlag from '~icons/ic/round-flag'
+import IconCheck from '~icons/ic/round-check'
 import type { TxStatus } from '@festival/shared/contracts/write'
 
 const props = defineProps<{
@@ -40,17 +42,13 @@ const isPending = computed(
             v-if="!isSuccess"
             class="w-14 h-14 rounded-full bg-danger flex items-center justify-center"
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 21V5h11l-1.5 4L16 13H5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <IconFlag style="width: 22px; height: 22px; color: white" />
           </div>
           <div
             v-else
             class="w-14 h-14 rounded-full bg-success flex items-center justify-center"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 12.5L10 17.5L19 7.5" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <IconCheck style="width: 24px; height: 24px; color: white" />
           </div>
 
           <div class="flex flex-col gap-1 items-center text-center w-full p-2">

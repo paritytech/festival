@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import type { FestivalDay } from '@festival/shared'
 import PillButton from './ui/PillButton.vue'
+import IconCalendar from '~icons/ic/round-calendar-month'
 
 const props = defineProps<{
   days: FestivalDay[]
@@ -63,16 +64,10 @@ watch(
   <div data-testid="session-date-picker">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="currentColor"
+        <IconCalendar
+          style="width:18px;height:18px"
           class="text-text-and-icons-primary shrink-0"
-        >
-          <path d="M20 3H19V2C19 1.45 18.55 1 18 1C17.45 1 17 1.45 17 2V3H7V2C7 1.45 6.55 1 6 1C5.45 1 5 1.45 5 2V3H4C2.9 3 2 3.9 2 5V21C2 22.1 2.9 23 4 23H20C21.1 23 22 22.1 22 21V5C22 3.9 21.1 3 20 3ZM19 21H5C4.45 21 4 20.55 4 20V8H20V20C20 20.55 19.55 21 19 21Z" />
-        </svg>
+        />
         <span class="text-sm text-text-and-icons-primary">Session Date</span>
       </div>
       <PillButton

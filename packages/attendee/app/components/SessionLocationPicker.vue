@@ -13,6 +13,7 @@ import {
 import { isMarkerAllowedAsSessionLocation } from '@festival/shared/venue/categories'
 import VenueMap from '~/components/VenueMap.vue'
 import FloorControl from '~/components/FloorControl.vue'
+import IconClose from '~icons/ic/round-close'
 
 const props = withDefaults(
   defineProps<{
@@ -182,10 +183,7 @@ function handleDone() {
           aria-label="Close"
           @click="emit('cancel')"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <IconClose style="width:24px;height:24px" />
         </button>
         <h1 class="slp__title">{{ title }}</h1>
         <button

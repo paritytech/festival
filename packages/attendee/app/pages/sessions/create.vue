@@ -34,6 +34,8 @@ import {
   formatTimeLabel,
   type SessionTimeValidationFailReason,
 } from "@festival/shared";
+import IconClose from "~icons/ic/round-close";
+import IconChevronLeft from "~icons/ic/round-chevron-left";
 
 const wallet = useWalletStore();
 const { metadata: festivalMetadata, details: festivalDetails } = useFestival();
@@ -470,24 +472,13 @@ async function doCreate() {
         @click="currentStep === 1 ? handleClose() : goBack()"
       >
         <!-- X icon (step 1) -->
-        <svg
+        <IconClose
           v-if="currentStep === 1"
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          style="width:24px;height:24px"
           class="text-white"
-        >
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
+        />
         <!-- Back arrow (steps 2-3) -->
-        <BackIcon v-else class="text-text-and-icons-primary" />
+        <IconChevronLeft v-else style="width:24px;height:24px" class="text-text-and-icons-primary" />
       </button>
 
       <!-- Centered title -->

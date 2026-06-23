@@ -21,6 +21,9 @@ import type { BookmarkPayload } from "~/composables/useBookmarks";
 import { useMyListFlyAnimation } from "~/composables/useMyListFlyAnimation";
 import { formatTimeBerlin, parseFestivalDate } from "@festival/shared/utils/time";
 import { truncate } from "@festival/shared/utils/text";
+import IconEdit from "~icons/ic/round-edit";
+import IconStar from "~icons/ic/round-star";
+import IconStarOutline from "~icons/ic/round-star-border";
 
 const props = withDefaults(
   defineProps<{
@@ -221,7 +224,7 @@ function onStarTap(e: MouseEvent) {
               class="shrink-0 p-1 -mr-1 mt-0.5 text-black"
               @click.stop
             >
-              <PencilIcon :size="18" />
+              <IconEdit style="width:18px;height:18px" />
             </NuxtLink>
 
             <!-- Non-owner: bookmark star -->
@@ -235,19 +238,8 @@ function onStarTap(e: MouseEvent) {
               ]"
               @click.prevent.stop="onStarTap"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                :fill="isBookmarked ? 'currentColor' : 'none'"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <polygon
-                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-                />
-              </svg>
+              <IconStar v-if="isBookmarked" style="width:18px;height:18px" />
+              <IconStarOutline v-else style="width:18px;height:18px" />
             </button>
           </template>
         </div>

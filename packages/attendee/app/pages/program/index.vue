@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from "vue";
+import IconAdd from "~icons/ic/round-add";
+import IconChevronUp from "~icons/ic/round-keyboard-arrow-up";
 import {
   useProgramTimeline,
   getItemId,
@@ -459,19 +461,7 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
         class="fixed bottom-[calc(var(--safe-bottom)+170px)] right-4 md:bottom-[calc(var(--safe-bottom)+90px)] md:right-[calc(var(--col-r)+1rem)] z-40 w-10 h-10 bg-surface-3 rounded-full flex items-center justify-center border border-white/12"
         @click="scrollToTop"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="18 15 12 9 6 15" />
-        </svg>
+        <IconChevronUp style="width: 18px; height: 18px" />
       </button>
     </Transition>
 
@@ -492,7 +482,7 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
       >
         Host your own session
       </span>
-      <PlusIcon :size="22" :stroke-width="2" class="shrink-0 text-black" />
+      <IconAdd class="shrink-0 text-black" style="width: 22px; height: 22px" />
     </NuxtLink>
   </div>
 </template>

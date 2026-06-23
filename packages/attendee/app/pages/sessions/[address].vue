@@ -29,6 +29,7 @@ import {
   ss58ToH160,
   isValidEvmAddress,
 } from "@festival/shared/utils/address";
+import IconEdit from "~icons/ic/round-edit";
 
 definePageMeta({
   validate: (route) => isValidEvmAddress(route.params.address as string),
@@ -299,7 +300,7 @@ function formatDay(d: Date): string {
         :to="`/my/manage/${addr}/edit`"
         class="w-10 h-10 flex items-center justify-center"
       >
-        <PencilIcon :size="22" class="text-white" />
+        <IconEdit style="width:22px;height:22px" class="text-white" />
       </NuxtLink>
     </template>
 

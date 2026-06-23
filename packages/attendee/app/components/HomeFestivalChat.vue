@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import IconArrowForward from '~icons/ic/round-arrow-forward'
 </script>
 
 <template>
@@ -21,7 +22,7 @@
     <div
       class="w-9 h-9 shrink-0 rounded-full bg-surface-3 flex items-center justify-center text-text-and-icons-primary"
     >
-      <ArrowRightIcon />
+      <IconArrowForward style="width: 16px; height: 16px" />
     </div>
   </NuxtLink>
 </template>

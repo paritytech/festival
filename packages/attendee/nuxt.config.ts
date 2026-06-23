@@ -56,6 +56,9 @@ export default defineNuxtConfig({
     },
     plugins: [
       import('@tailwindcss/vite').then((m) => m.default()),
+      // Material icons compiled at build time (no runtime Iconify API fetch —
+      // required by the host sandbox). Icons referenced as `~icons/<set>/<name>`.
+      import('unplugin-icons/vite').then((m) => m.default({ compiler: 'vue3' })),
     ],
   },
 
