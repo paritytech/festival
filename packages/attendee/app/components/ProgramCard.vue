@@ -56,7 +56,7 @@ const isOwner = computed(() => {
 });
 
 const accentColor = computed(() => {
-  if (past.value) return "#44403c"; // stone-700
+  if (past.value) return "var(--color-stone-700)";
   return CATEGORY_STYLE[getItemCategory(props.item)].color;
 });
 

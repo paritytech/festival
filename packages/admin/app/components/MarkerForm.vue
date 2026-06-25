@@ -212,9 +212,9 @@ function categoryLabel(cat: MarkerCategory): string {
 .cat-pill {
   padding: 6px 14px;
   border-radius: 9999px;
-  border: 1px solid var(--color-border, #2a2a2a);
+  border: 1px solid var(--color-border);
   background: transparent;
-  color: var(--color-text-secondary, #999);
+  color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -226,9 +226,9 @@ function categoryLabel(cat: MarkerCategory): string {
 .type-pill {
   padding: 6px 10px;
   border-radius: 8px;
-  border: 1px solid var(--color-border, #2a2a2a);
+  border: 1px solid var(--color-border);
   background: transparent;
-  color: var(--color-text-secondary, #999);
+  color: var(--color-text-secondary);
   font-size: 12px;
   cursor: pointer;
   transition: background 150ms, color 150ms, border-color 150ms;
