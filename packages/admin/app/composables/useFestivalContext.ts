@@ -15,6 +15,9 @@ function deepCopy<T>(obj: T): T {
 /** `txError` sentinel set when publish() aborts on a concurrent-change conflict. */
 export const PUBLISH_CONFLICT = 'CONFLICT'
 
+/** How long the success state lingers before tx status resets to idle. */
+const TX_STATUS_RESET_MS = 3000
+
 export interface FestivalContext {
   address: string
   userRoles: Ref<FestivalRole[]>
@@ -180,7 +183,7 @@ export function provideFestivalContext(address: string) {
         // Non-critical. Next reload picks it up.
       }
 
-      setTimeout(() => { txStatus.value = 'idle' }, 3000)
+      setTimeout(() => { txStatus.value = 'idle' }, TX_STATUS_RESET_MS)
     } catch (e: any) {
       txStatus.value = 'error'
       txError.value = e.message

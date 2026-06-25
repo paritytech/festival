@@ -2,6 +2,9 @@ import { berlinHourToDate } from '../sessions/timeWindow'
 
 const BERLIN_TZ = 'Europe/Berlin'
 
+/** Milliseconds in one minute. Used wherever a ms delta is rendered as minutes. */
+export const MS_PER_MINUTE = 60_000
+
 type DateInput = Date | string
 
 /**
@@ -152,7 +155,7 @@ export const SESSION_CHECKIN_GRACE_MS = 59 * 60 * 1000
  */
 export function formatCountdown(ms: number): string {
   if (ms <= 0) return '0m'
-  const totalMinutes = Math.ceil(ms / 60_000)
+  const totalMinutes = Math.ceil(ms / MS_PER_MINUTE)
   const h = Math.floor(totalMinutes / 60)
   const m = totalMinutes % 60
   if (h === 0) return `${m}m`
@@ -168,7 +171,7 @@ export function formatCountdown(ms: number): string {
  * state flips to ended.
  */
 export function formatClosesIn(ms: number): string {
-  const minutes = Math.max(1, Math.ceil(ms / 60_000))
+  const minutes = Math.max(1, Math.ceil(ms / MS_PER_MINUTE))
   return `${minutes} min`
 }
 
@@ -177,7 +180,7 @@ export function timeUntil(isoDate: string): string {
   const diff = parseFestivalDate(isoDate).getTime() - Date.now()
   if (diff <= 0) return 'now'
 
-  const minutes = Math.floor(diff / 60_000)
+  const minutes = Math.floor(diff / MS_PER_MINUTE)
   if (minutes < 1) return 'in less than a minute'
   if (minutes < 60) return `in ${minutes} minute${minutes !== 1 ? 's' : ''}`
 

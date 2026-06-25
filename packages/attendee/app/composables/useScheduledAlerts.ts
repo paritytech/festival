@@ -6,10 +6,11 @@ import {
 } from '@festival/shared/host/notifications'
 import { requestNotificationsPermission } from '@festival/shared/host/permissions'
 import { usePersistentRef } from '@festival/shared/cache/persistent'
+import { MS_PER_MINUTE } from '@festival/shared/utils/time'
 
 const STORAGE_KEY = 'festival-scheduled-alert-ids'
-const LEAD_TIME_MS = 10 * 60_000
-const LEAD_MINUTES = Math.round(LEAD_TIME_MS / 60_000)
+const LEAD_TIME_MS = 10 * MS_PER_MINUTE
+const LEAD_MINUTES = Math.round(LEAD_TIME_MS / MS_PER_MINUTE)
 
 export interface ScheduleAlertInput {
   id: string         // sessionId (schedule entry id or sub-event address)

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useFestivalContext } from '~/composables/useFestivalContext'
 import { useFestival } from '~/composables/useFestival'
 import { usePermissions } from '~/composables/usePermissions'
-import type { ScheduleEntry } from '@festival/shared/metadata/schemas'
+import { useScheduleEditor } from '~/composables/useScheduleEditor'
 import { getMarkerLabel } from '@festival/shared/venue/floors'
-import { timestampToInputBounds, formatTimeBerlin, parseFestivalDate } from '@festival/shared/utils/time'
+import { timestampToInputBounds, formatTimeBerlin } from '@festival/shared/utils/time'
 
 definePageMeta({ layout: 'festival' })
 
@@ -21,66 +21,16 @@ const festivalBounds = computed(() => {
 })
 const { canEditMetadata } = usePermissions(userRoles)
 
-const editingEntry = ref<ScheduleEntry | null>(null)
-const showForm = ref(false)
-let idCounter = 100
-
-const sorted = computed(() =>
-  [...draft.schedule].sort((a, b) => parseFestivalDate(a.start).getTime() - parseFestivalDate(b.start).getTime()),
-)
+const {
+  sorted, editingEntry, showForm,
+  openAdd, openEdit, saveEntry, removeEntry, moveUp, moveDown, cancelEdit,
+} = useScheduleEditor(draft.schedule)
 
 const markers = computed(() => draft.venueMap?.markers || [])
 
 function formatTime(iso: string) {
   if (!iso) return '—'
   return formatTimeBerlin(iso)
-}
-
-function openAdd() {
-  editingEntry.value = {
-    id: `entry-${Date.now()}-${idCounter++}`,
-    start: '', end: '', title: '', description: '', speakers: [],
-  }
-  showForm.value = true
-}
-
-function openEdit(entry: ScheduleEntry) {
-  editingEntry.value = { ...entry, speakers: [...entry.speakers] }
-  showForm.value = true
-}
-
-function saveEntry(entry: ScheduleEntry) {
-  const idx = draft.schedule.findIndex(e => e.id === entry.id)
-  if (idx >= 0) {
-    draft.schedule[idx] = { ...entry }
-  } else {
-    draft.schedule.push({ ...entry })
-  }
-  showForm.value = false
-  editingEntry.value = null
-}
-
-function removeEntry(id: string) {
-  const idx = draft.schedule.findIndex(e => e.id === id)
-  if (idx >= 0) draft.schedule.splice(idx, 1)
-}
-
-function moveUp(id: string) {
-  const idx = draft.schedule.findIndex(e => e.id === id)
-  if (idx > 0) {
-    const temp = draft.schedule[idx]
-    draft.schedule[idx] = draft.schedule[idx - 1]
-    draft.schedule[idx - 1] = temp
-  }
-}
-
-function moveDown(id: string) {
-  const idx = draft.schedule.findIndex(e => e.id === id)
-  if (idx < draft.schedule.length - 1) {
-    const temp = draft.schedule[idx]
-    draft.schedule[idx] = draft.schedule[idx + 1]
-    draft.schedule[idx + 1] = temp
-  }
 }
 </script>
 
@@ -106,7 +56,7 @@ function moveDown(id: string) {
         :min-datetime="festivalBounds?.start.datetimeLocal"
         :max-datetime="festivalBounds?.end.datetimeLocal"
         @save="saveEntry"
-        @cancel="() => { showForm = false; editingEntry = null }"
+        @cancel="cancelEdit"
       />
     </div>
 

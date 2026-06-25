@@ -12,7 +12,7 @@ import {
   parseCoordLocation,
 } from '@festival/shared/venue/floors'
 import { DEFAULT_ZONES } from '@festival/shared/venue/zones'
-import { parseFestivalDate } from '@festival/shared/utils/time'
+import { parseFestivalDate, MS_PER_MINUTE } from '@festival/shared/utils/time'
 import type { UserSpot } from '@festival/shared/venue/map-engine-ml'
 import { useFestival } from './useFestival'
 import { useSubEvents } from './useSubEvents'
@@ -183,7 +183,7 @@ export function useAttendeeMap() {
       .filter(c => c.startMs > now && c.startMs - now <= 60 * 60 * 1000)
       .sort((a, b) => a.startMs - b.startMs)[0]
     if (!upcoming) return null
-    const minutes = Math.max(1, Math.round((upcoming.startMs - now) / 60_000))
+    const minutes = Math.max(1, Math.round((upcoming.startMs - now) / MS_PER_MINUTE))
     return { kind: 'soon', source: upcoming.source, title: upcoming.title, minutes, route: upcoming.route }
   }
 

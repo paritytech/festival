@@ -1,14 +1,7 @@
 import { AbiEvent } from 'ox'
+import { bytesToHex } from 'viem'
 import { useMainClient } from '../host/client'
 import { FestivalABI } from '../contracts/abis'
-
-function bytesToHex(bytes: Uint8Array): `0x${string}` {
-  let hex = '0x'
-  for (let i = 0; i < bytes.length; i++) {
-    hex += bytes[i].toString(16).padStart(2, '0')
-  }
-  return hex as `0x${string}`
-}
 
 export interface FestivalEventHandlers {
   onMetadataUpdated?: (newCid: `0x${string}`) => void

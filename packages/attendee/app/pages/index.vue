@@ -27,7 +27,7 @@ import {
 } from "@festival/shared/venue/floors";
 import { useVenueMap } from "~/composables/useVenueMap";
 import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
-import { formatTimeBerlin } from "@festival/shared/utils/time";
+import { formatTimeBerlin, MS_PER_MINUTE } from "@festival/shared/utils/time";
 import { truncate } from "@festival/shared/utils/text";
 
 const { metadata: festivalMetadata } = useFestival();
@@ -51,6 +51,33 @@ const collectBadgesTo = computed(() =>
 const hostSessionTo = computed(() =>
   hasSeenOnboarding("host-session") ? "/sessions/create" : "/sessions/host",
 );
+
+// Shared content for the Host / Build / Collect feature cards, rendered both
+// locked (pre-check-in) and unlocked (as links). See <HomeFeatureCard>.
+const HOST_FEATURE = {
+  bg: "bg-magenta",
+  accent: "#C600AA",
+  image: "/host-schedule-img.svg",
+  imageClass: "absolute -bottom-1 right-[-10px] h-[140px]",
+  title: "Host your own session",
+  subtitle: "You can host two sessions",
+};
+const BUILD_FEATURE = {
+  bg: "bg-olive",
+  accent: "#728806",
+  image: "/build-schedule-img.svg",
+  imageClass: "absolute -bottom-1 right-0 h-[130px]",
+  title: "Build your schedule",
+  subtitle: "Save sessions from the Program",
+};
+const COLLECT_FEATURE = {
+  bg: "bg-community",
+  accent: "#9462FA",
+  image: "/collect.svg",
+  imageClass: "absolute bottom-[1px] right-[-7px] h-[135px]",
+  title: "Collect more badges",
+  subtitle: "Earn badges by attending community sessions.",
+};
 const { myList } = useProgramTimeline();
 const wallet = useWalletStore();
 
@@ -92,7 +119,7 @@ function getSessionSubtitle(session: AttendeeSubEvent): string {
   if (isSessionOngoing(session)) return `Session ongoing · ${joiners}`;
   const diff = session.startTime * 1000 - Date.now();
   if (diff <= 0) return joiners;
-  const totalMin = Math.floor(diff / 60_000);
+  const totalMin = Math.floor(diff / MS_PER_MINUTE);
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
   let countdown = "";
@@ -236,119 +263,9 @@ function getMyListRoute(item: TimelineItem): string {
       </h3>
 
       <div class="space-y-6">
-      <div
-        class="block rounded-3xl bg-magenta relative overflow-hidden"
-        data-testid="locked-host-card"
-      >
-        <div
-          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M18 8.5H17V6.5C17 3.74 14.76 1.5 12 1.5C9.24 1.5 7 3.74 7 6.5V8.5H6C4.9 8.5 4 9.4 4 10.5V20.5C4 21.6 4.9 22.5 6 22.5H18C19.1 22.5 20 21.6 20 20.5V10.5C20 9.4 19.1 8.5 18 8.5ZM12 17.5C10.9 17.5 10 16.6 10 15.5C10 14.4 10.9 13.5 12 13.5C13.1 13.5 14 14.4 14 15.5C14 16.6 13.1 17.5 12 17.5ZM9 8.5V6.5C9 4.84 10.34 3.5 12 3.5C13.66 3.5 15 4.84 15 6.5V8.5H9Z"
-              fill="#C600AA"
-            />
-          </svg>
-        </div>
-        <img
-          src="/host-schedule-img.svg"
-          class="absolute -bottom-1 right-[-10px] h-[140px]"
-          alt=""
-        />
-        <div class="relative z-[1] p-3 pr-[50%]">
-          <p class="text-2xl font-semibold text-text-and-icons-primary">
-            Host your own session
-          </p>
-          <p class="text-xs leading-[18px] text-text-and-icons-secondary mt-1 min-h-[2lh]">
-            You can host two sessions
-          </p>
-        </div>
-        <div
-          class="absolute inset-0 bg-black/45 z-20 pointer-events-none rounded-3xl"
-        />
-      </div>
-
-      <div
-        class="block rounded-3xl bg-olive relative overflow-hidden"
-        data-testid="locked-build-card"
-      >
-        <div
-          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M18 8.5H17V6.5C17 3.74 14.76 1.5 12 1.5C9.24 1.5 7 3.74 7 6.5V8.5H6C4.9 8.5 4 9.4 4 10.5V20.5C4 21.6 4.9 22.5 6 22.5H18C19.1 22.5 20 21.6 20 20.5V10.5C20 9.4 19.1 8.5 18 8.5ZM12 17.5C10.9 17.5 10 16.6 10 15.5C10 14.4 10.9 13.5 12 13.5C13.1 13.5 14 14.4 14 15.5C14 16.6 13.1 17.5 12 17.5ZM9 8.5V6.5C9 4.84 10.34 3.5 12 3.5C13.66 3.5 15 4.84 15 6.5V8.5H9Z"
-              fill="#728806"
-            />
-          </svg>
-        </div>
-        <img
-          src="/build-schedule-img.svg"
-          class="absolute -bottom-1 right-0 h-[130px]"
-          alt=""
-        />
-        <div class="relative z-[1] p-3 pr-[50%]">
-          <p class="text-2xl font-semibold text-text-and-icons-primary">
-            Build your schedule
-          </p>
-          <p class="text-xs leading-[18px] text-text-and-icons-secondary mt-1 min-h-[2lh]">
-            Save sessions from the Program
-          </p>
-        </div>
-        <div
-          class="absolute inset-0 bg-black/45 z-20 pointer-events-none rounded-3xl"
-        />
-      </div>
-
-      <div
-        class="block rounded-3xl bg-community relative overflow-hidden"
-        data-testid="locked-collect-card"
-      >
-        <div
-          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M18 8.5H17V6.5C17 3.74 14.76 1.5 12 1.5C9.24 1.5 7 3.74 7 6.5V8.5H6C4.9 8.5 4 9.4 4 10.5V20.5C4 21.6 4.9 22.5 6 22.5H18C19.1 22.5 20 21.6 20 20.5V10.5C20 9.4 19.1 8.5 18 8.5ZM12 17.5C10.9 17.5 10 16.6 10 15.5C10 14.4 10.9 13.5 12 13.5C13.1 13.5 14 14.4 14 15.5C14 16.6 13.1 17.5 12 17.5ZM9 8.5V6.5C9 4.84 10.34 3.5 12 3.5C13.66 3.5 15 4.84 15 6.5V8.5H9Z"
-              fill="#9462FA"
-            />
-          </svg>
-        </div>
-        <img
-          src="/collect.svg"
-          class="absolute bottom-[1px] right-[-7px] h-[135px]"
-          alt=""
-        />
-        <div class="relative z-[1] p-3 pr-[50%]">
-          <p class="text-2xl font-semibold text-text-and-icons-primary">
-            Collect more badges
-          </p>
-          <p class="text-xs leading-[18px] text-text-and-icons-secondary mt-1 min-h-[2lh]">
-            Earn badges by attending community sessions.
-          </p>
-        </div>
-        <div
-          class="absolute inset-0 bg-black/45 z-20 pointer-events-none rounded-3xl"
-        />
-      </div>
+        <HomeFeatureCard v-bind="HOST_FEATURE" data-testid="locked-host-card" />
+        <HomeFeatureCard v-bind="BUILD_FEATURE" data-testid="locked-build-card" />
+        <HomeFeatureCard v-bind="COLLECT_FEATURE" data-testid="locked-collect-card" />
       </div>
     </template>
 
@@ -440,124 +357,25 @@ function getMyListRoute(item: TimelineItem): string {
     <template v-if="isCheckedIn">
 
       <div class="space-y-6">
-      <!-- Host your own session (fallback when user has no sessions) -->
-      <NuxtLink
-        v-if="!mySessions.length && canHostMoreSessions"
-        :to="hostSessionTo"
-        class="block rounded-3xl bg-magenta relative overflow-hidden"
-      >
-        <div
-          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#C600AA"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </div>
-        <img
-          src="/host-schedule-img.svg"
-          class="absolute -bottom-1 right-[-10px] h-[140px]"
-          alt=""
+        <!-- Host your own session (fallback when user has no sessions) -->
+        <HomeFeatureCard
+          v-if="!mySessions.length && canHostMoreSessions"
+          v-bind="HOST_FEATURE"
+          :to="hostSessionTo"
         />
-        <div class="relative z-[1] p-3 pr-[50%]">
-          <p class="text-2xl font-semibold text-text-and-icons-primary">
-            Host your own session
-          </p>
-          <p class="text-xs leading-[18px] text-text-and-icons-secondary mt-1 min-h-[2lh]">
-            You can host two sessions
-          </p>
-        </div>
-      </NuxtLink>
-
-      <!-- 6. Build your schedule (only when no saved items) -->
-      <NuxtLink
-        v-if="!myListItems.length"
-        :to="buildScheduleTo"
-        class="block rounded-3xl bg-olive relative overflow-hidden"
-      >
-        <div
-          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#728806"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </div>
-        <img
-          src="/build-schedule-img.svg"
-          class="absolute -bottom-1 right-0 h-[130px]"
-          alt=""
+        <!-- 6. Build your schedule (only when no saved items) -->
+        <HomeFeatureCard
+          v-if="!myListItems.length"
+          v-bind="BUILD_FEATURE"
+          :to="buildScheduleTo"
         />
-        <div class="relative z-[1] p-3 pr-[50%]">
-          <p class="text-2xl font-semibold text-text-and-icons-primary">
-            Build your schedule
-          </p>
-          <p class="text-xs leading-[18px] text-text-and-icons-secondary mt-1 min-h-[2lh]">
-            Save sessions from the Program
-          </p>
-        </div>
-      </NuxtLink>
-
-      <!-- 7. Collect more badges (only when user has no session badges yet) -->
-      <NuxtLink
-        v-if="collectibleSubEventPoaps.length === 0"
-        :to="collectBadgesTo"
-        class="block rounded-3xl bg-community relative overflow-hidden"
-        data-testid="collect-badges-card"
-      >
-        <div
-          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#9462FA"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </div>
-        <img
-          src="/collect.svg"
-          class="absolute bottom-[1px] right-[-7px] h-[135px]"
-          alt=""
+        <!-- 7. Collect more badges (only when user has no session badges yet) -->
+        <HomeFeatureCard
+          v-if="collectibleSubEventPoaps.length === 0"
+          v-bind="COLLECT_FEATURE"
+          :to="collectBadgesTo"
+          data-testid="collect-badges-card"
         />
-        <div class="relative z-[1] p-3 pr-[50%]">
-          <p class="text-2xl font-semibold text-text-and-icons-primary">
-            Collect more badges
-          </p>
-          <p class="text-xs leading-[18px] text-text-and-icons-secondary mt-1 min-h-[2lh]">
-            Earn badges by attending community sessions.
-          </p>
-        </div>
-      </NuxtLink>
-
       </div>
       <!-- 8. Festival chat -->
       <HomeFestivalChat />

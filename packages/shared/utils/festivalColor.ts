@@ -2,6 +2,7 @@
  * Deterministic POAP / Festival Pass color from an SS58 address.
  * DJB2 hash mod 14. Same address → same color across every host.
  */
+import { djb2 } from './hash'
 
 export const FESTIVAL_COLORS = [
   '#C600AA', // magenta
@@ -21,11 +22,6 @@ export const FESTIVAL_COLORS = [
 ] as const
 
 export function deriveFestivalColor(ss58Address: string): string {
-  let hash = 5381
-  for (let i = 0; i < ss58Address.length; i++) {
-    hash = ((hash << 5) + hash) + ss58Address.charCodeAt(i)
-    hash = hash & hash
-  }
-  const index = Math.abs(hash) % FESTIVAL_COLORS.length
+  const index = Math.abs(djb2(ss58Address)) % FESTIVAL_COLORS.length
   return FESTIVAL_COLORS[index]!
 }

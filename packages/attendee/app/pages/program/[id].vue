@@ -59,7 +59,7 @@ const timeRange = computed(() => {
   if (!entry.value) return "";
   const start = parseFestivalDate(entry.value.start);
   const end = parseFestivalDate(entry.value.end);
-  return `${formatTime(start)} - ${formatTime(end)}`;
+  return `${formatTimeBerlin(start)} - ${formatTimeBerlin(end)}`;
 });
 
 const dayLabel = computed(() => {
@@ -82,10 +82,6 @@ const locationLabel = computed(() => {
 const imageUrl = useBulletinImage(
   () => metadata.value?.festivalPoapImage || metadata.value?.image || null,
 );
-
-function formatTime(d: Date): string {
-  return formatTimeBerlin(d);
-}
 
 function formatDay(d: Date): string {
   return formatDateBerlin(d, { weekday: "long", month: "long", day: "numeric" });

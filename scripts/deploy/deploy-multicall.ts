@@ -22,17 +22,14 @@ dotenv.config()
 dotenv.config({ path: 'contracts/.env' })
 import { createClient, Binary } from 'polkadot-api'
 import { getWsProvider } from 'polkadot-api/ws'
-import { getPolkadotSigner, type PolkadotSigner } from 'polkadot-api/signer'
-import { sr25519CreateDerive } from '@polkadot-labs/hdkd'
-import { entropyToMiniSecret, mnemonicToEntropy } from '@polkadot-labs/hdkd-helpers'
-import { AccountId } from '@polkadot-api/substrate-bindings'
+import { type PolkadotSigner } from 'polkadot-api/signer'
 import { ss58ToH160 } from '@parity/product-sdk-address'
-import { keccak256 } from 'viem'
 import { readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getNetworkConfig } from '../lib/network'
 import { parseEnvFlag, upsertEnvFile } from '../lib/env-files'
+import { GAS_MULTIPLIER, dryRunDeposit, createSigner, deriveH160 } from '../lib/revive'
 
 // CLI `--env <key>` overrides the NETWORK env var. Must run before
 // getNetworkConfig() resolves and caches the active network.
@@ -43,31 +40,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const CONTRACTS_OUT = resolve(__dirname, '../../contracts/out')
 const network = getNetworkConfig()
 const WS_URL = network.mainChain.wsUrl
-const GAS_MULTIPLIER = 4n
-// 50 native units in chain-native decimals
-const DRY_RUN_DEPOSIT = 50n * 10n ** BigInt(network.nativeToken.decimals)
-
-function createSigner(): { signer: PolkadotSigner; publicKey: Uint8Array; ss58: string } {
-  const seed = process.env.DEPLOYER_SEED
-  if (!seed) {
-    throw new Error('DEPLOYER_SEED not set. Provide a 12/24-word mnemonic in .env or as an env var.')
-  }
-
-  const miniSecret = entropyToMiniSecret(mnemonicToEntropy(seed))
-  const derive = sr25519CreateDerive(miniSecret)
-  const keyPair = derive('')
-
-  return {
-    signer: getPolkadotSigner(keyPair.publicKey, 'Sr25519', keyPair.sign),
-    publicKey: keyPair.publicKey,
-    ss58: AccountId(42).dec(keyPair.publicKey),
-  }
-}
-
-function deriveH160(publicKey: Uint8Array): `0x${string}` {
-  const hash = keccak256(publicKey)
-  return ('0x' + hash.slice(26)) as `0x${string}`
-}
+// Computed after the --env override above resolves the active network.
+const DRY_RUN_DEPOSIT = dryRunDeposit(network.nativeToken.decimals)
 
 /**
  * Deploy Multicall3 and return its address. The caller owns the client, account

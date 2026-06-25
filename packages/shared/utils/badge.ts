@@ -1,3 +1,5 @@
+import { djb2 } from './hash'
+
 export const GRID_SIZE = 16
 export const PIXEL_COUNT = GRID_SIZE * GRID_SIZE
 
@@ -44,15 +46,6 @@ export function decodeBadgeHex(hex: string): number[] {
 }
 
 // --- Generative badge ---
-
-/** djb2 hash */
-function hashString(str: string): number {
-  let hash = 5381
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0
-  }
-  return hash >>> 0
-}
 
 /** mulberry32 PRNG */
 function mulberry32(seed: number) {
@@ -103,7 +96,7 @@ function fillRect(pixels: number[], x: number, y: number, w: number, h: number, 
  * @param salt - Extra seed material (e.g. user account address for uniqueness)
  */
 export function generateBadge(title: string, _category?: string, salt = ''): number[] {
-  const seed = hashString((title || 'untitled') + salt)
+  const seed = djb2((title || 'untitled') + salt) >>> 0
   const rand = mulberry32(seed)
 
   // Pick a random vibrant color pair from the seed
