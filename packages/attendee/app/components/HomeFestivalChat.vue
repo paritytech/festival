@@ -20,7 +20,7 @@ import IconArrowForward from '~icons/ic/round-arrow-forward'
       </p>
     </div>
     <div
-      class="w-9 h-9 shrink-0 rounded-full bg-surface-3 flex items-center justify-center text-text-and-icons-primary"
+      class="w-10 h-10 shrink-0 rounded-full bg-surface-3 flex items-center justify-center text-text-and-icons-primary"
     >
       <IconArrowForward style="width: 16px; height: 16px" />
     </div>

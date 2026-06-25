@@ -21,9 +21,9 @@ import type { BookmarkPayload } from "~/composables/useBookmarks";
 import { useMyListFlyAnimation } from "~/composables/useMyListFlyAnimation";
 import { formatTimeBerlin, parseFestivalDate } from "@festival/shared/utils/time";
 import { truncate } from "@festival/shared/utils/text";
-import IconEdit from "~icons/ic/round-edit";
 import IconStar from "~icons/ic/round-star";
 import IconStarOutline from "~icons/ic/round-star-border";
+import EditButton from "~/components/ui/EditButton.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -218,14 +218,13 @@ function onStarTap(e: MouseEvent) {
           <!-- Right action: pencil for owner, star for others -->
           <template v-if="!past">
             <!-- Owner: pencil edit icon -->
-            <NuxtLink
+            <EditButton
               v-if="isOwner"
               :to="editRoute"
+              aria-label="Edit session"
               class="shrink-0 p-1 -mr-1 mt-0.5 text-black"
               @click.stop
-            >
-              <IconEdit style="width:18px;height:18px" />
-            </NuxtLink>
+            />
 
             <!-- Non-owner: bookmark star -->
             <button
@@ -238,8 +237,8 @@ function onStarTap(e: MouseEvent) {
               ]"
               @click.prevent.stop="onStarTap"
             >
-              <IconStar v-if="isBookmarked" style="width:18px;height:18px" />
-              <IconStarOutline v-else style="width:18px;height:18px" />
+              <IconStar v-if="isBookmarked" style="width:28px;height:28px" />
+              <IconStarOutline v-else style="width:28px;height:28px" />
             </button>
           </template>
         </div>

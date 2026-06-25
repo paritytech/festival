@@ -201,7 +201,7 @@ const gridBgColor = computed(() => {
     <!-- Header -->
     <div class="px-4 pt-4 pb-3 flex items-center">
       <button class="w-10 h-10 flex items-center justify-center -ml-2" @click="handleClose">
-        <IconClose class="w-6 h-6 text-white" />
+        <IconClose class="w-7 h-7 text-white" />
       </button>
       <h1 class="flex-1 text-center text-base font-semibold text-white">Create Badge</h1>
       <button
@@ -223,7 +223,7 @@ const gridBgColor = computed(() => {
         :disabled="!canUndo"
         @click="undo"
       >
-        <IconUndo class="w-[22px] h-[22px] text-white" />
+        <IconUndo class="w-8 h-8 text-white" />
       </button>
       <button
         data-testid="badge-editor-random"
@@ -284,27 +284,27 @@ const gridBgColor = computed(() => {
     <div class="flex items-center justify-around px-12 mt-auto pb-[calc(var(--safe-bottom)+16px)]">
       <!-- Pencil -->
       <button
-        class="w-14 h-14 rounded-full flex items-center justify-center transition-colors"
+        class="w-12 h-12 rounded-full flex items-center justify-center transition-colors"
         :class="activeTool === 'pencil' ? 'bg-white' : 'bg-surface-2'"
         @click="activeTool = 'pencil'"
       >
-        <IconEdit class="w-6 h-6" :class="activeTool === 'pencil' ? 'text-black' : 'text-white'" />
+        <IconEdit class="w-8 h-8" :class="activeTool === 'pencil' ? 'text-black' : 'text-white'" />
       </button>
       <!-- Fill -->
       <button
-        class="w-14 h-14 rounded-full flex items-center justify-center transition-colors"
+        class="w-12 h-12 rounded-full flex items-center justify-center transition-colors"
         :class="activeTool === 'fill' ? 'bg-white' : 'bg-surface-2'"
         @click="activeTool = 'fill'"
       >
-        <IconFill class="w-6 h-6" :class="activeTool === 'fill' ? 'text-black' : 'text-white'" />
+        <IconFill class="w-8 h-8" :class="activeTool === 'fill' ? 'text-black' : 'text-white'" />
       </button>
       <!-- Eraser -->
       <button
-        class="w-14 h-14 rounded-full flex items-center justify-center transition-colors"
+        class="w-12 h-12 rounded-full flex items-center justify-center transition-colors"
         :class="activeTool === 'eraser' ? 'bg-white' : 'bg-surface-2'"
         @click="activeTool = 'eraser'"
       >
-        <IconEraser class="w-6 h-6" :class="activeTool === 'eraser' ? 'text-black' : 'text-white'" />
+        <IconEraser class="w-8 h-8" :class="activeTool === 'eraser' ? 'text-black' : 'text-white'" />
       </button>
     </div>
 

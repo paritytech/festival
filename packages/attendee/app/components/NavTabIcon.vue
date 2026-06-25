@@ -2,7 +2,7 @@
 import { computed, type Component } from "vue";
 import IconHome from "~icons/ic/round-home";
 import IconMap from "~icons/ic/round-map";
-import IconProgram from "~icons/ic/round-event";
+import IconProgram from "~icons/ic/round-event-note";
 
 const props = withDefaults(
   defineProps<{ icon: string; size?: number | string }>(),

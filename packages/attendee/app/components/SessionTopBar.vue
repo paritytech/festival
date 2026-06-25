@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import IconChevronLeft from '~icons/ic/round-chevron-left'
+import IconArrowBack from '~icons/ic/round-arrow-back-ios'
 
 withDefaults(
   defineProps<{
@@ -23,7 +23,7 @@ defineEmits<{ back: [] }>()
       :aria-label="backAriaLabel"
       @click="$emit('back')"
     >
-      <IconChevronLeft style="width:24px;height:24px" aria-hidden="true" />
+      <IconArrowBack style="width:28px;height:28px" aria-hidden="true" />
     </button>
 
     <h1

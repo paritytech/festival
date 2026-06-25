@@ -183,7 +183,7 @@ function handleDone() {
           aria-label="Close"
           @click="emit('cancel')"
         >
-          <IconClose style="width:24px;height:24px" />
+          <IconClose style="width:28px;height:28px" />
         </button>
         <h1 class="slp__title">{{ title }}</h1>
         <button

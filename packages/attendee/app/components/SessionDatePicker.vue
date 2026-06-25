@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import type { FestivalDay } from '@festival/shared'
 import PillButton from './ui/PillButton.vue'
-import IconCalendar from '~icons/ic/round-calendar-month'
+import IconCalendar from '~icons/ic/round-calendar-today'
 
 const props = defineProps<{
   days: FestivalDay[]
@@ -65,7 +65,7 @@ watch(
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
         <IconCalendar
-          style="width:18px;height:18px"
+          style="width:24px;height:24px"
           class="text-text-and-icons-primary shrink-0"
         />
         <span class="text-sm text-text-and-icons-primary">Session Date</span>

@@ -351,7 +351,7 @@ function getMyListRoute(item: TimelineItem): string {
         <h3 class="text-lg font-semibold text-text-and-icons-primary">My List</h3>
         <NuxtLink
           to="/program?tab=mylist"
-          class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-and-icons-primary"
+          class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-and-icons-primary"
         >
           <IconArrowForward style="width: 16px; height: 16px" />
         </NuxtLink>

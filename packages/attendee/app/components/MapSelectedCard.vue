@@ -63,7 +63,7 @@ const categoryColor = computed(() =>
           aria-label="Close"
           @click="$emit('close')"
         >
-          <IconClose class="sel-card__icon" />
+          <IconClose class="sel-card__icon" style="width:28px;height:28px" />
         </button>
       </div>
     </div>

@@ -29,7 +29,7 @@ import {
   ss58ToH160,
   isValidEvmAddress,
 } from "@festival/shared/utils/address";
-import IconEdit from "~icons/ic/round-edit";
+import EditButton from "~/components/ui/EditButton.vue";
 
 definePageMeta({
   validate: (route) => isValidEvmAddress(route.params.address as string),
@@ -296,12 +296,11 @@ function formatDay(d: Date): string {
     @open-location="locationViewOpen = true"
   >
     <template v-if="isCreator && isUpcoming" #topBarTrailing>
-      <NuxtLink
+      <EditButton
         :to="`/my/manage/${addr}/edit`"
-        class="w-10 h-10 flex items-center justify-center"
-      >
-        <IconEdit style="width:22px;height:22px" class="text-white" />
-      </NuxtLink>
+        aria-label="Edit session"
+        class="w-10 h-10 flex items-center justify-center text-white"
+      />
     </template>
 
     <template v-if="canReport" #secondaryAction>

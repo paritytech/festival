@@ -7,7 +7,7 @@ import {
   formatDurationLabel,
 } from '@festival/shared'
 import PillButton from './ui/PillButton.vue'
-import IconClock from '~icons/ic/round-schedule'
+import IconClock from '~icons/ic/round-watch-later'
 
 function variantFor(hasValue: boolean, isActive: boolean) {
   if (hasValue) return 'filled' as const
@@ -199,7 +199,7 @@ const showDurationFooter = computed(
   <div data-testid="session-time-picker">
     <div class="flex items-center gap-3">
       <IconClock
-        style="width:18px;height:18px"
+        style="width:24px;height:24px"
         class="text-text-and-icons-primary shrink-0"
       />
       <span class="text-sm text-text-and-icons-primary">Session Time</span>

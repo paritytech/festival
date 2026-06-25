@@ -82,6 +82,7 @@ const locationLabel = computed(() => {
         <EditButton
           data-testid="overview-edit-badge"
           aria-label="Edit badge"
+          class="text-text-and-icons-primary"
           @click="$emit('edit', 3)"
         />
       </header>
@@ -97,6 +98,7 @@ const locationLabel = computed(() => {
         <EditButton
           data-testid="overview-edit-details"
           aria-label="Edit details"
+          class="text-text-and-icons-primary"
           @click="$emit('edit', 1)"
         />
       </header>
@@ -131,6 +133,7 @@ const locationLabel = computed(() => {
         <EditButton
           data-testid="overview-edit-location"
           aria-label="Edit location"
+          class="text-text-and-icons-primary"
           @click="$emit('edit', 2)"
         />
       </header>

@@ -67,8 +67,8 @@ function onBack() {
           data-testid="session-favorite-toggle"
           @click="$emit('toggle-bookmark')"
         >
-          <IconStar v-if="bookmarked" style="width:24px;height:24px" />
-          <IconStarOutline v-else style="width:24px;height:24px" />
+          <IconStar v-if="bookmarked" style="width:28px;height:28px" />
+          <IconStarOutline v-else style="width:28px;height:28px" />
         </button>
       </template>
     </SessionTopBar>

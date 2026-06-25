@@ -35,7 +35,7 @@ import {
   type SessionTimeValidationFailReason,
 } from "@festival/shared";
 import IconClose from "~icons/ic/round-close";
-import IconChevronLeft from "~icons/ic/round-chevron-left";
+import IconArrowBack from "~icons/ic/round-arrow-back-ios";
 
 const wallet = useWalletStore();
 const { metadata: festivalMetadata, details: festivalDetails } = useFestival();
@@ -474,11 +474,11 @@ async function doCreate() {
         <!-- X icon (step 1) -->
         <IconClose
           v-if="currentStep === 1"
-          style="width:24px;height:24px"
+          style="width:28px;height:28px"
           class="text-white"
         />
         <!-- Back arrow (steps 2-3) -->
-        <IconChevronLeft v-else style="width:24px;height:24px" class="text-text-and-icons-primary" />
+        <IconArrowBack v-else style="width:28px;height:28px" class="text-text-and-icons-primary" />
       </button>
 
       <!-- Centered title -->

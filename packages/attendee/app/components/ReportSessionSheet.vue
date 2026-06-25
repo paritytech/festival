@@ -42,7 +42,7 @@ const isPending = computed(
             v-if="!isSuccess"
             class="w-14 h-14 rounded-full bg-danger flex items-center justify-center"
           >
-            <IconFlag style="width: 22px; height: 22px; color: white" />
+            <IconFlag style="width: 24px; height: 24px; color: white" />
           </div>
           <div
             v-else
