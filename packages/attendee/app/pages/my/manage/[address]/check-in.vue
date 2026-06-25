@@ -16,6 +16,9 @@ import {
 } from '@festival/shared/utils/address'
 import { resolveFullLocationLabel } from '@festival/shared/venue/floors'
 import { formatTimeBerlin } from '@festival/shared/utils/time'
+import IconQr from '~icons/ic/round-qr-code-scanner'
+import IconCheck from '~icons/ic/round-check'
+import IconChevronDown from '~icons/ic/round-keyboard-arrow-down'
 
 definePageMeta({
   validate: (route) => isValidEvmAddress(route.params.address as string),
@@ -181,12 +184,7 @@ function onScannerError(msg: string) {
           v-else
           class="absolute inset-0 flex items-center justify-center bg-surface-2/60"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-white/40">
-            <rect x="3" y="3" width="5" height="5" rx="1" />
-            <rect x="16" y="3" width="5" height="5" rx="1" />
-            <rect x="3" y="16" width="5" height="5" rx="1" />
-            <path d="M16 16h2v2h-2zM19 19h2v2h-2zM13 3h2v2h-2zM13 8h2v2h-2zM13 13h2v2h-2zM8 13h2v2H8z" />
-          </svg>
+          <IconQr style="width: 32px; height: 32px" class="text-white/40" />
         </div>
       </div>
     </div>
@@ -241,9 +239,7 @@ function onScannerError(msg: string) {
         v-else-if="step === 'success'"
         class="rounded-2xl bg-surface-2 px-5 py-4 flex items-center gap-3"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-green-400 shrink-0">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
+        <IconCheck class="w-5 h-5 text-green-400 shrink-0" />
         <p class="text-sm text-white">
           Checked in {{ attendeeSS58 ? shortenAddress(attendeeSS58) : '' }}
         </p>
@@ -285,19 +281,10 @@ function onScannerError(msg: string) {
         @click="showManual = !showManual"
       >
         <span>Enter address manually</span>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          class="transition-transform"
+        <IconChevronDown
+          class="w-4 h-4 transition-transform"
           :class="{ 'rotate-180': showManual }"
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        />
       </button>
 
       <div v-if="showManual" class="mt-2 space-y-2">

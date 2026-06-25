@@ -1,17 +1,24 @@
 <script setup lang="ts">
-defineProps<{
-  ariaLabel: string
-}>()
+import IconEdit from '~icons/ic/round-mode-edit'
+
+// Edit affordance (round-mode-edit). Renders a NuxtLink when `to` is provided,
+// otherwise a button. Color and layout are owned by the call site via class;
+// `size` controls the glyph dimensions in px.
+withDefaults(
+  defineProps<{
+    ariaLabel: string
+    to?: string
+    size?: number
+  }>(),
+  { size: 24 },
+)
 </script>
 
 <template>
-  <button
-    type="button"
-    class="text-text-and-icons-primary"
-    :aria-label="ariaLabel"
-  >
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-    </svg>
+  <NuxtLink v-if="to" :to="to" :aria-label="ariaLabel">
+    <IconEdit :style="{ width: `${size}px`, height: `${size}px` }" />
+  </NuxtLink>
+  <button v-else type="button" :aria-label="ariaLabel">
+    <IconEdit :style="{ width: `${size}px`, height: `${size}px` }" />
   </button>
 </template>

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import IconMenu from '~icons/ic/round-menu'
+import IconClose from '~icons/ic/round-close'
 import { provideFestivalContext, PUBLISH_CONFLICT } from '~/composables/useFestivalContext'
 import { usePermissions } from '~/composables/usePermissions'
 import { useWalletStore } from '@festival/shared/host/wallet'
@@ -112,8 +114,8 @@ function handleRefreshFromChain() {
         class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/8 transition-colors -ml-1"
         @click="mobileMenuOpen = !mobileMenuOpen"
       >
-        <svg v-if="!mobileMenuOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-        <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        <IconMenu v-if="!mobileMenuOpen" class="w-5 h-5" />
+        <IconClose v-else class="w-5 h-5" />
       </button>
       <h2 class="font-heading text-sm font-bold">Festival</h2>
       <p class="text-xs font-mono text-text-muted">{{ shortenAddr(address) }}</p>
@@ -133,7 +135,7 @@ function handleRefreshFromChain() {
             <div class="flex items-center justify-between mb-4">
               <h2 class="font-heading text-lg font-bold">Festival</h2>
               <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/8" @click="mobileMenuOpen = false">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <IconClose class="w-5 h-5" />
               </button>
             </div>
             <p class="text-xs font-mono text-text-muted mb-2">{{ shortenAddr(address) }}</p>

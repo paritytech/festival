@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import IconEdit from '~icons/ic/round-edit'
 import { useFestival } from '~/composables/useFestival'
 import { useFestivalContext } from '~/composables/useFestivalContext'
 import { usePermissions } from '~/composables/usePermissions'
@@ -140,7 +141,7 @@ const statusStyles: Record<string, string> = {
           class="text-xs text-text-muted hover:text-text-primary transition-colors flex items-center gap-1"
           @click="editing = !editing"
         >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+          <IconEdit class="w-3.5 h-3.5" />
           {{ editing ? 'Done' : 'Edit' }}
         </button>
       </div>

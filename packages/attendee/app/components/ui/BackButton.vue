@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAttrs } from 'vue'
+import IconArrowBack from '~icons/ic/round-arrow-back-ios'
 
 const router = useRouter()
 const attrs = useAttrs()
@@ -15,6 +16,6 @@ function handleClick() {
     aria-label="Back"
     @click="handleClick"
   >
-    <BackIcon />
+    <IconArrowBack style="width: 28px; height: 28px" aria-hidden="true" />
   </button>
 </template>

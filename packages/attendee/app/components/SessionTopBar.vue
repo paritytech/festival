@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import IconArrowBack from '~icons/ic/round-arrow-back-ios'
+
 withDefaults(
   defineProps<{
     title: string
@@ -21,7 +23,7 @@ defineEmits<{ back: [] }>()
       :aria-label="backAriaLabel"
       @click="$emit('back')"
     >
-      <BackIcon />
+      <IconArrowBack style="width:28px;height:28px" aria-hidden="true" />
     </button>
 
     <h1

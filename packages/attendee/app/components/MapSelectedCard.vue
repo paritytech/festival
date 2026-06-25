@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import IconLocationOn from '~icons/ic/round-location-on'
+import IconShare from '~icons/ic/round-share'
+import IconClose from '~icons/ic/round-close'
 import type { VenueMarker } from '@festival/shared/metadata/schemas'
 import { getCategory } from '@festival/shared/venue/categories'
 import { getMarkerIcon } from '@festival/shared/venue/icons'
@@ -37,19 +40,7 @@ const categoryColor = computed(() =>
         :style="mode === 'marker' && categoryColor ? { background: categoryColor } : undefined"
       >
         <span v-if="mode === 'marker'" class="sel-card__tile-glyph" v-html="iconHtml" />
-        <svg
-          v-else
-          class="sel-card__tile-pin"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <path
-            d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1112 6.5a2.5 2.5 0 010 5z"
-            fill="#0f0f0f"
-          />
-        </svg>
+        <IconLocationOn v-else class="sel-card__tile-pin" aria-hidden="true" />
       </div>
 
       <div class="sel-card__text">
@@ -64,12 +55,7 @@ const categoryColor = computed(() =>
           aria-label="Share location"
           @click="$emit('share')"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M17 7H14C13.45 7 13 7.45 13 8C13 8.55 13.45 9 14 9H17C18.65 9 20 10.35 20 12C20 13.65 18.65 15 17 15H14C13.45 15 13 15.45 13 16C13 16.55 13.45 17 14 17H17C19.76 17 22 14.76 22 12C22 9.24 19.76 7 17 7ZM8 12C8 12.55 8.45 13 9 13H15C15.55 13 16 12.55 16 12C16 11.45 15.55 11 15 11H9C8.45 11 8 11.45 8 12ZM10 15H7C5.35 15 4 13.65 4 12C4 10.35 5.35 9 7 9H10C10.55 9 11 8.55 11 8C11 7.45 10.55 7 10 7H7C4.24 7 2 9.24 2 12C2 14.76 4.24 17 7 17H10C10.55 17 11 16.55 11 16C11 15.45 10.55 15 10 15Z"
-              fill="currentColor"
-            />
-          </svg>
+          <IconShare class="sel-card__icon" />
         </button>
         <button
           type="button"
@@ -77,12 +63,7 @@ const categoryColor = computed(() =>
           aria-label="Close"
           @click="$emit('close')"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M18.3 5.71a1 1 0 00-1.41 0L12 10.59 7.11 5.7a1 1 0 10-1.42 1.42L10.59 12l-4.9 4.89a1 1 0 101.42 1.42L12 13.41l4.89 4.9a1 1 0 001.41-1.42L13.41 12l4.89-4.87a1 1 0 000-1.42z"
-              fill="currentColor"
-            />
-          </svg>
+          <IconClose class="sel-card__icon" style="width:28px;height:28px" />
         </button>
       </div>
     </div>
@@ -139,6 +120,10 @@ const categoryColor = computed(() =>
 .sel-card__tile-pin {
   width: 24px;
   height: 24px;
+}
+.sel-card__icon {
+  width: 22px;
+  height: 22px;
 }
 
 .sel-card__text {

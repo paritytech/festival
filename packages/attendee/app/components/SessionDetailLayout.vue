@@ -2,6 +2,8 @@
 import { useRouter } from 'vue-router'
 import type { RouteLocationRaw } from 'vue-router'
 import type { VenueMarker, VenueZone } from '@festival/shared/metadata/schemas'
+import IconStar from '~icons/ic/round-star'
+import IconStarOutline from '~icons/ic/round-star-border'
 
 const props = defineProps<{
   badgePixels?: number[] | null
@@ -65,18 +67,8 @@ function onBack() {
           data-testid="session-favorite-toggle"
           @click="$emit('toggle-bookmark')"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            :fill="bookmarked ? 'currentColor' : 'none'"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linejoin="round"
-          >
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
+          <IconStar v-if="bookmarked" style="width:28px;height:28px" />
+          <IconStarOutline v-else style="width:28px;height:28px" />
         </button>
       </template>
     </SessionTopBar>

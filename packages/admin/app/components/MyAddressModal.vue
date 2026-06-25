@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import IconClose from '~icons/ic/round-close'
 import { useWalletStore } from '@festival/shared/host/wallet'
 import { isInHost } from '@festival/shared/host/detect'
 import { checkAllowancesOnChain } from '@festival/shared/host/allowances'
@@ -132,9 +133,7 @@ async function copy(which: 'ss58' | 'h160') {
               class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/8 text-text-muted"
               @click="close"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <IconClose class="w-4 h-4" />
             </button>
           </div>
 

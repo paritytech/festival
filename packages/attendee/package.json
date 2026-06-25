@@ -15,7 +15,6 @@
     "@vueuse/core": "^12.5.0",
     "clsx": "^2.1.1",
     "html5-qrcode": "^2.3.8",
-    "lucide-vue-next": "^0.577.0",
     "maplibre-gl": "^5.24.0",
     "pinia": "^3.0.1",
     "polylabel": "^2.0.1",
@@ -25,10 +24,12 @@
   },
   "//nuxt-pin": "nuxt is pinned to exactly 3.21.2 because 3.21.3+ introduced a vite-node IPC regression that breaks the dev server (NUXT_VITE_NODE_OPTIONS.socketPath not defined). Re-evaluate when a fixed patch ships.",
   "devDependencies": {
+    "@iconify-json/ic": "^1.2.4",
     "@tailwindcss/vite": "^4.1.4",
     "@types/polylabel": "^1.1.3",
     "nuxt": "3.21.2",
     "tailwindcss": "^4.1.4",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "unplugin-icons": "^23.0.1"
   }
 }
