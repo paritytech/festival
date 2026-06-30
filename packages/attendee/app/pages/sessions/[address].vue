@@ -305,7 +305,7 @@ function formatDay(d: Date): string {
 
     <template v-if="canReport" #secondaryAction>
       <button
-        class="block w-full py-4 rounded-2xl bg-danger/10 text-danger text-base font-semibold"
+        class="block w-full py-4 rounded-2xl bg-bg-status-error/10 text-fg-error text-base font-semibold"
         data-testid="session-report-trigger"
         @click="openReportSheet"
       >
@@ -317,7 +317,7 @@ function formatDay(d: Date): string {
       <template v-if="isCreator || hasManageAccess">
         <button
           v-if="isUpcoming"
-          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-white/10 text-white/60 cursor-default"
+          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-fill-12 text-text-and-icons-tertiary cursor-default"
           disabled
           data-testid="session-check-in-pending"
         >
@@ -327,7 +327,7 @@ function formatDay(d: Date): string {
         <NuxtLink
           v-else-if="isLive"
           :to="`/my/manage/${addr}/check-in`"
-          class="block w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold text-center"
+          class="block w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold text-center"
           data-testid="session-check-in-cta"
         >
           Check People In<template v-if="isPastEnd"> · Closes in {{ closesInLabel }}</template>
@@ -335,7 +335,7 @@ function formatDay(d: Date): string {
 
         <button
           v-else
-          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-white/10 text-white/60 cursor-default"
+          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-fill-12 text-text-and-icons-tertiary cursor-default"
           disabled
           data-testid="session-check-in-ended"
         >
@@ -346,7 +346,7 @@ function formatDay(d: Date): string {
       <template v-else-if="!subEvent.isCheckedIn">
         <button
           v-if="isUpcoming"
-          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-white/10 text-white/60 cursor-default"
+          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-fill-12 text-text-and-icons-tertiary cursor-default"
           disabled
           data-testid="session-collect-badge-pending"
         >
@@ -355,7 +355,7 @@ function formatDay(d: Date): string {
 
         <button
           v-else-if="isLive && isCheckedIn"
-          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-semibold bg-white text-black"
+          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-semibold bg-bg-action-primary text-fg-primary-inverted"
           data-testid="session-collect-badge-cta"
           @click="openPassport"
         >

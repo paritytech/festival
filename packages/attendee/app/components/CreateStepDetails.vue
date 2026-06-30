@@ -62,7 +62,7 @@ defineExpose({ canProceed })
           type="text"
           :maxlength="SPEAKER_MAX_LENGTH"
           placeholder="Leave blank to stay anonymous"
-          class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
+          class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-text-and-icons-tertiary"
           @input="patch('speaker', ($event.target as HTMLInputElement).value)"
         />
       </template>
@@ -87,7 +87,7 @@ defineExpose({ canProceed })
           required
           aria-required="true"
           :maxlength="NAME_MAX_LENGTH"
-          class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
+          class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-text-and-icons-tertiary"
           @input="patch('name', ($event.target as HTMLInputElement).value)"
         />
       </template>

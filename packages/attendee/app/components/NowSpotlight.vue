@@ -177,8 +177,8 @@ watch(totalCards, () => {
   <div v-if="currentEntry" class="mb-5">
     <NuxtLink
       :to="`/program/${currentEntry.id}`"
-      class="block bg-surface border rounded-lg overflow-hidden"
-      :class="isLive ? 'border-primary/30 bg-primary-light/30' : 'border-border'"
+      class="block bg-bg-surface-container border rounded-lg overflow-hidden"
+      :class="isLive ? 'border-primary/30 bg-primary-light/30' : 'border-stroke-primary'"
       @click="handleClick"
       @touchstart.passive="handleTouchStart"
       @touchend.passive="handleTouchEnd"
@@ -199,12 +199,12 @@ watch(totalCards, () => {
               <span class="w-2 h-2 bg-primary rounded-full animate-pulse" />
               <span class="text-xs font-medium text-primary uppercase tracking-wide">Live</span>
             </span>
-            <span v-else class="text-xs font-medium text-text-muted">
+            <span v-else class="text-xs font-medium text-text-and-icons-tertiary">
               {{ getCountdown(currentEntry) }}
             </span>
           </div>
           <div v-if="totalCards > 1" class="flex items-center gap-1">
-            <span class="text-[10px] text-text-muted">{{ currentIndex + 1 }}/{{ totalCards }}</span>
+            <span class="text-[10px] text-text-and-icons-tertiary">{{ currentIndex + 1 }}/{{ totalCards }}</span>
           </div>
         </div>
 
@@ -212,11 +212,11 @@ watch(totalCards, () => {
         <h3 class="font-heading text-lg font-bold leading-snug mb-1">{{ currentEntry.title }}</h3>
 
         <!-- Meta row -->
-        <div class="flex items-center flex-wrap gap-x-3 gap-y-1 text-sm text-text-secondary">
+        <div class="flex items-center flex-wrap gap-x-3 gap-y-1 text-sm text-text-and-icons-secondary">
           <span v-if="currentEntry.speakers?.length">
             {{ currentEntry.speakers.join(', ') }}
           </span>
-          <span class="text-xs text-text-muted">
+          <span class="text-xs text-text-and-icons-tertiary">
             {{ formatTime(currentEntry.start) }}–{{ formatTime(currentEntry.end) }}
           </span>
         </div>
@@ -241,7 +241,7 @@ watch(totalCards, () => {
     </NuxtLink>
 
     <!-- Swipe hint (shows briefly when multiple) -->
-    <p v-if="totalCards > 1 && !isPaused" class="text-[10px] text-text-muted text-center mt-1">
+    <p v-if="totalCards > 1 && !isPaused" class="text-[10px] text-text-and-icons-tertiary text-center mt-1">
       {{ totalCards }} sessions now · swipe to browse
     </p>
   </div>

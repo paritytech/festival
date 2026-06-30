@@ -126,16 +126,16 @@ const entry = computed(() =>
 <template>
   <div
     v-if="state.type === 'pre-festival'"
-    class="rounded-2xl bg-surface-2 p-4"
+    class="rounded-2xl bg-bg-surface-nested p-4"
     data-testid="event-reminder-pre-festival"
   >
     <div class="flex items-center gap-1.5">
-      <span class="w-1.5 h-1.5 rounded-full bg-danger shrink-0" />
-      <span class="text-xs font-semibold text-danger uppercase tracking-wide">
+      <span class="w-1.5 h-1.5 rounded-full bg-bg-status-error shrink-0" />
+      <span class="text-xs font-semibold text-fg-error uppercase tracking-wide">
         DON'T MISS {{ festivalName.toUpperCase() }}!
       </span>
     </div>
-    <p class="text-base font-semibold text-white mt-1.5 leading-snug">
+    <p class="text-base font-semibold text-text-and-icons-primary mt-1.5 leading-snug">
       Starts in: {{ countdownLabel }}
     </p>
   </div>
@@ -143,26 +143,26 @@ const entry = computed(() =>
   <NuxtLink
     v-else-if="entry"
     :to="`/program/${entry.id}`"
-    class="block rounded-2xl bg-surface-2 p-4"
+    class="block rounded-2xl bg-bg-surface-nested p-4"
   >
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-1.5">
         <span
           v-if="state.type === 'ongoing'"
-          class="w-1.5 h-1.5 rounded-full bg-danger shrink-0"
+          class="w-1.5 h-1.5 rounded-full bg-bg-status-error shrink-0"
         />
         <span
           class="text-xs font-medium"
-          :class="state.type === 'ongoing' ? 'text-danger' : 'text-text-muted'"
+          :class="state.type === 'ongoing' ? 'text-fg-error' : 'text-text-and-icons-tertiary'"
         >
           {{ statusLabel }}
         </span>
       </div>
-      <span v-if="locationLabel" class="text-xs text-text-muted">
+      <span v-if="locationLabel" class="text-xs text-text-and-icons-tertiary">
         {{ locationLabel }}
       </span>
     </div>
-    <p class="text-base font-semibold text-white mt-1.5 leading-snug">
+    <p class="text-base font-semibold text-text-and-icons-primary mt-1.5 leading-snug">
       {{ entry.title }}
     </p>
   </NuxtLink>

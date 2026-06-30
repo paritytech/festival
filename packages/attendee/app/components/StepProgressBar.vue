@@ -13,7 +13,7 @@ withDefaults(defineProps<{
       :key="i"
       class="flex-1 h-0.5 rounded-full transition-colors"
       :class="variant === 'light'
-        ? (i <= currentStep ? 'bg-white' : 'bg-white/20')
+        ? (i <= currentStep ? 'bg-white' : 'bg-fill-18')
         : (i <= currentStep ? 'bg-black' : 'bg-black/15')"
     />
   </div>

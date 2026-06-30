@@ -26,10 +26,30 @@
   src: url('/fonts/inter-v20-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
+/*
+ * Akkurat Mono (Regular) — used by --font-mono (passport bands/captions, addresses,
+ * numeric alignment). Commercial face (Lineto); the woff2 is NOT checked in. Drop
+ * akkurat-mono-regular.woff2 into packages/shared/public/fonts/ (served at /fonts).
+ * Until then `font-mono` falls back to the generic monospace stack below.
+ */
+@font-face {
+  font-family: 'Akkurat Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/akkurat-mono-regular.woff2') format('woff2');
+}
 
-/* iOS-mirrored theme tokens. BerlinNight values live here as :root defaults —
-   there's no berlin-night.css because [data-theme="berlin-night"] would just
-   duplicate this block; the cascade falls back here instead. */
+/* ════════════════════════════════════════════════════════════════════════
+   CLASSIC THEME — the default app skin (canonical foundation).
+   Design-system tokens generated from polkadot-app-design-system-ios. Every
+   screen renders these at :root when no [data-theme] is set. On /onboarding the
+   theme plugin sets [data-theme="…"] and these same token names resolve to
+   BerlinNight / the event themes (text-and-icons-* aliasing to cool fg-* via the
+   [data-theme] block further below). BerlinNight ≡ these :root values, so there
+   is deliberately no berlin-night.css.
+   CANONICAL: use these for all neutrals / surfaces / strokes / actions / status.
+   ════════════════════════════════════════════════════════════════════════ */
 @theme {
   /* Foreground */
   --color-fg-error:                       #D9363E;
@@ -106,6 +126,22 @@
   --color-stroke-secondary:        #404249;
   --color-stroke-cutout:           #000000;
 
+  /* Fill — white at N% opacity (design-system "Fill / N") primitives; subtle
+     raised fills on dark surfaces. */
+  --color-fill-6:  #FFFFFF0F;   /*  6% */
+  --color-fill-12: #FFFFFF1F;   /* 12% */
+  --color-fill-18: #FFFFFF2E;   /* 18% */
+  --color-fill-24: #FFFFFF3D;   /* 24% */
+  --color-fill-30: #FFFFFF4D;   /* 30% */
+
+  /* Applied — semantic white-opacity tokens (design-system "applied/*").
+     Purpose-named aliases over the Fill primitives; prefer these over raw
+     fill-* where the intent is stroke/separator/hover/overlay. */
+  --color-applied-hover:     #FFFFFF0F;   /*  6% — hover wash (= fill-6) */
+  --color-applied-stroke:    #FFFFFF1F;   /* 12% — hairline border (= fill-12) */
+  --color-applied-separator: #FFFFFF29;   /* 16% — list/row dividers */
+  --color-applied-overlay:   #FFFFFFB3;   /* 70% — light overlay wash */
+
   /* Focus */
   --color-focus-error: #D9363E3D;
   --color-focus-ring:  #FFFFFF29;
@@ -144,37 +180,24 @@
   --color-gradient-navigation-overlay-end:   #00000000;
 }
 
-/* App-wide tokens. Names don't overlap with the iOS-mirrored block above —
-   keep the two blocks separate. */
+/* ════════════════════════════════════════════════════════════════════════
+   FESTIVAL BRAND LAYER — the festival's own palette: accent colors, status
+   (incl. muted tints) and the stone brand `primary*`. No design-system
+   equivalent, so these are canonical and live here alongside shared utilities
+   (the Classic text-and-icons tokens, typography, scales, radius, shadows).
+   ════════════════════════════════════════════════════════════════════════ */
 @theme {
-  /* ── Surfaces ── */
-  --color-background:       #000000;
-  --color-surface:          #141414;
-  --color-surface-2:        #1f1f1f;
-  --color-surface-3:        #2a2a2a;
-  --color-surface-4:        #3a3a3a;
-  --color-surface-elevated: #ffffff;
-
-  /* ── Text ── */
-  --color-text-primary:     #fafaf9;
-  --color-text-secondary:   #d6d3d1;
-  --color-text-muted:       #a8a29e;
-
-  /* ── Semantic text/icon tokens (Figma: Text and Icons) ── */
+  /* ── CLASSIC canonical text (opacity white; aliases to cool fg-* under [data-theme]) ── */
   --color-text-and-icons-primary:   #ffffff;
   --color-text-and-icons-secondary: rgba(255, 255, 255, 0.69);
   --color-text-and-icons-tertiary:  rgba(255, 255, 255, 0.40);
 
-  /* ── Borders ── */
-  --color-border:           #292524;
-  --color-border-light:     rgba(255, 255, 255, 0.12);
-
-  /* ── Brand (neutral stone — keeps existing bg-primary/text-primary usages safe) ── */
+  /* ── FESTIVAL BRAND: primary (stone; kept — CTAs stay dark, no DS equivalent) ── */
   --color-primary:          #57534e;
   --color-primary-hover:    #78716c;
   --color-primary-light:    #1c1917;
 
-  /* ── Accent colors ── */
+  /* ── FESTIVAL BRAND: accent palette (no DS equivalent; canonical) ── */
   --color-violet:           #7916f3;
   --color-violet-light:     #2d1466;
   --color-light-blue-violet: #7365FF;
@@ -186,7 +209,7 @@
   --color-lime:             #e4ff07;
   --color-cyan:             #07ffff;
 
-  /* ── Status ── */
+  /* ── FESTIVAL BRAND: status (DS-mappable; muted tints have no DS equivalent) ── */
   --color-success:          #35c759;
   --color-success-muted:    #1a3d26;
   --color-danger:           #ff3123;
@@ -237,8 +260,6 @@
   /* ── Fonts ── */
   --font-heading:           'Inter', sans-serif;
   --font-body:              'Inter', sans-serif;
-  /* Unbounded is not loaded (was unused); font-display falls back to sans-serif */
-  --font-display:           'Unbounded', sans-serif;
   --font-mono:              'Akkurat Mono', monospace;
 
   /* ── Radius ── */
@@ -302,8 +323,8 @@
 
   body {
     font-family: var(--font-body);
-    background-color: var(--color-background);
-    color: var(--color-text-primary);
+    background-color: var(--color-bg-surface-main);
+    color: var(--color-fg-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -313,26 +334,17 @@
     height: 100dvh;
     display: flex;
     flex-direction: column;
-    background-color: var(--color-background);
-  }
-
-  /* When a theme is active (currently only on /onboarding — see
-     plugins/theme.client.ts), the body and app-shell follow the theme's
-     surface-main / fg-primary so no pure-black seam shows around the page
-     wrapper on mobile (where <main> is mx-auto max-w-md px-4). */
-  html[data-theme] body,
-  html[data-theme] .app-shell {
     background-color: var(--color-bg-surface-main);
-    color: var(--color-fg-primary);
   }
 
-  /* Alias the app-wide tokens used by components that render on BOTH the
-     festival home AND /onboarding (HomeLocation, etc.) so they follow the
-     active theme without the component knowing about it. Outside /onboarding
-     no [data-theme] is set, so the legacy tokens resolve to their own :root
-     values (festival dark) and the home page renders unchanged. */
+  /* body/.app-shell use the Classic tokens directly above; under [data-theme]
+     (only /onboarding) those same vars resolve to the active theme, so the
+     wrapper follows the theme automatically — no separate override needed. */
+
+  /* On /onboarding ([data-theme] set), the opacity text-and-icons tokens follow
+     the active theme by aliasing to its solid fg-* values. Off /onboarding they
+     resolve to their :root opacity-white (Classic) and screens render unchanged. */
   html[data-theme] {
-    --color-surface-2: var(--color-bg-surface-container);
     --color-text-and-icons-secondary: var(--color-fg-secondary);
     --color-text-and-icons-tertiary: var(--color-fg-tertiary);
   }
