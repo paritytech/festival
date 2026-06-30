@@ -190,7 +190,7 @@ function getMyListRoute(item: TimelineItem): string {
     >
       <button
         type="button"
-        class="absolute inset-0 flex items-end bg-surface-2 text-activations"
+        class="absolute inset-0 flex items-end bg-bg-surface-nested text-activations"
         data-testid="activate-pass-cta"
         aria-label="Activate your pass"
         @click="onActivatePass"
@@ -241,7 +241,7 @@ function getMyListRoute(item: TimelineItem): string {
         data-testid="locked-host-card"
       >
         <div
-          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
+          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-bg-surface-container-inverted flex items-center justify-center z-10"
         >
           <svg
             width="18"
@@ -270,7 +270,7 @@ function getMyListRoute(item: TimelineItem): string {
           </p>
         </div>
         <div
-          class="absolute inset-0 bg-black/45 z-20 pointer-events-none rounded-3xl"
+          class="absolute inset-0 bg-bg-surface-overlay z-20 pointer-events-none rounded-3xl"
         />
       </div>
 
@@ -279,7 +279,7 @@ function getMyListRoute(item: TimelineItem): string {
         data-testid="locked-build-card"
       >
         <div
-          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
+          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-bg-surface-container-inverted flex items-center justify-center z-10"
         >
           <svg
             width="18"
@@ -308,7 +308,7 @@ function getMyListRoute(item: TimelineItem): string {
           </p>
         </div>
         <div
-          class="absolute inset-0 bg-black/45 z-20 pointer-events-none rounded-3xl"
+          class="absolute inset-0 bg-bg-surface-overlay z-20 pointer-events-none rounded-3xl"
         />
       </div>
 
@@ -317,7 +317,7 @@ function getMyListRoute(item: TimelineItem): string {
         data-testid="locked-collect-card"
       >
         <div
-          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
+          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-bg-surface-container-inverted flex items-center justify-center z-10"
         >
           <svg
             width="18"
@@ -346,7 +346,7 @@ function getMyListRoute(item: TimelineItem): string {
           </p>
         </div>
         <div
-          class="absolute inset-0 bg-black/45 z-20 pointer-events-none rounded-3xl"
+          class="absolute inset-0 bg-bg-surface-overlay z-20 pointer-events-none rounded-3xl"
         />
       </div>
       </div>
@@ -359,7 +359,7 @@ function getMyListRoute(item: TimelineItem): string {
         <NuxtLink
           v-if="canHostMoreSessions"
           :to="hostSessionTo"
-          class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-and-icons-primary"
+          class="w-9 h-9 rounded-full bg-bg-surface-nested flex items-center justify-center text-text-and-icons-primary"
           aria-label="Host a session"
         >
           <PlusIcon :size="18" />
@@ -370,7 +370,7 @@ function getMyListRoute(item: TimelineItem): string {
           v-for="session in mySessions"
           :key="session.address"
           :to="`/sessions/${session.address}`"
-          class="block rounded-2xl bg-white px-4 py-2.5"
+          class="block rounded-2xl bg-bg-surface-container-inverted px-4 py-2.5"
         >
           <div class="flex items-center gap-3">
             <div
@@ -380,10 +380,10 @@ function getMyListRoute(item: TimelineItem): string {
               <BadgeCanvas :pixels="session.metadata.badgePixels" :size="48" />
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-semibold text-black truncate">
+              <p class="text-sm font-semibold text-fg-primary-inverted truncate">
                 {{ session.metadata.name }}
               </p>
-              <p class="text-xs text-black/50 mt-0.5">{{ getSessionSubtitle(session) }}</p>
+              <p class="text-xs text-fg-primary-inverted/50 mt-0.5">{{ getSessionSubtitle(session) }}</p>
             </div>
           </div>
         </NuxtLink>
@@ -396,13 +396,13 @@ function getMyListRoute(item: TimelineItem): string {
         <h3 class="text-lg font-semibold text-text-and-icons-primary">My List</h3>
         <NuxtLink
           to="/program?tab=mylist"
-          class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-and-icons-primary"
+          class="w-9 h-9 rounded-full bg-bg-surface-nested flex items-center justify-center text-text-and-icons-primary"
         >
           <ArrowRightIcon />
         </NuxtLink>
       </div>
       <div
-        class="rounded-2xl bg-surface-2 divide-y divide-white/8 overflow-hidden"
+        class="rounded-2xl bg-bg-surface-nested divide-y divide-applied-separator overflow-hidden"
       >
         <NuxtLink
           v-for="item in myListItems"
@@ -418,17 +418,17 @@ function getMyListRoute(item: TimelineItem): string {
             <div class="flex items-center gap-1.5">
               <span
                 v-if="isItemOngoing(item)"
-                class="w-1.5 h-1.5 rounded-full bg-danger shrink-0"
+                class="w-1.5 h-1.5 rounded-full bg-bg-status-error shrink-0"
               />
               <p class="text-sm font-medium text-text-and-icons-primary line-clamp-1">
                 {{ getMyListTitle(item) }}
               </p>
             </div>
             <div class="flex items-start justify-between gap-2 mt-0.5">
-              <span class="text-xs text-text-muted whitespace-nowrap shrink-0">{{
+              <span class="text-xs text-text-and-icons-tertiary whitespace-nowrap shrink-0">{{
                 getMyListTimeLabel(item)
               }}</span>
-              <span class="text-xs text-text-muted text-left">{{
+              <span class="text-xs text-text-and-icons-tertiary text-left">{{
                 getMyListLocation(item)
               }}</span>
             </div>
@@ -447,7 +447,7 @@ function getMyListRoute(item: TimelineItem): string {
         class="block rounded-3xl bg-magenta relative overflow-hidden"
       >
         <div
-          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
+          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-bg-surface-container-inverted flex items-center justify-center z-10"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -486,7 +486,7 @@ function getMyListRoute(item: TimelineItem): string {
         class="block rounded-3xl bg-olive relative overflow-hidden"
       >
         <div
-          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
+          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-bg-surface-container-inverted flex items-center justify-center z-10"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -526,7 +526,7 @@ function getMyListRoute(item: TimelineItem): string {
         data-testid="collect-badges-card"
       >
         <div
-          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white flex items-center justify-center z-10"
+          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-bg-surface-container-inverted flex items-center justify-center z-10"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

@@ -25,7 +25,7 @@ defineEmits<{ back: [] }>()
     </button>
 
     <h1
-      class="absolute left-1/2 -translate-x-1/2 text-base font-semibold text-white"
+      class="absolute left-1/2 -translate-x-1/2 text-base font-semibold text-text-and-icons-primary"
       :data-testid="titleTestid"
     >
       {{ title }}

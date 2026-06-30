@@ -62,7 +62,7 @@ function handleReady() {
 </script>
 
 <template>
-  <div class="aspect-[4/3] rounded-2xl overflow-hidden bg-surface-2 relative">
+  <div class="aspect-[4/3] rounded-2xl overflow-hidden bg-bg-surface-nested relative">
     <ClientOnly>
       <VenueMap
         v-if="resolved && resolved.kind !== 'unknown'"
@@ -78,7 +78,7 @@ function handleReady() {
         @ready="handleReady"
       />
       <div v-else class="w-full h-full flex items-center justify-center">
-        <p class="text-xs text-white/40">
+        <p class="text-xs text-text-and-icons-tertiary">
           {{
             resolved?.kind === "unknown"
               ? "Location unavailable"

@@ -38,7 +38,7 @@ const length = computed(() => props.modelValue.length)
         :rows="rows"
         :maxlength="maxLength"
         :placeholder="placeholder"
-        class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none resize-none placeholder-white/30"
+        class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none resize-none placeholder-text-and-icons-tertiary"
         @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
       />
     </template>

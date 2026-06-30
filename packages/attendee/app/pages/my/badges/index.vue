@@ -24,17 +24,17 @@ function onCollectMore() {
     <!-- Header -->
     <div class="px-4 pt-4 pb-3 flex items-center shrink-0">
       <BackButton class="text-text-and-icons-primary" />
-      <h1 class="flex-1 text-center text-base font-semibold text-white">Badge Collection</h1>
+      <h1 class="flex-1 text-center text-base font-semibold text-text-and-icons-primary">Badge Collection</h1>
       <div class="w-10" />
     </div>
 
-    <div v-if="isLoading" class="flex-1 flex items-center justify-center text-text-muted">
+    <div v-if="isLoading" class="flex-1 flex items-center justify-center text-text-and-icons-tertiary">
       Loading…
     </div>
 
     <div v-else-if="!poaps.length" class="flex-1 flex flex-col items-center justify-center px-4 text-center">
-      <p class="text-text-muted text-sm">No badges yet.</p>
-      <p class="text-text-muted text-xs mt-1">Check in to sessions to earn badges.</p>
+      <p class="text-text-and-icons-tertiary text-sm">No badges yet.</p>
+      <p class="text-text-and-icons-tertiary text-xs mt-1">Check in to sessions to earn badges.</p>
     </div>
 
     <div v-else class="flex-1 px-4">
@@ -45,7 +45,7 @@ function onCollectMore() {
           :to="`/my/badge/${poap.tokenId}?contract=${poap.poapContract}`"
           class="flex flex-col items-center"
         >
-          <div class="w-full aspect-square rounded-2xl overflow-hidden bg-white">
+          <div class="w-full aspect-square rounded-2xl overflow-hidden bg-bg-surface-container-inverted">
             <FestivalPoapBadge
               v-if="poap.type === 'festival'"
               :address="poap.attendee"
@@ -63,16 +63,16 @@ function onCollectMore() {
               class="w-full h-full"
             />
           </div>
-          <p class="text-xs text-white mt-2 text-center truncate w-full">{{ poap.sourceName }}</p>
+          <p class="text-xs text-text-and-icons-primary mt-2 text-center truncate w-full">{{ poap.sourceName }}</p>
         </NuxtLink>
       </div>
     </div>
 
     <!-- Sticky bottom CTA: pinned above the tab bar via the scroll area. -->
-    <div class="sticky bottom-0 px-4 pt-3 pb-[calc(var(--safe-bottom)+16px)] bg-background">
+    <div class="sticky bottom-0 px-4 pt-3 pb-[calc(var(--safe-bottom)+16px)] bg-bg-surface-main">
       <button
         type="button"
-        class="block w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold text-center"
+        class="block w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold text-center"
         @click="onCollectMore"
       >
         Collect more Badges

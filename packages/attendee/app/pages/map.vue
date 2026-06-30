@@ -436,7 +436,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  color: #ffffff;
+  color: var(--color-text-and-icons-primary);
 }
 
 .map-page__title {
@@ -458,7 +458,7 @@ onBeforeUnmount(() => {
   flex: 1;
   min-height: 360px;
   margin: 16px -16px 0;
-  background: #000;
+  background: var(--color-bg-surface-main);
   overflow: hidden;
 }
 
@@ -496,7 +496,7 @@ onBeforeUnmount(() => {
   z-index: 1200;
   padding: 10px 16px;
   background: rgba(15, 15, 15, 0.95);
-  color: #ffffff;
+  color: var(--color-text-and-icons-primary);
   border-radius: 10px;
   font-size: 13px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);

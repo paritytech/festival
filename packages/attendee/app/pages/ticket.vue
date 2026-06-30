@@ -60,13 +60,13 @@ const seconds = computed(() => (timeRemaining.value % 60).toString().padStart(2,
 
 <template>
   <div class="max-w-md mx-auto">
-    <NuxtLink to="/" class="text-xs text-text-muted hover:text-text-secondary mb-4 block">
+    <NuxtLink to="/" class="text-xs text-text-and-icons-tertiary hover:text-text-and-icons-secondary mb-4 block">
       ← Back to Hub
     </NuxtLink>
 
     <!-- Not registered -->
     <div v-if="!isRegistered" class="text-center py-12">
-      <p class="text-text-muted mb-2">You're not registered yet.</p>
+      <p class="text-text-and-icons-tertiary mb-2">You're not registered yet.</p>
       <NuxtLink to="/" class="text-primary text-sm">Register first</NuxtLink>
     </div>
 
@@ -74,7 +74,7 @@ const seconds = computed(() => (timeRemaining.value % 60).toString().padStart(2,
     <div v-else>
       <div class="text-center mb-4">
         <h2 class="font-heading text-xl font-bold">{{ metadata?.name }}</h2>
-        <p class="text-text-secondary text-sm">Your Ticket</p>
+        <p class="text-text-and-icons-secondary text-sm">Your Ticket</p>
       </div>
 
       <!-- Check-in status banner -->
@@ -90,14 +90,14 @@ const seconds = computed(() => (timeRemaining.value % 60).toString().padStart(2,
 
       <!-- QR Code area -->
       <div
-        class="bg-surface-elevated border border-border rounded-lg p-6 mb-4"
+        class="bg-bg-surface-container-inverted border border-stroke-primary rounded-lg p-6 mb-4"
         :class="isCheckedIn && 'opacity-50'"
       >
         <!-- Reveal button (no QR yet) -->
         <div v-if="!qrDataUrl && !isGenerating && !qrError" class="aspect-square flex flex-col items-center justify-center text-center">
-          <p class="text-sm text-text-muted mb-4">Tap to sign and reveal your check-in QR</p>
+          <p class="text-sm text-text-and-icons-tertiary mb-4">Tap to sign and reveal your check-in QR</p>
           <button
-            class="px-6 py-3 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary-hover transition-colors"
+            class="px-6 py-3 bg-primary text-text-and-icons-primary rounded-md text-sm font-medium hover:bg-primary-hover transition-colors"
             @click="revealTicket"
           >
             Reveal Ticket
@@ -107,14 +107,14 @@ const seconds = computed(() => (timeRemaining.value % 60).toString().padStart(2,
         <!-- Signing in progress -->
         <div v-else-if="isGenerating" class="aspect-square flex flex-col items-center justify-center">
           <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3" />
-          <p class="text-sm text-text-muted">Waiting for signature...</p>
+          <p class="text-sm text-text-and-icons-tertiary">Waiting for signature...</p>
         </div>
 
         <!-- Error -->
         <div v-else-if="qrError" class="aspect-square flex flex-col items-center justify-center text-center px-4">
-          <p class="text-sm text-red-600 mb-2">{{ qrError }}</p>
+          <p class="text-sm text-fg-error mb-2">{{ qrError }}</p>
           <button
-            class="px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary-hover transition-colors"
+            class="px-4 py-2 bg-primary text-text-and-icons-primary rounded-md text-sm hover:bg-primary-hover transition-colors"
             @click="revealTicket"
           >
             Retry
@@ -122,25 +122,25 @@ const seconds = computed(() => (timeRemaining.value % 60).toString().padStart(2,
         </div>
 
         <!-- QR Image -->
-        <div v-else-if="qrDataUrl" class="aspect-square bg-white rounded-md flex items-center justify-center border border-border-light p-4">
+        <div v-else-if="qrDataUrl" class="aspect-square bg-bg-surface-container-inverted rounded-md flex items-center justify-center border border-stroke-primary p-4">
           <img :src="qrDataUrl" alt="Check-in QR code" class="w-full h-full" />
         </div>
 
-        <p class="text-center text-xs text-text-muted font-mono mt-3">Ticket #{{ ticketTokenId }}</p>
+        <p class="text-center text-xs text-text-and-icons-tertiary font-mono mt-3">Ticket #{{ ticketTokenId }}</p>
 
         <!-- Timer (only when QR is visible and not checked in) -->
         <div v-if="qrDataUrl && !isCheckedIn" class="text-center mt-4">
-          <p class="text-xs text-text-muted">Expires in</p>
+          <p class="text-xs text-text-and-icons-tertiary">Expires in</p>
           <p class="text-2xl font-mono font-bold text-primary">{{ minutes }}:{{ seconds }}</p>
         </div>
       </div>
 
       <!-- Instructions -->
-      <div class="bg-surface border border-border rounded-md p-4 text-center">
-        <p v-if="!isCheckedIn" class="text-sm text-text-secondary">
+      <div class="bg-bg-surface-container border border-stroke-primary rounded-md p-4 text-center">
+        <p v-if="!isCheckedIn" class="text-sm text-text-and-icons-secondary">
           Show this QR code to check-in staff. Each code is valid for 5 minutes and requires a new signature.
         </p>
-        <p v-else class="text-sm text-text-secondary">
+        <p v-else class="text-sm text-text-and-icons-secondary">
           You've been checked in. Your festival POAP has been minted to your wallet.
         </p>
       </div>

@@ -52,7 +52,7 @@ onUnmounted(() => {
 <template>
   <Teleport to="body">
     <div
-      class="badge-earned-festival fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-[2110] overflow-hidden bg-background text-white"
+      class="badge-earned-festival fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-[2110] overflow-hidden bg-bg-surface-main text-text-and-icons-primary"
       data-testid="badge-earned-festival-screen"
       role="dialog"
       aria-labelledby="badge-earned-title"

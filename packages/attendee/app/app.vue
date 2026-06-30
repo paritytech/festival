@@ -194,22 +194,22 @@ const bookmarkAlertMessage = computed(() => {
 </script>
 
 <template>
-  <div v-if="!allowed && !isDev" class="min-h-screen flex items-center justify-center bg-background p-8">
+  <div v-if="!allowed && !isDev" class="min-h-screen flex items-center justify-center bg-bg-surface-main p-8">
     <div class="text-center max-w-md">
       <h1 class="text-2xl font-bold mb-4">Festival</h1>
-      <p class="text-text-secondary mb-6">
+      <p class="text-text-and-icons-secondary mb-6">
         This app runs inside the Polkadot Host. Open it from Polkadot Desktop, Web, or Mobile.
       </p>
-      <p class="text-text-muted text-sm">
+      <p class="text-text-and-icons-tertiary text-sm">
         Detected environment: {{ environment }}
       </p>
     </div>
   </div>
 
-  <div v-else-if="!isConfigured && !isDev" class="min-h-screen flex items-center justify-center bg-background p-8">
+  <div v-else-if="!isConfigured && !isDev" class="min-h-screen flex items-center justify-center bg-bg-surface-main p-8">
     <div class="text-center max-w-md">
       <h1 class="text-2xl font-bold mb-4">Missing Configuration</h1>
-      <p class="text-text-secondary">
+      <p class="text-text-and-icons-secondary">
         VITE_FESTIVAL_ADDRESS environment variable is required.
       </p>
     </div>
@@ -223,10 +223,10 @@ const bookmarkAlertMessage = computed(() => {
   <div v-else class="app-shell">
       <!-- Desktop sidebar (hidden on mobile) -->
       <aside
-        class="hidden md:flex md:fixed md:top-0 md:left-0 md:bottom-0 md:w-60 md:flex-col md:gap-1 md:border-r md:border-white/8 md:z-30 md:px-4 md:py-6"
+        class="hidden md:flex md:fixed md:top-0 md:left-0 md:bottom-0 md:w-60 md:flex-col md:gap-1 md:border-r md:border-stroke-primary md:z-30 md:px-4 md:py-6"
         data-testid="attendee-sidebar"
       >
-        <p class="text-sm font-semibold text-white/80 tracking-widest uppercase px-2 mb-5">
+        <p class="text-sm font-semibold text-text-and-icons-secondary tracking-widest uppercase px-2 mb-5">
           Festival
         </p>
         <NuxtLink
@@ -236,7 +236,7 @@ const bookmarkAlertMessage = computed(() => {
           :to="tab.to"
           :data-testid="`nav-item-${tab.label.toLowerCase()}`"
           class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
-          :class="isTabActive(tab) ? 'bg-surface-2 text-white' : 'text-white/60 hover:text-white hover:bg-surface/60'"
+          :class="isTabActive(tab) ? 'bg-bg-surface-nested text-text-and-icons-primary' : 'text-text-and-icons-tertiary hover:text-text-and-icons-primary hover:bg-bg-surface-container/60'"
         >
           <!-- Home icon -->
           <svg v-if="tab.icon === 'home'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 28 28" fill="currentColor">
@@ -256,7 +256,7 @@ const bookmarkAlertMessage = computed(() => {
 
       <!-- Desktop right pane (empty in PR 1, reserved for two-pane detail) -->
       <aside
-        class="hidden md:block md:fixed md:top-0 md:bottom-0 md:right-0 md:bg-background md:border-l md:border-white/8 md:z-10"
+        class="hidden md:block md:fixed md:top-0 md:bottom-0 md:right-0 md:bg-bg-surface-main md:border-l md:border-stroke-primary md:z-10"
         :style="{ width: 'var(--col-r)' }"
       />
 
@@ -266,7 +266,7 @@ const bookmarkAlertMessage = computed(() => {
         <!-- Connection status banner — scoped to the main column at md+ -->
         <div
           v-if="wallet.connectionStatus === 'disconnected'"
-          class="fixed top-0 left-0 right-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-[100] bg-warning/90 text-white text-center py-2 text-sm font-medium"
+          class="fixed top-0 left-0 right-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-[100] bg-bg-status-warning/90 text-text-and-icons-primary text-center py-2 text-sm font-medium"
         >
           Reconnecting to host...
         </div>
@@ -279,27 +279,27 @@ const bookmarkAlertMessage = computed(() => {
         >
           <button
             v-if="wallet.isConnected"
-            class="text-right rounded-lg px-2 py-1 bg-surface/70 backdrop-blur hover:bg-surface-2 transition-colors"
+            class="text-right rounded-lg px-2 py-1 bg-bg-surface-container/70 backdrop-blur hover:bg-bg-surface-nested transition-colors"
             @click="showAccountPicker = !showAccountPicker"
           >
-            <p class="text-[10px] text-text-muted truncate max-w-[120px]">{{ wallet.accountName }}</p>
+            <p class="text-[10px] text-text-and-icons-tertiary truncate max-w-[120px]">{{ wallet.accountName }}</p>
             <p class="text-[9px] text-violet">DEV</p>
           </button>
-          <p v-else class="text-[10px] text-text-muted px-2 py-1">No wallet</p>
+          <p v-else class="text-[10px] text-text-and-icons-tertiary px-2 py-1">No wallet</p>
 
           <div
             v-if="showAccountPicker && wallet.accounts.length > 1"
-            class="absolute right-2 bottom-full mb-1 w-56 bg-surface-2 border border-border rounded-xl shadow-lg z-50 overflow-hidden"
+            class="absolute right-2 bottom-full mb-1 w-56 bg-bg-surface-nested border border-stroke-primary rounded-xl shadow-lg z-50 overflow-hidden"
           >
             <button
               v-for="acc in wallet.accounts"
               :key="acc.address"
-              class="w-full text-left px-3 py-2 text-xs hover:bg-surface-3 transition-colors border-b border-border last:border-b-0"
-              :class="acc.address === wallet.address ? 'font-medium text-text-primary' : 'text-text-secondary'"
+              class="w-full text-left px-3 py-2 text-xs hover:bg-bg-surface-nested transition-colors border-b border-stroke-primary last:border-b-0"
+              :class="acc.address === wallet.address ? 'font-medium text-text-and-icons-primary' : 'text-text-and-icons-secondary'"
               @click="wallet.selectAccount(acc); showAccountPicker = false"
             >
               <p class="truncate">{{ acc.name || 'Account' }}</p>
-              <p class="text-text-muted text-[10px]">{{ shortenAddr(acc.address) }}</p>
+              <p class="text-text-and-icons-tertiary text-[10px]">{{ shortenAddr(acc.address) }}</p>
             </button>
           </div>
         </div>
@@ -323,7 +323,7 @@ const bookmarkAlertMessage = computed(() => {
              cannot drift, regardless of WebKit viewport quirks. -->
         <nav
           v-if="!hideTabBar"
-          class="relative z-50 md:hidden bg-black border-t border-white/12 shrink-0 pb-[var(--safe-bottom)]"
+          class="relative z-50 md:hidden bg-bg-surface-main border-t border-stroke-primary shrink-0 pb-[var(--safe-bottom)]"
           data-testid="attendee-tab-bar"
         >
           <div class="flex items-center justify-around h-[52px]">
@@ -333,7 +333,7 @@ const bookmarkAlertMessage = computed(() => {
               :to="tab.to"
               :data-testid="`tab-${tab.label.toLowerCase()}`"
               class="flex flex-col items-center gap-0.5 px-5 py-1 min-w-[64px] transition-colors"
-              :class="isTabActive(tab) ? 'text-white' : 'text-white/50'"
+              :class="isTabActive(tab) ? 'text-text-and-icons-primary' : 'text-text-and-icons-tertiary'"
             >
               <svg v-if="tab.icon === 'home'" xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 28 28" fill="currentColor">
                 <path d="M11.6663 23.9163V16.9163H16.333V23.9163H22.1663V14.583H25.6663L13.9997 4.08301L2.33301 14.583H5.83301V23.9163H11.6663Z" />

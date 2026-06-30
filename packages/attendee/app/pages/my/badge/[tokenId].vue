@@ -231,24 +231,24 @@ onUnmounted(() => {
         </div>
 
         <!-- Name -->
-        <h1 class="text-2xl font-bold text-white text-center mt-4">
+        <h1 class="text-2xl font-bold text-text-and-icons-primary text-center mt-4">
           {{ poap.sourceName }}
         </h1>
 
         <!-- Hosted by -->
-        <p v-if="hostedBy" class="text-sm text-text-muted text-center mt-2">
+        <p v-if="hostedBy" class="text-sm text-text-and-icons-tertiary text-center mt-2">
           {{ hostedBy }}
         </p>
 
         <!-- Time + location -->
-        <p v-if="timeAndLocation" class="text-sm text-text-muted text-center mt-1">
+        <p v-if="timeAndLocation" class="text-sm text-text-and-icons-tertiary text-center mt-1">
           {{ timeAndLocation }}
         </p>
       </div>
 
       <!-- Received date (bottom) -->
       <div class="px-4 pb-6 pt-4">
-        <p class="text-sm text-text-muted text-center">{{ receivedDate }}</p>
+        <p class="text-sm text-text-and-icons-tertiary text-center">{{ receivedDate }}</p>
       </div>
     </template>
   </div>

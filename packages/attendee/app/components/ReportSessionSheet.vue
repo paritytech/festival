@@ -26,19 +26,19 @@ const isPending = computed(
   <Transition name="fade">
     <div
       v-if="visible"
-      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] bg-black/70 z-[1000] flex items-end justify-center"
+      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] bg-bg-surface-overlay z-[1000] flex items-end justify-center"
       data-testid="report-session-sheet"
       @click.self="!isPending && (isSuccess ? $emit('done') : $emit('cancel'))"
     >
       <div
-        class="w-full bg-surface-2 rounded-t-[32px] px-6 pt-4 pb-[calc(var(--safe-bottom)+24px)] flex flex-col items-center gap-6"
+        class="w-full bg-bg-surface-nested rounded-t-[32px] px-6 pt-4 pb-[calc(var(--safe-bottom)+24px)] flex flex-col items-center gap-6"
       >
         <!-- Icon + Title + Body -->
         <div class="flex flex-col items-center gap-1 w-full">
           <!-- Icon circle -->
           <div
             v-if="!isSuccess"
-            class="w-14 h-14 rounded-full bg-danger flex items-center justify-center"
+            class="w-14 h-14 rounded-full bg-bg-status-error flex items-center justify-center"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M5 21V5h11l-1.5 4L16 13H5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -46,7 +46,7 @@ const isPending = computed(
           </div>
           <div
             v-else
-            class="w-14 h-14 rounded-full bg-success flex items-center justify-center"
+            class="w-14 h-14 rounded-full bg-bg-status-success flex items-center justify-center"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M5 12.5L10 17.5L19 7.5" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -54,10 +54,10 @@ const isPending = computed(
           </div>
 
           <div class="flex flex-col gap-1 items-center text-center w-full p-2">
-            <h2 class="text-[24px] font-semibold leading-[32px] text-white">
+            <h2 class="text-[24px] font-semibold leading-[32px] text-text-and-icons-primary">
               {{ isSuccess ? 'Report sent' : 'Report this session' }}
             </h2>
-            <p class="text-base leading-5 text-white/70">
+            <p class="text-base leading-5 text-text-and-icons-secondary">
               {{
                 isSuccess
                   ? "Thanks for letting us know. This session is now hidden from your Program and My List. We'll review it shortly."
@@ -70,23 +70,23 @@ const isPending = computed(
         <!-- Pending status / error -->
         <div
           v-if="isPending"
-          class="w-full flex items-center justify-center gap-3 rounded-2xl bg-white/[0.02] py-3"
+          class="w-full flex items-center justify-center gap-3 rounded-2xl bg-fill-6 py-3"
         >
-          <div class="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />
-          <p class="text-sm text-white/70">Reporting…</p>
+          <div class="w-4 h-4 border-2 border-text-and-icons-primary/60 border-t-transparent rounded-full animate-spin" />
+          <p class="text-sm text-text-and-icons-secondary">Reporting…</p>
         </div>
 
         <div
           v-if="error && !isPending && !isSuccess"
-          class="w-full rounded-2xl bg-danger/10 px-4 py-3"
+          class="w-full rounded-2xl bg-bg-status-error/10 px-4 py-3"
         >
-          <p class="text-sm text-danger leading-snug text-center">{{ error }}</p>
+          <p class="text-sm text-fg-error leading-snug text-center">{{ error }}</p>
         </div>
 
         <!-- Buttons -->
         <div v-if="isSuccess" class="w-full">
           <button
-            class="w-full py-[18px] rounded-2xl bg-white text-black text-base font-medium"
+            class="w-full py-[18px] rounded-2xl bg-bg-action-primary text-fg-primary-inverted text-base font-medium"
             data-testid="report-session-done"
             @click="$emit('done')"
           >
@@ -95,7 +95,7 @@ const isPending = computed(
         </div>
         <div v-else class="w-full flex flex-col gap-2">
           <button
-            class="w-full py-[18px] rounded-2xl bg-danger text-white text-base font-medium disabled:opacity-50"
+            class="w-full py-[18px] rounded-2xl bg-bg-status-error text-text-and-icons-primary text-base font-medium disabled:opacity-50"
             data-testid="report-session-confirm"
             :disabled="isPending"
             @click="$emit('confirm')"
@@ -103,7 +103,7 @@ const isPending = computed(
             Report &amp; Hide Session
           </button>
           <button
-            class="w-full py-3 text-white/70 text-base font-medium disabled:opacity-50"
+            class="w-full py-3 text-text-and-icons-secondary text-base font-medium disabled:opacity-50"
             data-testid="report-session-cancel"
             :disabled="isPending"
             @click="$emit('cancel')"
