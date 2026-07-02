@@ -640,17 +640,3 @@ async function doCreate() {
     @secondary="gate.onSecondary"
   />
 </template>
-
-<style scoped>
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition:
-    opacity 0.3s ease,
-    transform 0.3s ease;
-}
-.slide-up-enter-from,
-.slide-up-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
-}
-</style>
