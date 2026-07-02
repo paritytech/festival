@@ -49,8 +49,10 @@ defineEmits<{
 
           <!-- Buttons -->
           <div class="w-full flex flex-col gap-3">
-            <button
-              class="w-full py-[18px] rounded-2xl bg-bg-action-primary text-fg-primary-inverted text-base font-semibold disabled:opacity-50 flex items-center justify-center"
+            <Button
+              variant="primary"
+              size="lg"
+              block
               data-testid="activation-modal-primary"
               :disabled="busy"
               @click="$emit('primary')"
@@ -61,15 +63,17 @@ defineEmits<{
                 class="w-5 h-5 border-2 border-fg-primary-inverted/40 border-t-transparent rounded-full animate-spin"
                 aria-label="Activating"
               />
-            </button>
-            <button
-              class="w-full py-[18px] rounded-2xl bg-fill-12 text-text-and-icons-primary text-base font-medium disabled:opacity-50"
+            </Button>
+            <Button
+              variant="secondary"
+              size="lg"
+              block
               data-testid="activation-modal-secondary"
               :disabled="busy"
               @click="$emit('secondary')"
             >
               {{ secondaryLabel }}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -429,13 +429,14 @@ async function doCreate() {
       </div>
 
       <div class="px-4 pb-[calc(var(--safe-bottom)+24px)] space-y-3">
-        <NuxtLink
+        <Button
+          variant="primary"
+          block
           :to="{ path: `/sessions/${createdAddress}`, query: { from: 'create' } }"
           data-testid="session-success-view"
-          class="block w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold text-center"
         >
           View your Session
-        </NuxtLink>
+        </Button>
         <NuxtLink
           to="/program"
           data-testid="session-success-back"
@@ -465,8 +466,9 @@ async function doCreate() {
     <!-- Header -->
     <div class="px-4 pt-4 pb-3 flex items-center">
       <!-- Step 1: X close. Steps 2-3: back arrow -->
-      <button
-        class="w-10 h-10 flex items-center justify-center -ml-2"
+      <IconButton
+        :aria-label="currentStep === 1 ? 'Close' : 'Back'"
+        class="-ml-2"
         @click="currentStep === 1 ? handleClose() : goBack()"
       >
         <!-- X icon (step 1) -->
@@ -488,7 +490,7 @@ async function doCreate() {
         </svg>
         <!-- Back arrow (steps 2-3) -->
         <BackIcon v-else class="text-text-and-icons-primary" />
-      </button>
+      </IconButton>
 
       <!-- Centered title -->
       <h1 class="flex-1 text-center text-base font-semibold text-text-and-icons-primary">
@@ -578,31 +580,34 @@ async function doCreate() {
       class="sticky bottom-0 z-10 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-bg-surface-main"
     >
       <!-- Step 1: Next -->
-      <button
+      <Button
         v-if="currentStep === 1"
+        variant="primary"
+        block
         data-testid="create-step1-next"
-        class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
         :disabled="!canProceedStep1"
         @click="goNext"
       >
         Next
-      </button>
+      </Button>
 
       <!-- Step 2: Choose Location (intro state) or Next (preview state) -->
-      <button
+      <Button
         v-if="currentStep === 2 && !pickedLocation"
-        class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors"
+        variant="primary"
+        block
         @click="pickerOpen = true"
       >
         Choose Location
-      </button>
-      <button
+      </Button>
+      <Button
         v-else-if="currentStep === 2"
-        class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors"
+        variant="primary"
+        block
         @click="goNext"
       >
         Next
-      </button>
+      </Button>
 
       <!-- Step 4: Create Session -->
       <template v-if="currentStep === 4">
@@ -615,13 +620,14 @@ async function doCreate() {
         </div>
 
         <!-- Submit button -->
-        <button
-          class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
+        <Button
+          variant="primary"
+          block
           :disabled="!badgeHex || (txStatus !== 'idle' && txStatus !== 'error')"
           @click="submit"
         >
           Create Session
-        </button>
+        </Button>
       </template>
     </div>
   </div>

@@ -14,15 +14,15 @@ defineEmits<{ back: [] }>()
 
 <template>
   <div class="relative flex items-center justify-between px-4 pt-4 pb-3">
-    <button
-      type="button"
-      class="w-10 h-10 flex items-center justify-center -ml-2 text-text-and-icons-primary"
+    <IconButton
+      shape="square"
+      class="-ml-2"
       :data-testid="backTestid"
       :aria-label="backAriaLabel"
       @click="$emit('back')"
     >
       <BackIcon />
-    </button>
+    </IconButton>
 
     <h1
       class="absolute left-1/2 -translate-x-1/2 text-base font-semibold text-text-and-icons-primary"
