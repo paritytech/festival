@@ -514,15 +514,13 @@ async function submit() {
       </InputField>
 
       <!-- Submit-time revalidation banner -->
-      <div
+      <ErrorBanner
         v-if="submitValidationError"
         data-testid="session-revalidation-banner"
-        class="rounded-2xl bg-danger-muted border border-stroke-error/20 px-4 py-3"
+        size="sm"
       >
-        <p class="text-sm text-fg-error">
-          Selected time is no longer available. Please pick a new date and time.
-        </p>
-      </div>
+        Selected time is no longer available. Please pick a new date and time.
+      </ErrorBanner>
 
       <!-- Time is immutable on-chain after creation: display-only here. -->
       <SessionDatePicker
@@ -588,12 +586,7 @@ async function submit() {
       </div>
 
       <!-- Error -->
-      <div
-        v-if="error"
-        class="rounded-2xl bg-danger-muted border border-stroke-error/20 px-5 py-4"
-      >
-        <p class="text-sm text-fg-error">{{ error }}</p>
-      </div>
+      <ErrorBanner v-if="error" :message="error" />
 
       <!-- Delete -->
       <button

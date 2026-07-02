@@ -507,16 +507,14 @@ async function doCreate() {
     <div ref="stepBodyRef" class="flex-1 overflow-y-auto">
       <!-- Step 1: Session Details -->
       <div v-if="currentStep === 1">
-        <div
+        <ErrorBanner
           v-if="submitValidationError"
           data-testid="session-revalidation-banner"
-          class="mx-4 mb-4 rounded-2xl bg-danger-muted border border-stroke-error/20 px-4 py-3"
+          size="sm"
+          class="mx-4 mb-4"
         >
-          <p class="text-sm text-fg-error">
-            Selected time is no longer available. Please pick a new date and
-            time.
-          </p>
-        </div>
+          Selected time is no longer available. Please pick a new date and time.
+        </ErrorBanner>
 
         <CreateStepDetails
           ref="stepDetailsRef"
@@ -610,12 +608,7 @@ async function doCreate() {
       <!-- Step 4: Create Session -->
       <template v-if="currentStep === 4">
         <!-- Error -->
-        <div
-          v-if="error"
-          class="rounded-2xl bg-danger-muted border border-stroke-error/20 px-5 py-4 mb-3"
-        >
-          <p class="text-sm text-fg-error">{{ error }}</p>
-        </div>
+        <ErrorBanner v-if="error" :message="error" class="mb-3" />
 
         <!-- Submit button -->
         <Button
