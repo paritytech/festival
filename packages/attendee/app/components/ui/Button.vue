@@ -73,11 +73,7 @@ const classes = computed(() => [
     :aria-busy="loading || undefined"
     :class="classes"
   >
-    <span
-      v-if="loading"
-      class="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin"
-      aria-hidden="true"
-    />
+    <Spinner v-if="loading" size="sm" aria-hidden="true" />
     <slot />
   </component>
 </template>

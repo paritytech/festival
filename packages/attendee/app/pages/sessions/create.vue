@@ -393,9 +393,7 @@ async function doCreate() {
         </div>
 
         <div class="flex items-center gap-3 mt-8">
-          <div
-            class="w-5 h-5 border-2 border-text-and-icons-primary border-t-transparent rounded-full animate-spin shrink-0"
-          />
+          <Spinner size="md" class="text-text-and-icons-primary" />
           <p class="text-base font-semibold text-text-and-icons-primary">Creating session…</p>
         </div>
       </div>

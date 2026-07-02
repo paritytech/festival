@@ -58,10 +58,11 @@ defineEmits<{
               @click="$emit('primary')"
             >
               <span v-if="!busy">{{ primaryLabel }}</span>
-              <span
+              <Spinner
                 v-else
-                class="w-5 h-5 border-2 border-fg-primary-inverted/40 border-t-transparent rounded-full animate-spin"
-                aria-label="Activating"
+                size="md"
+                class="text-fg-primary-inverted/40"
+                label="Activating"
               />
             </Button>
             <Button
