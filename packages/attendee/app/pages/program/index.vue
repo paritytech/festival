@@ -454,9 +454,11 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
 
     <!-- Scroll-to-top button -->
     <Transition name="fade">
-      <button
+      <IconButton
         v-if="showScrollTop"
-        class="fixed bottom-[calc(var(--safe-bottom)+170px)] right-4 md:bottom-[calc(var(--safe-bottom)+90px)] md:right-[calc(var(--col-r)+1rem)] z-40 w-10 h-10 bg-bg-surface-nested rounded-full flex items-center justify-center border border-applied-stroke"
+        aria-label="Scroll to top"
+        variant="surface"
+        class="fixed bottom-[calc(var(--safe-bottom)+170px)] right-4 md:bottom-[calc(var(--safe-bottom)+90px)] md:right-[calc(var(--col-r)+1rem)] z-40 border border-applied-stroke"
         @click="scrollToTop"
       >
         <svg
@@ -472,7 +474,7 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
         >
           <polyline points="18 15 12 9 6 15" />
         </svg>
-      </button>
+      </IconButton>
     </Transition>
 
     <!-- Host your own session: collapsible button (Program tab only) -->
@@ -498,15 +500,6 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
 </template>
 
 <style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
 .mylist-counter-pulse {
   animation: mylist-counter-pulse 450ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }

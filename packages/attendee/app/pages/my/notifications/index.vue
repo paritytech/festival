@@ -101,7 +101,7 @@ onUnmounted(teardown)
     </div>
 
     <div v-if="isLoading && !channel" class="flex-1 flex items-center justify-center py-12">
-      <div class="w-8 h-8 border-2 border-text-and-icons-primary border-t-transparent rounded-full animate-spin" />
+      <Spinner size="lg" class="text-text-and-icons-primary" />
     </div>
 
     <div v-else-if="!channel" class="px-4 py-12 text-center">

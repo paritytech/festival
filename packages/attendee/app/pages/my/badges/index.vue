@@ -70,13 +70,9 @@ function onCollectMore() {
 
     <!-- Sticky bottom CTA: pinned above the tab bar via the scroll area. -->
     <div class="sticky bottom-0 px-4 pt-3 pb-[calc(var(--safe-bottom)+16px)] bg-bg-surface-main">
-      <button
-        type="button"
-        class="block w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold text-center"
-        @click="onCollectMore"
-      >
+      <Button variant="primary" block @click="onCollectMore">
         Collect more Badges
-      </button>
+      </Button>
     </div>
   </div>
 </template>

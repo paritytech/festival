@@ -201,7 +201,7 @@ function onScannerError(msg: string) {
         v-else-if="step === 'validating'"
         class="rounded-2xl bg-bg-surface-nested px-5 py-4 flex items-center gap-3"
       >
-        <div class="w-5 h-5 border-2 border-text-and-icons-primary border-t-transparent rounded-full animate-spin shrink-0" />
+        <Spinner size="md" class="text-text-and-icons-primary" />
         <p class="text-sm text-text-and-icons-primary">Checking on-chain…</p>
       </div>
 
@@ -233,7 +233,7 @@ function onScannerError(msg: string) {
         v-else-if="step === 'executing'"
         class="rounded-2xl bg-bg-surface-nested px-5 py-4 flex items-center gap-3"
       >
-        <div class="w-5 h-5 border-2 border-text-and-icons-primary border-t-transparent rounded-full animate-spin shrink-0" />
+        <Spinner size="md" class="text-text-and-icons-primary" />
         <p class="text-sm text-text-and-icons-primary">Checking in…</p>
       </div>
 

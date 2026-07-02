@@ -393,18 +393,22 @@ async function submit() {
         <p class="text-sm text-text-and-icons-tertiary mt-2">
           This action cannot be undone.
         </p>
-        <button
-          class="w-full py-4 bg-bg-status-error text-text-and-icons-primary rounded-2xl text-sm font-semibold mt-6"
+        <Button
+          variant="danger"
+          block
+          class="mt-6"
           @click="confirmDelete"
         >
           Delete Session
-        </button>
-        <button
-          class="w-full py-4 text-text-and-icons-primary text-sm font-medium mt-3"
+        </Button>
+        <Button
+          variant="ghost"
+          block
+          class="mt-3"
           @click="showDeleteModal = false"
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   </Transition>
@@ -423,18 +427,22 @@ async function submit() {
         <p class="text-sm text-text-and-icons-tertiary mt-2">
           If you leave without updating, your changes won't be saved.
         </p>
-        <button
-          class="w-full py-4 bg-bg-status-error text-text-and-icons-primary rounded-2xl text-sm font-semibold mt-6"
+        <Button
+          variant="danger"
+          block
+          class="mt-6"
           @click="confirmDiscard"
         >
           Discard
-        </button>
-        <button
-          class="w-full py-4 text-text-and-icons-primary text-sm font-medium mt-3"
+        </Button>
+        <Button
+          variant="ghost"
+          block
+          class="mt-3"
           @click="showDiscardModal = false"
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   </Transition>
@@ -506,15 +514,13 @@ async function submit() {
       </InputField>
 
       <!-- Submit-time revalidation banner -->
-      <div
+      <ErrorBanner
         v-if="submitValidationError"
         data-testid="session-revalidation-banner"
-        class="rounded-2xl bg-danger-muted border border-stroke-error/20 px-4 py-3"
+        size="sm"
       >
-        <p class="text-sm text-fg-error">
-          Selected time is no longer available. Please pick a new date and time.
-        </p>
-      </div>
+        Selected time is no longer available. Please pick a new date and time.
+      </ErrorBanner>
 
       <!-- Time is immutable on-chain after creation: display-only here. -->
       <SessionDatePicker
@@ -569,23 +575,18 @@ async function submit() {
             No location set
           </div>
 
-          <button
-            type="button"
-            class="absolute left-4 right-4 bottom-4 z-10 py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold shadow-lg"
+          <Button
+            variant="primary"
+            class="absolute left-4 right-4 bottom-4 z-10 shadow-lg"
             @click="pickerOpen = true"
           >
             Change Location
-          </button>
+          </Button>
         </div>
       </div>
 
       <!-- Error -->
-      <div
-        v-if="error"
-        class="rounded-2xl bg-danger-muted border border-stroke-error/20 px-5 py-4"
-      >
-        <p class="text-sm text-fg-error">{{ error }}</p>
-      </div>
+      <ErrorBanner v-if="error" :message="error" />
 
       <!-- Delete -->
       <button
@@ -604,8 +605,9 @@ async function submit() {
       v-if="isDirty"
       class="sticky bottom-0 z-20 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-bg-surface-main"
     >
-      <button
-        class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
+      <Button
+        variant="primary"
+        block
         :disabled="
           !form.name ||
           !form.dateKey ||
@@ -624,7 +626,7 @@ async function submit() {
             ? "Update Session"
             : "Updating Session…"
         }}
-      </button>
+      </Button>
     </div>
   </div>
 
@@ -639,14 +641,3 @@ async function submit() {
     @cancel="handlePickerCancel"
   />
 </template>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

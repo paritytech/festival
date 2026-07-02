@@ -72,7 +72,7 @@ const isPending = computed(
           v-if="isPending"
           class="w-full flex items-center justify-center gap-3 rounded-2xl bg-fill-6 py-3"
         >
-          <div class="w-4 h-4 border-2 border-text-and-icons-primary/60 border-t-transparent rounded-full animate-spin" />
+          <Spinner size="sm" class="text-text-and-icons-primary/60" />
           <p class="text-sm text-text-and-icons-secondary">Reporting…</p>
         </div>
 
@@ -115,14 +115,3 @@ const isPending = computed(
     </div>
   </Transition>
 </template>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

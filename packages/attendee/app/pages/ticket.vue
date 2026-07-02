@@ -106,7 +106,7 @@ const seconds = computed(() => (timeRemaining.value % 60).toString().padStart(2,
 
         <!-- Signing in progress -->
         <div v-else-if="isGenerating" class="aspect-square flex flex-col items-center justify-center">
-          <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3" />
+          <Spinner size="lg" class="text-primary mb-3" />
           <p class="text-sm text-text-and-icons-tertiary">Waiting for signature...</p>
         </div>
 
