@@ -18,7 +18,7 @@ import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { useBulletinStorage } from "@festival/shared/metadata/bulletin";
 import { formatTxError } from "@festival/shared/contracts/errors";
 import { useWalletStore } from "@festival/shared/host/wallet";
-import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
+import { walletAddressToH160 } from "@festival/shared/utils/address";
 import { festivalState } from "@festival/shared/cache/festival-state";
 import { addPending, dropPending, draftSessionEntry } from "@festival/shared/cache/pending";
 import {
@@ -320,11 +320,7 @@ async function doCreate() {
       ),
     );
 
-    const creatorH160 = (
-      isValidEvmAddress(wallet.address)
-        ? wallet.address.toLowerCase()
-        : ss58ToH160(wallet.address).toLowerCase()
-    ) as `0x${string}`;
+    const creatorH160 = walletAddressToH160(wallet.address);
     pendingCid = bytes32;
 
     await writeContract({

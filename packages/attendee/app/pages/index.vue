@@ -26,7 +26,7 @@ import {
   resolveShortLocationLabel,
 } from "@festival/shared/venue/floors";
 import { useVenueMap } from "~/composables/useVenueMap";
-import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
+import { walletAddressToH160 } from "@festival/shared/utils/address";
 import { formatTimeBerlin } from "@festival/shared/utils/time";
 import { truncate } from "@festival/shared/utils/text";
 
@@ -64,9 +64,7 @@ const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 const userH160 = computed(() => {
   if (!wallet.isConnected) return null;
-  return isValidEvmAddress(wallet.address)
-    ? wallet.address.toLowerCase()
-    : ss58ToH160(wallet.address).toLowerCase();
+  return walletAddressToH160(wallet.address);
 });
 
 const mySessions = computed<AttendeeSubEvent[]>(() => {

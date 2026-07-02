@@ -26,8 +26,8 @@ import {
   formatDateBerlin,
 } from "@festival/shared/utils/time";
 import {
-  ss58ToH160,
   isValidEvmAddress,
+  walletAddressToH160,
 } from "@festival/shared/utils/address";
 
 definePageMeta({
@@ -104,9 +104,7 @@ useSessionCheckInPoll(addr);
 // user is already checked in (e.g. the creator).
 const isCreator = computed(() => {
   if (!subEvent.value || !wallet.isConnected) return false;
-  const userH160 = isValidEvmAddress(wallet.address)
-    ? wallet.address.toLowerCase()
-    : ss58ToH160(wallet.address).toLowerCase();
+  const userH160 = walletAddressToH160(wallet.address);
   return subEvent.value.creator.toLowerCase() === userH160;
 });
 
