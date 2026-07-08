@@ -139,10 +139,11 @@ export function toBerlinDateKey(d: DateInput): string {
 /**
  * Window after a session's `endTime` during which a volunteer can still
  * issue `manualCheckIn` (the contract has no time gate, so this is purely
- * a UX choice). Inside the window we keep the `Collect Badge` CTA live;
- * after it we show "Session ended".
+ * a UX choice). Inside the window we keep the `Collect Badge` CTA live and
+ * count down the time left to claim ("Closes in N min"); after it we show
+ * "Session ended".
  */
-export const SESSION_CHECKIN_GRACE_MS = 2 * 60 * 60 * 1000
+export const SESSION_CHECKIN_GRACE_MS = 59 * 60 * 1000
 
 /**
  * Round up to whole minutes and format as "Xh Ym" or "Ym" (no seconds).
@@ -157,6 +158,18 @@ export function formatCountdown(ms: number): string {
   if (h === 0) return `${m}m`
   if (m === 0) return `${h}h`
   return `${h}h ${m}m`
+}
+
+/**
+ * Minutes-only countdown for the post-session "Collect Badge · Closes in N min"
+ * CTA. The remaining window is always <= SESSION_CHECKIN_GRACE_MS (under an
+ * hour), so we never need hours. Rounds up to whole minutes and floors at
+ * "1 min" so the label never reads "0 min" during the 30s tick gap before the
+ * state flips to ended.
+ */
+export function formatClosesIn(ms: number): string {
+  const minutes = Math.max(1, Math.ceil(ms / 60_000))
+  return `${minutes} min`
 }
 
 /** Human-readable time until a date. E.g., "in 5 minutes", "in 2 hours" */

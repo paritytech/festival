@@ -3,15 +3,22 @@ import { ref, computed } from 'vue'
 import { useSubEvents } from '~/composables/useSubEvents'
 import { usePermissions, type FestivalRole } from '~/composables/usePermissions'
 import { loadUserRoles } from '@festival/shared/contracts/role-helpers'
-import { readSessionAttendees, readIsCheckedIn } from '@festival/shared/contracts/festival-reads'
+import { readIsCheckedIn } from '@festival/shared/contracts/festival-reads'
 import { writeContract } from '@festival/shared/contracts/write'
+import { retryTransient, isTransientError, READ_RETRY_OPTS } from '@festival/shared/contracts/retry'
+import { resetMainClient } from '@festival/shared/host/client'
 import type { TxStatus } from '@festival/shared/contracts/write'
 import { FestivalSessionABI } from '@festival/shared/contracts/abis'
 import { formatTxError } from '@festival/shared/contracts/errors'
 import { useWalletStore } from '@festival/shared/host/wallet'
+import { festivalState } from '@festival/shared/cache/festival-state'
+import { addPending, dropPending, sessionScopedId, pendingSessionCheckins } from '@festival/shared/cache/pending'
+import { useVisiblePoll } from '@festival/shared/cache/visibility'
+import { bootLoadAdmin } from '~/composables/useBootLoad'
 import {
   h160ToSs58,
   ss58ToH160,
+  walletAddressToH160,
   isValidEvmAddress,
   isValidSs58,
   shortenAddress,
@@ -22,6 +29,7 @@ definePageMeta({ layout: 'festival' })
 const route = useRoute()
 const address = route.params.address as string
 const subAddress = route.params.subAddress as string
+const wallet = useWalletStore()
 
 // Session metadata from the already-loaded sub-events list
 const { subEvents, cancelSession, txStatus: cancelTxStatus } = useSubEvents(address)
@@ -103,7 +111,16 @@ async function lookupAttendee() {
     resolvedAttendeeH160.value = h160
     resolvedAttendeeSs58.value = h160ToSs58(h160)
 
-    const checkedIn = await readIsCheckedIn(address as `0x${string}`, h160)
+    // Cap each attempt so a dry-run orphaned by a flapping host connection
+    // rejects instead of hanging the lookup. On a whole-round connection
+    // failure, rebuild the wedged client (as a page refresh would) and try
+    // once more before surfacing an error.
+    const probe = () => retryTransient(() => readIsCheckedIn(address as `0x${string}`, h160), READ_RETRY_OPTS)
+    const checkedIn = await probe().catch((e) => {
+      if (!isTransientError(e)) throw e
+      resetMainClient()
+      return probe()
+    })
     lookupState.value = checkedIn ? 'ready' : 'not-festival-checked-in'
   } catch (e: any) {
     checkInError.value = formatTxError(e)
@@ -114,45 +131,52 @@ async function lookupAttendee() {
 
 async function performSessionCheckIn() {
   if (lookupState.value !== 'ready' || !resolvedAttendeeH160.value) return
+  const attendeeH160 = resolvedAttendeeH160.value
   checkInError.value = null
   checkInTxStatus.value = 'preparing'
 
+  const pendingId = sessionScopedId(attendeeH160, subAddress)
   try {
-    const wallet = useWalletStore()
-    await writeContract({
+    // Retry only PRE-broadcast transient failures; once signed/broadcast the tx
+    // must never be re-submitted. A revert is deterministic and throws.
+    let committed = false
+    await retryTransient(() => writeContract({
       address: subAddress as `0x${string}`,
       abi: FestivalSessionABI,
       functionName: 'manualCheckIn',
-      args: [resolvedAttendeeH160.value],
+      args: [attendeeH160],
       signer: wallet.getSigner(),
       walletAddress: wallet.address,
-      onStatus: (s) => { checkInTxStatus.value = s },
-    })
+      onStatus: (s) => {
+        checkInTxStatus.value = s
+        if (s === 'signing' || s === 'broadcasting') committed = true
+        if (s === 'broadcasting') addPending('checkin', pendingId)
+      },
+    }), { shouldRetry: (e) => !committed && isTransientError(e) })
 
-    await loadAttendees()
     checkInInput.value = ''
     resetLookup()
   } catch (e: any) {
+    dropPending('checkin', pendingId)
     checkInTxStatus.value = 'error'
     checkInError.value = formatTxError(e)
   }
 }
 
-// Attendees
-const attendees = ref<{ address: `0x${string}`; isCheckedIn: boolean }[]>([])
-const attendeesLoading = ref(true)
-
-async function loadAttendees() {
-  attendeesLoading.value = true
-  try {
-    attendees.value = await readSessionAttendees(subAddress as `0x${string}`)
-  } catch (e) {
-    console.error('[SessionDetail] Failed to load attendees:', e)
-  } finally {
-    attendeesLoading.value = false
+// Roster: a view over the confirmed tier (bootLoadAdmin + watcher + visibility
+// reconcile) OR'd with this device's in-flight check-ins, so it self-heals and
+// reflects check-ins from any device.
+const attendees = computed<{ address: `0x${string}`; isCheckedIn: boolean }[]>(() => {
+  const entry = festivalState.sessions.find((s) => s.address.toLowerCase() === subAddress.toLowerCase())
+  const rows = (entry?.attendees ?? []).map((a) => ({ address: a.address, isCheckedIn: a.isCheckedIn }))
+  for (const attendee of pendingSessionCheckins(subAddress)) {
+    const existing = rows.find((r) => r.address.toLowerCase() === attendee.toLowerCase())
+    if (existing) existing.isCheckedIn = true
+    else rows.push({ address: attendee as `0x${string}`, isCheckedIn: true })
   }
-}
-loadAttendees()
+  return rows
+})
+const attendeesLoading = computed(() => festivalState.loading)
 
 // Sub-event has its OWN independent roles. Not inherited from the parent festival
 const subEventRoles = ref<FestivalRole[]>([])
@@ -192,6 +216,13 @@ const visibleTabs = computed(() => {
 })
 
 const activeTab = ref('overview')
+
+// Keep the roster live while the check-in tab is open, as a foreground fallback
+// for registration/check-in events missed on a flaky socket.
+useVisiblePoll(() => {
+  if (activeTab.value !== 'checkin' || !wallet.isConnected) return
+  return bootLoadAdmin(address as `0x${string}`, walletAddressToH160(wallet.address))
+}, 10_000)
 
 function shortenAddr(addr: string) {
   return addr.slice(0, 8) + '…' + addr.slice(-4)

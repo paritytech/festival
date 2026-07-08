@@ -97,16 +97,34 @@ export function resetFestivalState(): void {
 // Called from useFestivalWatcher when chain events arrive. Handlers mutate
 // the singleton in place; Vue reactivity propagates to all composable views.
 
+/**
+ * Write festival metadata. With expectedCid the write only lands if the festival
+ * still points at that CID, so a slow fetch for an older CID (e.g. a lagging
+ * bootLoad) can't clobber a newer update. Mirrors {@link applySessionMetadata}.
+ */
+export function applyFestivalMetadata(
+  metadata: FestivalMetadata | null,
+  expectedCid?: `0x${string}`,
+): void {
+  if (!festivalState.festival || !metadata) return
+  if (expectedCid && festivalState.festival.details.metadataCid.toLowerCase() !== expectedCid.toLowerCase()) return
+  festivalState.festival.metadata = metadata
+}
+
 export function applyMetadataUpdated(
   newCid: `0x${string}`,
   newMetadata: FestivalMetadata | null,
 ): void {
   if (!festivalState.festival) return
-  festivalState.festival.metadata = newMetadata
+  // A failed off-chain fetch arrives as null: keep the last good metadata and
+  // CID rather than blanking the festival or advancing past content we can't
+  // load. A retry / bootLoad reconciles.
+  if (!newMetadata) return
   festivalState.festival.details = {
     ...festivalState.festival.details,
     metadataCid: newCid,
   }
+  applyFestivalMetadata(newMetadata, newCid)
 }
 
 export function applyRegistered(attendee: `0x${string}`): void {
@@ -193,6 +211,22 @@ export function applySessionCreated(
       attendees: [],
       poapTokenIds: [],
     },
+  ])
+}
+
+/**
+ * Merge real on-chain details into a session entry. Used by the SessionCreated
+ * handler so a new session carries its true times/cid the moment the event
+ * lands (the event itself only seeds a zeroed stub), instead of sorting to the
+ * epoch-0 bucket on subject devices until the next bootLoad. Upgrade-only via
+ * mergeSession: zeros never beat known values.
+ */
+export function applySessionDetails(
+  sessionAddress: `0x${string}`,
+  details: SessionDetails,
+): void {
+  festivalState.sessions = mergeSessions(festivalState.sessions, [
+    { address: sessionAddress, details, metadata: null, attendees: [], poapTokenIds: [] },
   ])
 }
 
@@ -294,6 +328,9 @@ export function applySessionMetadataUpdated(
     (s) => s.address.toLowerCase() === sessionAddress.toLowerCase(),
   )
   if (!entry) return
+  // Failed fetch (null): keep the current CID + metadata so a retry / bootLoad
+  // reconciles, rather than pointing the entry at content we never loaded.
+  if (!metadata) return
   entry.details = { ...entry.details, metadataCid: newCid }
   applySessionMetadata(sessionAddress, metadata, newCid)
 }
