@@ -1,8 +1,11 @@
 import { onUnmounted, getCurrentInstance, watch, type Ref, type WatchStopHandle } from 'vue'
+import { onMainClientReset } from '../host/client'
 import type { FestivalMetadata, SubEventMetadata } from '../metadata/schemas'
 import { hydrateSubEventMetadata } from '../metadata/schemas'
 import { useBulletinStorage } from '../metadata/bulletin'
 import { isNonZeroCid } from '../contracts/festival-reads'
+import { batchRead } from '../contracts/multicall'
+import { FestivalSessionABI } from '../contracts/abis'
 import { watchContractEvents, type FestivalEventHandlers } from './event-watcher'
 import {
   festivalState,
@@ -12,6 +15,7 @@ import {
   applyCapacityUpdated,
   applyCancelled,
   applySessionCreated,
+  applySessionDetails,
   applySessionMetadata,
   applySessionRegistered,
   applySessionCheckedIn,
@@ -56,10 +60,12 @@ export function useFestivalWatcher(
 
   let active: { unsubscribe: () => void } | null = null
   let disposed = false
+  let started = false
   let stopDeferWatch: WatchStopHandle | null = null
 
   function start() {
     if (disposed || active) return
+    started = true
     active = buildHandlers()
   }
 
@@ -69,6 +75,7 @@ export function useFestivalWatcher(
       stopDeferWatch()
       stopDeferWatch = null
     }
+    unregisterReset()
     if (active) {
       active.unsubscribe()
       active = null
@@ -79,14 +86,24 @@ export function useFestivalWatcher(
   // silently pause the WebSocket while backgrounded; on resume the existing
   // follow may be dead with no error emitted, so the visibility handler calls
   // this after reconciling to guarantee live updates resume.
+  //
+  // Also driven by resetMainClient(): watchContractEvents captured `api` from
+  // the now-destroyed client, so we must rebuild — buildHandlers() re-calls
+  // useMainClient() and binds the follow to the freshly built client.
   function restart() {
-    if (disposed) return
+    // Don't open the follow before the initial (possibly deferred) start has
+    // run — a reset during the boot-defer window must not pre-empt the gate.
+    if (disposed || !started) return
     if (active) {
       active.unsubscribe()
       active = null
     }
     active = buildHandlers()
   }
+
+  // Re-follow on the rebuilt client when a wedged connection is reset elsewhere
+  // (e.g. the session check-in recovery path).
+  const unregisterReset = onMainClientReset(restart)
 
   const normalizedFestival = festivalAddress.toLowerCase()
 
@@ -148,6 +165,28 @@ export function useFestivalWatcher(
           creator as `0x${string}`,
           metadataCid,
         )
+        // Pull the session's real details so subject devices place it in the
+        // right program slot now, not just after the next bootLoad. flag fields
+        // arrive with that load; zeros here never regress under mergeSession.
+        try {
+          const [d] = (await batchRead([
+            { address: sessionAddr as `0x${string}`, abi: FestivalSessionABI, functionName: 'getEventDetails' },
+          ])) as [readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, bigint, bigint, boolean, bigint]]
+          applySessionDetails(sessionAddr as `0x${string}`, {
+            metadataCid: d[0],
+            creator: d[1],
+            poapContract: d[2],
+            parentFestival: d[3],
+            startTime: d[4],
+            endTime: d[5],
+            cancelled: d[6],
+            registeredCount: d[7],
+            flagCount: 0n,
+            flagThreshold: 0n,
+          })
+        } catch (e) {
+          console.warn('[FestivalWatcher] session details fetch failed:', e)
+        }
         // Fetch the metadata so the card shows a title right away. Skip when
         // the entry already moved past the creation cid, and pass the cid so
         // a fetch that raced a newer update cannot apply old content.

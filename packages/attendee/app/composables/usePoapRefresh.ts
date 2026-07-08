@@ -7,7 +7,7 @@ import {
 } from '@festival/shared/contracts/addresses'
 import type { POAPData } from '@festival/shared/contracts/types'
 import { festivalState } from '@festival/shared/cache/festival-state'
-import { mergePoaps } from '@festival/shared/cache/merge'
+import { mergePoaps, mergeTokenIds } from '@festival/shared/cache/merge'
 
 /**
  * Targeted refresh of the current user's POAPs after their own CheckedIn event.
@@ -38,6 +38,13 @@ async function refresh(
     ])) as [readonly bigint[]]
 
     if (!userStillCurrent(userAddress)) return
+
+    // Link the session's tokens to its entry so the badge art (joined via
+    // session.poapTokenIds in usePoaps) resolves without a full reload.
+    if (bucket === 'sessionPoaps') {
+      const entry = festivalState.sessions.find((s) => s.address.toLowerCase() === sourceContract.toLowerCase())
+      if (entry) entry.poapTokenIds = mergeTokenIds(entry.poapTokenIds, tokenIds)
+    }
 
     // Every id already in state is a getPOAPData call saved against the host
     // read budget.

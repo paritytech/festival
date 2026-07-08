@@ -5,10 +5,12 @@ import { useSubEventRoles } from "~/composables/useSubEventRoles";
 import { useRegistration } from "~/composables/useRegistration";
 import { useFestival } from "~/composables/useFestival";
 import { useFlagSession } from "~/composables/useFlagSession";
+import { usePassGate } from "~/composables/usePassGate";
 import { useHiddenSessions } from "~/composables/useHiddenSessions";
 import { useBookmarks } from "~/composables/useBookmarks";
-import { useNow } from "~/composables/useNow";
+import { useRafNow } from "~/composables/useRafNow";
 import { useCelebratedSessions } from "~/composables/useCelebratedSessions";
+import { useSessionCheckInPoll } from "~/composables/useSessionCheckInPoll";
 import { useWalletStore } from "@festival/shared/host/wallet";
 import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { resolveFullLocationLabel } from "@festival/shared/venue/floors";
@@ -18,6 +20,7 @@ import { CATEGORY_STYLE } from "~/composables/useProgramTimeline";
 import {
   SESSION_CHECKIN_GRACE_MS,
   formatCountdown,
+  formatClosesIn,
   isSameDay,
   formatTimeBerlin,
   formatDateBerlin,
@@ -71,7 +74,7 @@ const subEvent = computed(() =>
 );
 const { roles: subEventRoles } = useSubEventRoles(addr);
 const hasManageAccess = computed(() => subEventRoles.value.length > 0);
-const now = useNow();
+const now = useRafNow();
 const { isBookmarked, toggleBookmark } = useBookmarks();
 
 const reportSheetVisible = ref(false);
@@ -92,6 +95,20 @@ const locationViewOpen = ref(false);
 // client-side without an extra read.
 const receivedAt = ref<Date | null>(null);
 const { hasCelebrated, markCelebrated } = useCelebratedSessions();
+
+// Foreground fallback for a missed CheckedIn event, so the badge still fires.
+useSessionCheckInPoll(addr);
+
+// Declared before the celebration watcher below: that watcher runs with
+// `immediate: true`, so it reads isCreator synchronously during setup when the
+// user is already checked in (e.g. the creator).
+const isCreator = computed(() => {
+  if (!subEvent.value || !wallet.isConnected) return false;
+  const userH160 = isValidEvmAddress(wallet.address)
+    ? wallet.address.toLowerCase()
+    : ss58ToH160(wallet.address).toLowerCase();
+  return subEvent.value.creator.toLowerCase() === userH160;
+});
 
 // Badge celebration: fire once when the user becomes checked in for this
 // session. Driven by shared state (the app-level watcher feeds it), so it's
@@ -169,14 +186,6 @@ const festivalPoapImageUrl = useBulletinImage(
   () => festivalMetadata.value?.festivalPoapImage || festivalMetadata.value?.image || null,
 );
 
-const isCreator = computed(() => {
-  if (!subEvent.value || !wallet.isConnected) return false;
-  const userH160 = isValidEvmAddress(wallet.address)
-    ? wallet.address.toLowerCase()
-    : ss58ToH160(wallet.address).toLowerCase();
-  return subEvent.value.creator.toLowerCase() === userH160;
-});
-
 const canReport = computed(() => {
   if (!subEvent.value) return false;
   if (isCreator.value) return false;
@@ -210,6 +219,12 @@ const countdownLabel = computed(() =>
   formatCountdown(sessionStartMs.value - nowMs.value),
 );
 
+// Once the session has ended we keep the CTA live through the grace window,
+// counting down how long is left to claim the badge ("Closes in N min").
+const closesInLabel = computed(() =>
+  formatClosesIn(collectDeadlineMs.value - nowMs.value),
+);
+
 const receivedLabel = computed(() =>
   receivedAt.value ? formatReceived(receivedAt.value) : "",
 );
@@ -220,9 +235,13 @@ function formatReceived(d: Date): string {
   return `${day}, ${time}`;
 }
 
+const gate = usePassGate("report a session");
+
 function openReportSheet() {
-  resetFlag();
-  reportSheetVisible.value = true;
+  gate.run(() => {
+    resetFlag();
+    reportSheetVisible.value = true;
+  });
 }
 
 async function confirmReport() {
@@ -275,7 +294,7 @@ function formatDay(d: Date): string {
     @toggle-bookmark="handleToggleBookmark"
     @open-location="locationViewOpen = true"
   >
-    <template v-if="isCreator && !isPastEnd" #topBarTrailing>
+    <template v-if="isCreator && isUpcoming" #topBarTrailing>
       <NuxtLink
         :to="`/my/manage/${addr}/edit`"
         class="w-10 h-10 flex items-center justify-center"
@@ -295,13 +314,34 @@ function formatDay(d: Date): string {
     </template>
 
     <template #action>
-      <NuxtLink
-        v-if="isCreator || hasManageAccess"
-        :to="`/my/manage/${addr}/check-in`"
-        class="block w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold text-center"
-      >
-        Check People In
-      </NuxtLink>
+      <template v-if="isCreator || hasManageAccess">
+        <button
+          v-if="isUpcoming"
+          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-white/10 text-white/60 cursor-default"
+          disabled
+          data-testid="session-check-in-pending"
+        >
+          Check People In · Opens in {{ countdownLabel }}
+        </button>
+
+        <NuxtLink
+          v-else-if="isLive"
+          :to="`/my/manage/${addr}/check-in`"
+          class="block w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold text-center"
+          data-testid="session-check-in-cta"
+        >
+          Check People In<template v-if="isPastEnd"> · Closes in {{ closesInLabel }}</template>
+        </NuxtLink>
+
+        <button
+          v-else
+          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-medium bg-white/10 text-white/60 cursor-default"
+          disabled
+          data-testid="session-check-in-ended"
+        >
+          Session ended
+        </button>
+      </template>
 
       <template v-else-if="!subEvent.isCheckedIn">
         <button
@@ -319,7 +359,7 @@ function formatDay(d: Date): string {
           data-testid="session-collect-badge-cta"
           @click="openPassport"
         >
-          Collect Badge
+          Collect Badge<template v-if="isPastEnd"> · Closes in {{ closesInLabel }}</template>
         </button>
       </template>
     </template>
@@ -332,6 +372,13 @@ function formatDay(d: Date): string {
     @confirm="confirmReport"
     @cancel="dismissReportSheet"
     @done="handleReportDone"
+  />
+
+  <ActivationModal
+    :visible="gate.state.value !== 'none'"
+    v-bind="gate.modalProps.value"
+    @primary="gate.onPrimary"
+    @secondary="gate.onSecondary"
   />
 
   <SessionQrOverlay v-if="passportOpen" @close="closePassport" />

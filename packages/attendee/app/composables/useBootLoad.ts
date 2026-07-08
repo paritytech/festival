@@ -11,7 +11,7 @@ import type { FestivalMetadata, SubEventMetadata } from '@festival/shared/metada
 import { hydrateSubEventMetadata } from '@festival/shared/metadata/schemas'
 import { useBulletinStorage } from '@festival/shared/metadata/bulletin'
 import { fetchInChunks } from '@festival/shared/utils/chunked'
-import { festivalState, hydrateFromCache, persistToCache, type SessionEntry } from '@festival/shared/cache/festival-state'
+import { festivalState, hydrateFromCache, persistToCache, applyFestivalMetadata, type SessionEntry } from '@festival/shared/cache/festival-state'
 import { mergeAttendees, mergeSessions, mergePoaps, maxBig, keepPositive } from '@festival/shared/cache/merge'
 
 interface BootLoadOptions {
@@ -408,9 +408,8 @@ async function fetchFestivalMetadata(cid: `0x${string}`): Promise<void> {
   try {
     const { retrievePlaintext } = useBulletinStorage()
     const meta = await retrievePlaintext<FestivalMetadata>(cid)
-    if (festivalState.festival) {
-      festivalState.festival.metadata = meta
-    }
+    // Guarded on the CID we fetched, so a slow read can't clobber a newer update.
+    applyFestivalMetadata(meta, cid)
   } catch (e) {
     console.warn('[bootLoadAttendee] festival metadata fetch failed:', e)
   }
