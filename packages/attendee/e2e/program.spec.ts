@@ -21,7 +21,7 @@ test.describe('Program', () => {
     const mylistTab = frame.locator('[data-testid="program-tab-mylist"]')
     await expect(mylistTab).toBeVisible()
     await mylistTab.click()
-    await expect(mylistTab).toHaveClass(/text-white(?!\/)/)
+    await expect(mylistTab).toHaveClass(/text-text-and-icons-primary/)
   })
 
   test('Sessions Type legend lists Official, Community, and Activations', async ({ testHost }) => {
