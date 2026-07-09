@@ -82,6 +82,16 @@ export function pendingCheckins(): string[] {
   return out
 }
 
+/** Check-ins in flight for one session (lowercased attendee addresses). */
+export function pendingSessionCheckins(sessionAddress: string): string[] {
+  const suffix = `@${sessionAddress.toLowerCase()}`
+  const out: string[] = []
+  for (const e of pending.values()) {
+    if (e.kind === 'checkin' && e.id.endsWith(suffix)) out.push(e.id.slice(0, -suffix.length))
+  }
+  return out
+}
+
 const ZERO_ADDR = '0x0000000000000000000000000000000000000000' as `0x${string}`
 
 /**
