@@ -22,9 +22,9 @@ function onImageError(url: string) {
     <!-- Header -->
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold text-text-and-icons-primary">Badge Collection</h3>
-      <NuxtLink to="/my/badges" class="w-9 h-9 rounded-full bg-bg-surface-nested flex items-center justify-center text-text-and-icons-primary">
+      <IconButton aria-label="View all badges" size="sm" variant="surface" to="/my/badges">
         <ArrowRightIcon />
-      </NuxtLink>
+      </IconButton>
     </div>
 
     <!-- Badge thumbnails: up to 3, evenly filling the row -->

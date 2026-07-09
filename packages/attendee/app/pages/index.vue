@@ -26,7 +26,7 @@ import {
   resolveShortLocationLabel,
 } from "@festival/shared/venue/floors";
 import { useVenueMap } from "~/composables/useVenueMap";
-import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
+import { walletAddressToH160 } from "@festival/shared/utils/address";
 import { formatTimeBerlin } from "@festival/shared/utils/time";
 import { truncate } from "@festival/shared/utils/text";
 
@@ -64,9 +64,7 @@ const { markers: venueMarkers, zones: venueZones } = useVenueMap();
 
 const userH160 = computed(() => {
   if (!wallet.isConnected) return null;
-  return isValidEvmAddress(wallet.address)
-    ? wallet.address.toLowerCase()
-    : ss58ToH160(wallet.address).toLowerCase();
+  return walletAddressToH160(wallet.address);
 });
 
 const mySessions = computed<AttendeeSubEvent[]>(() => {
@@ -356,14 +354,15 @@ function getMyListRoute(item: TimelineItem): string {
     <div v-if="isCheckedIn && mySessions.length">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-lg font-semibold text-text-and-icons-primary">My Sessions</h3>
-        <NuxtLink
+        <IconButton
           v-if="canHostMoreSessions"
           :to="hostSessionTo"
-          class="w-9 h-9 rounded-full bg-bg-surface-nested flex items-center justify-center text-text-and-icons-primary"
+          size="sm"
+          variant="surface"
           aria-label="Host a session"
         >
           <PlusIcon :size="18" />
-        </NuxtLink>
+        </IconButton>
       </div>
       <div class="space-y-2">
         <NuxtLink
@@ -394,12 +393,14 @@ function getMyListRoute(item: TimelineItem): string {
     <div v-if="isCheckedIn && myListItems.length">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-lg font-semibold text-text-and-icons-primary">My List</h3>
-        <NuxtLink
+        <IconButton
           to="/program?tab=mylist"
-          class="w-9 h-9 rounded-full bg-bg-surface-nested flex items-center justify-center text-text-and-icons-primary"
+          size="sm"
+          variant="surface"
+          aria-label="View My List"
         >
           <ArrowRightIcon />
-        </NuxtLink>
+        </IconButton>
       </div>
       <div
         class="rounded-2xl bg-bg-surface-nested divide-y divide-applied-separator overflow-hidden"

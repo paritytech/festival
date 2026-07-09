@@ -7,7 +7,7 @@ import {
   getItemCategory,
   CATEGORY_STYLE,
 } from "~/composables/useProgramTimeline";
-import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
+import { walletAddressToH160 } from "@festival/shared/utils/address";
 import {
   LOCATION_LABEL_MAX_CHARS,
   resolveFullLocationLabel,
@@ -49,9 +49,7 @@ const itemId = computed(() => getItemId(props.item));
 
 const isOwner = computed(() => {
   if (props.item.type !== "community" || !wallet.isConnected) return false;
-  const userH160 = isValidEvmAddress(wallet.address)
-    ? wallet.address.toLowerCase()
-    : ss58ToH160(wallet.address).toLowerCase();
+  const userH160 = walletAddressToH160(wallet.address);
   return props.item.subEvent.creator.toLowerCase() === userH160;
 });
 

@@ -18,7 +18,7 @@ import { FESTIVAL_ADDRESS } from "@festival/shared/contracts/addresses";
 import { useBulletinStorage } from "@festival/shared/metadata/bulletin";
 import { formatTxError } from "@festival/shared/contracts/errors";
 import { useWalletStore } from "@festival/shared/host/wallet";
-import { ss58ToH160, isValidEvmAddress } from "@festival/shared/utils/address";
+import { walletAddressToH160 } from "@festival/shared/utils/address";
 import { festivalState } from "@festival/shared/cache/festival-state";
 import { addPending, dropPending, draftSessionEntry } from "@festival/shared/cache/pending";
 import {
@@ -320,11 +320,7 @@ async function doCreate() {
       ),
     );
 
-    const creatorH160 = (
-      isValidEvmAddress(wallet.address)
-        ? wallet.address.toLowerCase()
-        : ss58ToH160(wallet.address).toLowerCase()
-    ) as `0x${string}`;
+    const creatorH160 = walletAddressToH160(wallet.address);
     pendingCid = bytes32;
 
     await writeContract({
@@ -393,9 +389,7 @@ async function doCreate() {
         </div>
 
         <div class="flex items-center gap-3 mt-8">
-          <div
-            class="w-5 h-5 border-2 border-text-and-icons-primary border-t-transparent rounded-full animate-spin shrink-0"
-          />
+          <Spinner size="md" class="text-text-and-icons-primary" />
           <p class="text-base font-semibold text-text-and-icons-primary">Creating session…</p>
         </div>
       </div>
@@ -429,13 +423,14 @@ async function doCreate() {
       </div>
 
       <div class="px-4 pb-[calc(var(--safe-bottom)+24px)] space-y-3">
-        <NuxtLink
+        <Button
+          variant="primary"
+          block
           :to="{ path: `/sessions/${createdAddress}`, query: { from: 'create' } }"
           data-testid="session-success-view"
-          class="block w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold text-center"
         >
           View your Session
-        </NuxtLink>
+        </Button>
         <NuxtLink
           to="/program"
           data-testid="session-success-back"
@@ -465,8 +460,9 @@ async function doCreate() {
     <!-- Header -->
     <div class="px-4 pt-4 pb-3 flex items-center">
       <!-- Step 1: X close. Steps 2-3: back arrow -->
-      <button
-        class="w-10 h-10 flex items-center justify-center -ml-2"
+      <IconButton
+        :aria-label="currentStep === 1 ? 'Close' : 'Back'"
+        class="-ml-2"
         @click="currentStep === 1 ? handleClose() : goBack()"
       >
         <!-- X icon (step 1) -->
@@ -488,7 +484,7 @@ async function doCreate() {
         </svg>
         <!-- Back arrow (steps 2-3) -->
         <BackIcon v-else class="text-text-and-icons-primary" />
-      </button>
+      </IconButton>
 
       <!-- Centered title -->
       <h1 class="flex-1 text-center text-base font-semibold text-text-and-icons-primary">
@@ -507,16 +503,14 @@ async function doCreate() {
     <div ref="stepBodyRef" class="flex-1 overflow-y-auto">
       <!-- Step 1: Session Details -->
       <div v-if="currentStep === 1">
-        <div
+        <ErrorBanner
           v-if="submitValidationError"
           data-testid="session-revalidation-banner"
-          class="mx-4 mb-4 rounded-2xl bg-danger-muted border border-stroke-error/20 px-4 py-3"
+          size="sm"
+          class="mx-4 mb-4"
         >
-          <p class="text-sm text-fg-error">
-            Selected time is no longer available. Please pick a new date and
-            time.
-          </p>
-        </div>
+          Selected time is no longer available. Please pick a new date and time.
+        </ErrorBanner>
 
         <CreateStepDetails
           ref="stepDetailsRef"
@@ -578,50 +572,49 @@ async function doCreate() {
       class="sticky bottom-0 z-10 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-bg-surface-main"
     >
       <!-- Step 1: Next -->
-      <button
+      <Button
         v-if="currentStep === 1"
+        variant="primary"
+        block
         data-testid="create-step1-next"
-        class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
         :disabled="!canProceedStep1"
         @click="goNext"
       >
         Next
-      </button>
+      </Button>
 
       <!-- Step 2: Choose Location (intro state) or Next (preview state) -->
-      <button
+      <Button
         v-if="currentStep === 2 && !pickedLocation"
-        class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors"
+        variant="primary"
+        block
         @click="pickerOpen = true"
       >
         Choose Location
-      </button>
-      <button
+      </Button>
+      <Button
         v-else-if="currentStep === 2"
-        class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors"
+        variant="primary"
+        block
         @click="goNext"
       >
         Next
-      </button>
+      </Button>
 
       <!-- Step 4: Create Session -->
       <template v-if="currentStep === 4">
         <!-- Error -->
-        <div
-          v-if="error"
-          class="rounded-2xl bg-danger-muted border border-stroke-error/20 px-5 py-4 mb-3"
-        >
-          <p class="text-sm text-fg-error">{{ error }}</p>
-        </div>
+        <ErrorBanner v-if="error" :message="error" class="mb-3" />
 
         <!-- Submit button -->
-        <button
-          class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
+        <Button
+          variant="primary"
+          block
           :disabled="!badgeHex || (txStatus !== 'idle' && txStatus !== 'error')"
           @click="submit"
         >
           Create Session
-        </button>
+        </Button>
       </template>
     </div>
   </div>
@@ -643,17 +636,3 @@ async function doCreate() {
     @secondary="gate.onSecondary"
   />
 </template>
-
-<style scoped>
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition:
-    opacity 0.3s ease,
-    transform 0.3s ease;
-}
-.slide-up-enter-from,
-.slide-up-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
-}
-</style>

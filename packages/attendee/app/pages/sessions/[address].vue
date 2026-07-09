@@ -26,8 +26,8 @@ import {
   formatDateBerlin,
 } from "@festival/shared/utils/time";
 import {
-  ss58ToH160,
   isValidEvmAddress,
+  walletAddressToH160,
 } from "@festival/shared/utils/address";
 
 definePageMeta({
@@ -104,9 +104,7 @@ useSessionCheckInPoll(addr);
 // user is already checked in (e.g. the creator).
 const isCreator = computed(() => {
   if (!subEvent.value || !wallet.isConnected) return false;
-  const userH160 = isValidEvmAddress(wallet.address)
-    ? wallet.address.toLowerCase()
-    : ss58ToH160(wallet.address).toLowerCase();
+  const userH160 = walletAddressToH160(wallet.address);
   return subEvent.value.creator.toLowerCase() === userH160;
 });
 
@@ -295,12 +293,13 @@ function formatDay(d: Date): string {
     @open-location="locationViewOpen = true"
   >
     <template v-if="isCreator && isUpcoming" #topBarTrailing>
-      <NuxtLink
+      <IconButton
+        aria-label="Edit session"
+        shape="square"
         :to="`/my/manage/${addr}/edit`"
-        class="w-10 h-10 flex items-center justify-center"
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 17.46v3.04c0 .28.22.5.5.5h3.04c.13 0 .26-.05.35-.15L17.81 9.94l-3.75-3.75L3.15 17.1a.49.49 0 0 0-.15.36Z" fill="white"/><path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83a1 1 0 0 0 0-1.41Z" fill="white"/></svg>
-      </NuxtLink>
+      </IconButton>
     </template>
 
     <template v-if="canReport" #secondaryAction>
@@ -324,14 +323,15 @@ function formatDay(d: Date): string {
           Check People In · Opens in {{ countdownLabel }}
         </button>
 
-        <NuxtLink
+        <Button
           v-else-if="isLive"
+          variant="primary"
+          block
           :to="`/my/manage/${addr}/check-in`"
-          class="block w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold text-center"
           data-testid="session-check-in-cta"
         >
           Check People In<template v-if="isPastEnd"> · Closes in {{ closesInLabel }}</template>
-        </NuxtLink>
+        </Button>
 
         <button
           v-else
@@ -353,14 +353,15 @@ function formatDay(d: Date): string {
           Visit & Collect Badge in {{ countdownLabel }}
         </button>
 
-        <button
+        <Button
           v-else-if="isLive && isCheckedIn"
-          class="w-full flex items-center justify-center rounded-2xl py-4 text-sm font-semibold bg-bg-action-primary text-fg-primary-inverted"
+          variant="primary"
+          block
           data-testid="session-collect-badge-cta"
           @click="openPassport"
         >
           Collect Badge<template v-if="isPastEnd"> · Closes in {{ closesInLabel }}</template>
-        </button>
+        </Button>
       </template>
     </template>
   </SessionDetailLayout>

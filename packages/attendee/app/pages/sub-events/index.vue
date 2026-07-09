@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useSubEvents } from '~/composables/useSubEvents'
 import { useHiddenSessions } from '~/composables/useHiddenSessions'
 import { useWalletStore } from '@festival/shared/host/wallet'
-import { ss58ToH160, isValidEvmAddress } from '@festival/shared/utils/address'
+import { walletAddressToH160 } from '@festival/shared/utils/address'
 import { formatTimeBerlin } from '@festival/shared/utils/time'
 
 const { subEvents } = useSubEvents()
@@ -12,9 +12,7 @@ const wallet = useWalletStore()
 
 const userH160 = computed(() => {
   if (!wallet.isConnected) return null
-  return isValidEvmAddress(wallet.address)
-    ? wallet.address.toLowerCase()
-    : ss58ToH160(wallet.address).toLowerCase()
+  return walletAddressToH160(wallet.address)
 })
 
 const visibleSubEvents = computed(() => subEvents.value.filter(se => !isHidden(se.address)))

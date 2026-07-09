@@ -24,9 +24,9 @@ function openInbox() {
 </script>
 
 <template>
-  <button
-    type="button"
-    class="relative -mr-1 flex h-10 w-10 items-center justify-center"
+  <IconButton
+    shape="square"
+    class="relative -mr-1"
     data-testid="notifications-bell"
     :aria-label="ariaLabel"
     @click="openInbox"
@@ -39,5 +39,5 @@ function openInbox() {
       class="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-bg-status-error ring-2 ring-background"
       data-testid="notifications-bell-dot"
     />
-  </button>
+  </IconButton>
 </template>
