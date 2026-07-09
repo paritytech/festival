@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { decodeBadgeHex } from '@festival/shared/utils/badge'
+import { truncate } from '@festival/shared/utils/text'
+
+const PREVIEW_NAME_MAX_CHARS = 32
 
 const props = defineProps<{
   name: string
@@ -14,6 +17,8 @@ const badgePixels = computed(() => {
   if (!props.badgeHex) return null
   return decodeBadgeHex(props.badgeHex)
 })
+
+const displayName = computed(() => truncate(props.name, PREVIEW_NAME_MAX_CHARS))
 </script>
 
 <template>
@@ -25,7 +30,7 @@ const badgePixels = computed(() => {
       <BadgeCanvas :pixels="badgePixels" :size="128" />
     </div>
 
-    <p class="text-[18px] leading-[22px] font-semibold text-white mt-5">{{ name }}</p>
+    <p class="text-[18px] leading-[22px] font-semibold text-white mt-5">{{ displayName }}</p>
 
     <p class="text-xs text-white/50 mt-2">
       {{ startTime }} - {{ endTime }}

@@ -27,6 +27,9 @@ import {
 import VenueMap from "~/components/VenueMap.vue";
 import InputField from "~/components/ui/InputField.vue";
 
+const NAME_MAX_LENGTH = 120;
+const SPEAKERS_MAX_LENGTH = 120;
+
 definePageMeta({
   validate: (route) => isValidEvmAddress(route.params.address as string),
 });
@@ -458,26 +461,48 @@ async function submit() {
       </div>
 
       <!-- Speakers -->
-      <InputField v-slot="{ inputId }" label="Speakers">
-        <input
-          :id="inputId"
-          v-model="form.speakers"
-          type="text"
-          placeholder="Alice, Bob"
-          class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
-        />
+      <InputField label="Speakers">
+        <template #label-trailing>
+          <span
+            class="text-xs leading-[18px] font-normal text-text-and-icons-secondary"
+            data-testid="session-speakers-counter"
+          >
+            {{ form.speakers.length }}/{{ SPEAKERS_MAX_LENGTH }}
+          </span>
+        </template>
+        <template #default="{ inputId }">
+          <input
+            :id="inputId"
+            v-model="form.speakers"
+            type="text"
+            :maxlength="SPEAKERS_MAX_LENGTH"
+            placeholder="Alice, Bob"
+            class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
+          />
+        </template>
       </InputField>
 
       <!-- Session Name -->
-      <InputField v-slot="{ inputId }" label="Session Name" required>
-        <input
-          :id="inputId"
-          v-model="form.name"
-          type="text"
-          required
-          aria-required="true"
-          class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
-        />
+      <InputField label="Session Name" required>
+        <template #label-trailing>
+          <span
+            class="text-xs leading-[18px] font-normal text-text-and-icons-secondary"
+            data-testid="session-name-counter"
+          >
+            {{ form.name.length }}/{{ NAME_MAX_LENGTH }}
+          </span>
+        </template>
+        <template #default="{ inputId }">
+          <input
+            :id="inputId"
+            v-model="form.name"
+            type="text"
+            required
+            aria-required="true"
+            :maxlength="NAME_MAX_LENGTH"
+            class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
+          />
+        </template>
       </InputField>
 
       <!-- Submit-time revalidation banner -->

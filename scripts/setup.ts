@@ -2,7 +2,7 @@
  * Guided deploy.
  *
  *   npm run setup                            # interactive wizard
- *   npm run setup -- --network paseo --yes   # non-interactive
+ *   npm run setup -- --network paseo-next-v2 --yes   # non-interactive
  *   npm run setup -- --dry-run               # checks only, no on-chain writes
  *
  * Phases: Environment → Configure → Readiness → Build → Deploy → Roles →
