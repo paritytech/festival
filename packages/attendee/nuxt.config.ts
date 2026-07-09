@@ -7,7 +7,7 @@ const sharedPublicDir = fileURLToPath(new URL('../shared/public', import.meta.ur
 // DEFAULT_NETWORK. If the network has no generated descriptor file yet (e.g.
 // previewnet before its .scale is committed), this alias points at a missing
 // file and the build fails loudly. By design, no silently-wrong types.
-const activeNetwork = process.env.VITE_NETWORK || 'paseo'
+const activeNetwork = process.env.VITE_NETWORK || 'paseo-next-v2'
 const activeDescriptors = fileURLToPath(
   new URL(`../shared/host/descriptors/${activeNetwork}.ts`, import.meta.url),
 )
