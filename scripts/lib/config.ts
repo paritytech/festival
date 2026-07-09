@@ -24,10 +24,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 export const REPO_ROOT = resolve(__dirname, '..', '..')
 export const CONFIG_PATH = resolve(REPO_ROOT, 'deploy.config.json')
 
-export const BUILT_IN_NETWORKS = ['paseo', 'paseo-next-v2'] as const
+export const BUILT_IN_NETWORKS = ['paseo-next-v2'] as const
 
 export interface DeployConfig {
-  /** 'paseo' | 'paseo-next-v2' | 'custom' */
+  /** 'paseo-next-v2' | 'custom' */
   network: string
   sessionsEnabled: boolean
   /** DotNS domains each SPA publishes to (with the `.dot` suffix). */
