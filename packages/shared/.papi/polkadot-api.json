@@ -2,29 +2,17 @@
   "version": 0,
   "descriptorPath": ".papi/descriptors",
   "entries": {
-    "paseoAh": {
-      "wsUrl": "wss://asset-hub-paseo-rpc.n.dwellir.com",
-      "metadata": ".papi/metadata/paseoAh.scale",
-      "genesis": "0xd6eec26135305a8ad257a20d003357284c8aa03d0bdb2b357ab0a22371e11ef2",
-      "codeHash": "0x7f6cc41b2b5ec9f34d7e4f56dda441fa4481fb28177fdca4063bc2e5524a626c"
-    },
-    "paseoBulletin": {
-      "wsUrl": "wss://paseo-bulletin-rpc.polkadot.io",
-      "metadata": ".papi/metadata/paseoBulletin.scale",
-      "genesis": "0x744960c32e3a3df5440e1ecd4d34096f1ce2230d7016a5ada8a765d5a622b4ea",
-      "codeHash": "0x3838044a1cf2f2973ec6ae993075d6c2d6f47fa5bd8613c8cc9a21d5d353c938"
-    },
     "paseoNextAh": {
       "wsUrl": "wss://paseo-asset-hub-next-rpc.polkadot.io",
       "metadata": ".papi/metadata/paseoNextAh.scale",
       "genesis": "0xbf0488dbe9daa1de1c08c5f743e26fdc2a4ecd74cf87dd1b4b1eeb99ae4ef19f",
-      "codeHash": "0xf29ad48ce8c0bb6db198f7789778dd8424dcd3cb19ec7084214574f7e4aa86d9"
+      "codeHash": "0xd89ebe4efd0300ac8a75980e1007bf7df579d9778f4b3aec87a25b519030cd74"
     },
     "paseoNextBulletin": {
       "wsUrl": "wss://paseo-bulletin-next-rpc.polkadot.io",
       "metadata": ".papi/metadata/paseoNextBulletin.scale",
       "genesis": "0x8cfe6717dc4becfda2e13c488a1e2061ff2dfee96e7d031157f72d36716c0a22",
-      "codeHash": "0xbf2cd56d20198f00ab6f38d7e77f15a9d5671d47beb5d456012ed45d23572045"
+      "codeHash": "0xe6deb62a7078a64b2534febedb4638acce1615a95b2622272d368db3e559b8ac"
     },
     "previewnetAh": {
       "wsUrl": "wss://previewnet.substrate.dev/asset-hub",
