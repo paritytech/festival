@@ -44,9 +44,9 @@ test('loadConfig: returns null when file is absent', () => {
 
 test('loadConfig: fills defaults for missing keys', () => {
   const p = tmpPath()
-  saveConfig({ network: 'paseo' } as unknown as DeployConfig, p)
+  saveConfig({ network: 'paseo-next-v2' } as unknown as DeployConfig, p)
   const loaded = loadConfig(p)!
-  assert.equal(loaded.network, 'paseo')
+  assert.equal(loaded.network, 'paseo-next-v2')
   assert.equal(loaded.sessionsEnabled, DEFAULT_CONFIG.sessionsEnabled)
   assert.deepEqual(loaded.domains, { admin: '', attendee: '' })
   assert.equal(loaded.custom, null)

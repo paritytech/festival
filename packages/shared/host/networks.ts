@@ -4,14 +4,13 @@
  * on unknown keys so a misconfigured deploy fails at boot.
  */
 
-export type NetworkKey = "paseo" | "paseo-next-v2" | "previewnet";
+export type NetworkKey = "paseo-next-v2" | "previewnet";
 
 export const SUPPORTED_NETWORKS: NetworkKey[] = [
-  "paseo",
   "paseo-next-v2",
   "previewnet",
 ];
-export const DEFAULT_NETWORK: NetworkKey = "paseo";
+export const DEFAULT_NETWORK: NetworkKey = "paseo-next-v2";
 
 export interface ChainEndpoint {
   /** WebSocket RPC URL for direct (standalone) connection. */
@@ -61,25 +60,6 @@ export interface NetworkConfig {
 }
 
 export const NETWORKS: Record<NetworkKey, NetworkConfig> = {
-  paseo: {
-    key: "paseo",
-    displayName: "Paseo Asset Hub",
-    isTestnet: true,
-    mainChain: {
-      wsUrl: "wss://asset-hub-paseo-rpc.n.dwellir.com",
-      genesisHash:
-        "0xd6eec26135305a8ad257a20d003357284c8aa03d0bdb2b357ab0a22371e11ef2",
-      descriptorKey: "paseoAh",
-    },
-    bulletinChain: {
-      wsUrl: "wss://paseo-bulletin-rpc.polkadot.io",
-      genesisHash:
-        "0x744960c32e3a3df5440e1ecd4d34096f1ce2230d7016a5ada8a765d5a622b4ea",
-      descriptorKey: "paseoBulletin",
-    },
-    ipfsGateway: "https://paseo-ipfs.polkadot.io",
-    nativeToken: { symbol: "PAS", decimals: 10 },
-  },
   "paseo-next-v2": {
     key: "paseo-next-v2",
     displayName: "Paseo Next V2",
@@ -165,7 +145,7 @@ function assertGenesisHashShape(
 /**
  * Apply per-field env overrides on top of a registry entry. Empty/undefined
  * overrides fall back to the registry value, so a network entry can ship with
- * stable hashes (paseo) or empty placeholders (previewnet) and selectively
+ * stable hashes (paseo-next-v2) or empty placeholders (previewnet) and selectively
  * accept overrides. Throws on malformed hashes so a typo in env doesn't reach
  * PAPI as an opaque mid-boot error.
  */

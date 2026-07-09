@@ -359,7 +359,7 @@ const showDurationFooter = computed(
     </div>
 
     <!-- Helper text -->
-    <div class="my-6 text-center text-sm leading-5 font-normal text-text-and-icons-tertiary">
+    <div class="mt-6 mb-6 text-center text-sm leading-5 font-normal text-text-and-icons-tertiary">
       <p
         v-if="showDurationFooter && durationMinutes != null"
         data-testid="session-time-duration"
@@ -367,9 +367,8 @@ const showDurationFooter = computed(
         Your Session Duration · {{ formatDurationLabel(durationMinutes) }}
       </p>
       <p v-else-if="!readonly">Sessions can run 15 min to 2 hours</p>
-      <hr class="my-1 border-0 border-t border-stroke-primary" />
-      <p v-if="readonly">The time can't be changed after creation.</p>
-      <p v-else>All times in Berlin time (CET)</p>
+      <p>The time can't be changed after creation.</p>
+      <hr class="mt-2 border-0 border-t border-stroke-primary" />
     </div>
   </div>
 </template>

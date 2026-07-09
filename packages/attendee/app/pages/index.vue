@@ -7,6 +7,8 @@ import { useSchedule } from "~/composables/useSchedule";
 import { useSubEvents, type AttendeeSubEvent } from "~/composables/useSubEvents";
 import { useSessionLimit } from "~/composables/useSessionLimit";
 import { usePoaps } from "~/composables/usePoaps";
+import { useFestivalPass } from "~/composables/useFestivalPass";
+import { usePassGate } from "~/composables/usePassGate";
 import { useOnboardingSeen } from "~/composables/useOnboardingSeen";
 import {
   useProgramTimeline,
@@ -33,6 +35,12 @@ const { isCheckedIn } = useRegistration(FESTIVAL_ADDRESS);
 const { entries: scheduleEntries } = useSchedule();
 const { subEvents } = useSubEvents();
 const { collectibleSubEventPoaps } = usePoaps();
+const { passStatus } = useFestivalPass();
+const passGate = usePassGate("use all Web3 Summit features");
+
+function onActivatePass() {
+  passGate.run(() => {});
+}
 const { has: hasSeenOnboarding } = useOnboardingSeen();
 const buildScheduleTo = computed(() =>
   hasSeenOnboarding("build-schedule") ? "/program" : "/program/welcome",
@@ -173,8 +181,43 @@ function getMyListRoute(item: TimelineItem): string {
       :festival-name="festivalMetadata?.name || 'Web3 Summit'"
     />
 
-    <!-- 2. Passport -->
-    <HomePassport />
+    <!-- 2. Passport. When the pass is deferred, a dark "Activate your pass"
+         card sits behind the passport and peeks out at the bottom; both are
+         bound by one rounded, clipped container. -->
+    <div
+      v-if="passStatus === 'deferred'"
+      class="relative my-6 rounded-3xl overflow-hidden"
+    >
+      <button
+        type="button"
+        class="absolute inset-0 flex items-end bg-surface-2 text-activations"
+        data-testid="activate-pass-cta"
+        aria-label="Activate your pass"
+        @click="onActivatePass"
+      >
+        <span class="flex w-full items-center justify-between px-5 h-14">
+          <span class="text-lg font-semibold">Activate your pass</span>
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              d="M5 12h14M13 6l6 6-6 6"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
+      </button>
+      <HomePassport class="relative z-[1] mb-14" />
+    </div>
+    <HomePassport v-else class="my-6" />
 
     <!-- 2.5. Location (kept up top only when not yet checked in;
          once checked in it moves to the bottom of the page). -->
@@ -342,23 +385,6 @@ function getMyListRoute(item: TimelineItem): string {
               </p>
               <p class="text-xs text-black/50 mt-0.5">{{ getSessionSubtitle(session) }}</p>
             </div>
-            <NuxtLink
-              v-if="!isSessionOngoing(session)"
-              :to="`/my/manage/${session.address}/edit`"
-              class="shrink-0"
-              @click.stop
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M3 17.46v3.04c0 .28.22.5.5.5h3.04c.13 0 .26-.05.35-.15L17.81 9.94l-3.75-3.75L3.15 17.1a.49.49 0 0 0-.15.36Z"
-                  fill="black"
-                />
-                <path
-                  d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83a1 1 0 0 0 0-1.41Z"
-                  fill="black"
-                />
-              </svg>
-            </NuxtLink>
           </div>
         </NuxtLink>
       </div>
@@ -398,11 +424,11 @@ function getMyListRoute(item: TimelineItem): string {
                 {{ getMyListTitle(item) }}
               </p>
             </div>
-            <div class="flex items-center justify-between mt-0.5">
-              <span class="text-xs text-text-muted">{{
+            <div class="flex items-start justify-between gap-2 mt-0.5">
+              <span class="text-xs text-text-muted whitespace-nowrap shrink-0">{{
                 getMyListTimeLabel(item)
               }}</span>
-              <span class="text-xs text-text-muted">{{
+              <span class="text-xs text-text-muted text-left">{{
                 getMyListLocation(item)
               }}</span>
             </div>
@@ -539,4 +565,11 @@ function getMyListRoute(item: TimelineItem): string {
       <HomeLocation />
     </template>
   </div>
+
+  <ActivationModal
+    :visible="passGate.state.value !== 'none'"
+    v-bind="passGate.modalProps.value"
+    @primary="passGate.onPrimary"
+    @secondary="passGate.onSecondary"
+  />
 </template>

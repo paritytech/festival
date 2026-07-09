@@ -420,13 +420,35 @@ function makeStyle(
   };
 }
 
+// dotli serves our app through a service worker, which returns the worker file
+// without the Cross-Origin-* headers the origin sets; the document's COEP then
+// makes the browser reject it as a worker (NS_ERROR_BLOCKED_BY_POLICY). A
+// controlling service worker is unique to dotli here — electron and wkwebview
+// load the bundle directly, with none — so only there do we run the worker from
+// a same-origin Blob URL, which bypasses the service worker.
+let resolvedWorkerUrl: string | null = null;
+async function resolveMaplibreWorkerUrl(): Promise<string> {
+  if (resolvedWorkerUrl) return resolvedWorkerUrl;
+  if (navigator.serviceWorker?.controller) {
+    try {
+      const res = await fetch(maplibreWorkerUrl);
+      resolvedWorkerUrl = URL.createObjectURL(await res.blob());
+      return resolvedWorkerUrl;
+    } catch {
+      // Fall back to the file URL below.
+    }
+  }
+  resolvedWorkerUrl = maplibreWorkerUrl;
+  return resolvedWorkerUrl;
+}
+
 export async function createVenueMap(
   container: HTMLElement,
   opts: VenueMapOptions = {},
 ): Promise<VenueMapHandle> {
   const mod = await import("maplibre-gl/dist/maplibre-gl-csp");
   const maplibregl: typeof import("maplibre-gl") = mod.default ?? mod;
-  maplibregl.setWorkerUrl(maplibreWorkerUrl);
+  maplibregl.setWorkerUrl(await resolveMaplibreWorkerUrl());
 
   container.classList.add("venue-map");
   if (!opts.interactive) container.classList.add("is-static");
