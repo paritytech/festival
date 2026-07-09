@@ -2,29 +2,17 @@
   "version": 0,
   "descriptorPath": ".papi/descriptors",
   "entries": {
-    "paseoAh": {
-      "wsUrl": "wss://asset-hub-paseo-rpc.n.dwellir.com",
-      "metadata": ".papi/metadata/paseoAh.scale",
-      "genesis": "0xd6eec26135305a8ad257a20d003357284c8aa03d0bdb2b357ab0a22371e11ef2",
-      "codeHash": "0xfddf30fb88912790c5c7efd5918a9498821a80e22d5604ae115f4ed4b3580048"
-    },
-    "paseoBulletin": {
-      "wsUrl": "wss://paseo-bulletin-rpc.polkadot.io",
-      "metadata": ".papi/metadata/paseoBulletin.scale",
-      "genesis": "0x744960c32e3a3df5440e1ecd4d34096f1ce2230d7016a5ada8a765d5a622b4ea",
-      "codeHash": "0xd248224df107ca81267a5a4d0671bb9618dbb1a43fae7fad6ba2331a45a10ac5"
-    },
     "paseoNextAh": {
       "wsUrl": "wss://paseo-asset-hub-next-rpc.polkadot.io",
       "metadata": ".papi/metadata/paseoNextAh.scale",
       "genesis": "0xbf0488dbe9daa1de1c08c5f743e26fdc2a4ecd74cf87dd1b4b1eeb99ae4ef19f",
-      "codeHash": "0xf29ad48ce8c0bb6db198f7789778dd8424dcd3cb19ec7084214574f7e4aa86d9"
+      "codeHash": "0xd89ebe4efd0300ac8a75980e1007bf7df579d9778f4b3aec87a25b519030cd74"
     },
     "paseoNextBulletin": {
       "wsUrl": "wss://paseo-bulletin-next-rpc.polkadot.io",
       "metadata": ".papi/metadata/paseoNextBulletin.scale",
       "genesis": "0x8cfe6717dc4becfda2e13c488a1e2061ff2dfee96e7d031157f72d36716c0a22",
-      "codeHash": "0xbf2cd56d20198f00ab6f38d7e77f15a9d5671d47beb5d456012ed45d23572045"
+      "codeHash": "0xe6deb62a7078a64b2534febedb4638acce1615a95b2622272d368db3e559b8ac"
     },
     "previewnetAh": {
       "wsUrl": "wss://previewnet.substrate.dev/asset-hub",
@@ -36,18 +24,6 @@
       "wsUrl": "wss://previewnet.substrate.dev/bulletin",
       "metadata": ".papi/metadata/previewnetBulletin.scale",
       "genesis": "0xf37fa1f1450ea120edbf64c3fc447f671a00e1f1095a698f42eeec073c7ee487",
-      "codeHash": "0xbf2cd56d20198f00ab6f38d7e77f15a9d5671d47beb5d456012ed45d23572045"
-    },
-    "summitAh": {
-      "wsUrl": "wss://summit-asset-hub-rpc.polkadot.io",
-      "metadata": ".papi/metadata/summitAh.scale",
-      "genesis": "0xf388dc6d6cdf6fb77eac3c4a91f31bc0c8642b142f1a757512ab7849f9f70660",
-      "codeHash": "0x34fcf28062037e032b010a31cf0dc64422c29e85ae3f09c6c1d0dd0c041672df"
-    },
-    "summitBulletin": {
-      "wsUrl": "wss://summit-bulletin-rpc.polkadot.io",
-      "metadata": ".papi/metadata/summitBulletin.scale",
-      "genesis": "0x147aae0d60625af72300d4d5ebd5dcb869f7ac4c6c1a326be1cbb14a4a65ae77",
       "codeHash": "0xbf2cd56d20198f00ab6f38d7e77f15a9d5671d47beb5d456012ed45d23572045"
     }
   }
