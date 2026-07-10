@@ -122,7 +122,7 @@ async function testSystemRemark() {
     }
 
     const signer = wallet.getSigner()
-    const { api } = useMainClient()
+    const { api } = await useMainClient()
 
     updateLog(id, 'pending', [
       `Signer publicKey: ${toHex(signer.publicKey)}`,
@@ -166,8 +166,13 @@ async function testCreateTransaction() {
       return
     }
 
-    const { hostApi } = await import('@novasamatech/host-api-wrapper')
-    const { api } = useMainClient()
+    const { getTruApi } = await import('@parity/product-sdk-host')
+    const hostApi = await getTruApi()
+    if (!hostApi) {
+      updateLog(id, 'error', 'Host API unavailable')
+      return
+    }
+    const { api } = await useMainClient()
 
     updateLog(id, 'pending', 'Encoding System.remark calldata...')
     const tx = api.tx.System.remark({
@@ -230,7 +235,7 @@ async function testSignRaw() {
 async function testContractRead() {
   const id = log('Contract Read', 'pending', 'Reading contract with wallet address as origin...')
   try {
-    const { api } = useMainClient()
+    const { api } = await useMainClient()
     const address = wallet.address || '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY'
 
     updateLog(id, 'pending', `Querying System.Account for ${address.slice(0, 12)}...`)

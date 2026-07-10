@@ -140,7 +140,23 @@ export function watchContractEvents(
     }
   }
 
-  function subscribe() {
+  async function subscribe() {
+    if (stopped) return
+
+    // Resolve the (now async) main client once, lazily. On failure, retry on
+    // the same cadence as a subscribe error.
+    if (!api) {
+      try {
+        ;({ api } = await useMainClient())
+      } catch (err) {
+        console.warn(`[FestivalWatcher] client unavailable — will retry in ${RETRY_DELAY_MS}ms: ${(err as Error).message}`)
+        if (!stopped) {
+          if (retryTimeout) clearTimeout(retryTimeout)
+          retryTimeout = setTimeout(subscribe, RETRY_DELAY_MS)
+        }
+        return
+      }
+    }
     if (stopped) return
 
     // Dispose any prior subscription before opening a new one. This covers the

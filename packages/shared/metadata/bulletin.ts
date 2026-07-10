@@ -79,7 +79,7 @@ export function useBulletinStorage() {
     remainingBytes: bigint
   }> {
     const { useBulletinClient } = await import('../host/client')
-    const { api } = useBulletinClient()
+    const { api } = await useBulletinClient()
 
     try {
       const status = await sdkCheckAuthorization(
@@ -169,7 +169,7 @@ export function useBulletinStorage() {
   ): Promise<{ cid: string; bytes32: `0x${string}` }> {
     const { useBulletinClient } = await import('../host/client')
     const { useWalletStore } = await import('../host/wallet')
-    const { api } = useBulletinClient()
+    const { api } = await useBulletinClient()
     const walletStore = useWalletStore()
 
     txStatus.value = 'signing'

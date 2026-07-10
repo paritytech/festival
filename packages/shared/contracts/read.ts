@@ -28,7 +28,7 @@ export async function readContract<T = unknown>({
   at?: 'best' | 'finalized'
 }): Promise<T> {
   const calldata = encodeFunctionData({ abi, functionName, args })
-  const { api } = useMainClient()
+  const { api } = await useMainClient()
 
   const origin = walletAddress || READ_ONLY_ORIGIN
 

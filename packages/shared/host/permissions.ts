@@ -1,8 +1,8 @@
 import {
-  hostApi,
+  getTruApi,
   requestDevicePermission as sdkRequestDevicePermission,
   requestPermission as sdkRequestPermission,
-} from '@novasamatech/host-api-wrapper'
+} from '@parity/product-sdk-host'
 import { isInHost } from './detect'
 
 /** Client-side cache for granted permissions. Avoids redundant host round-trips. */
@@ -21,11 +21,9 @@ export async function requestCameraPermission(): Promise<boolean> {
   const key = cacheKey('device', 'Camera')
   if (grantedCache.get(key)) return true
 
-  const result = await sdkRequestDevicePermission('Camera')
-  const granted = result.match(
-    (val) => val,
-    () => false,
-  )
+  // Facade returns a plain boolean and throws on host error (vs the old
+  // neverthrow Result); treat any throw as "not granted".
+  const granted = await sdkRequestDevicePermission('Camera').catch(() => false)
 
   if (granted) grantedCache.set(key, true)
   return granted
@@ -38,11 +36,7 @@ export async function requestNotificationsPermission(): Promise<boolean> {
   const key = cacheKey('device', 'Notifications')
   if (grantedCache.get(key)) return true
 
-  const result = await sdkRequestDevicePermission('Notifications')
-  const granted = result.match(
-    (val) => val,
-    () => false,
-  )
+  const granted = await sdkRequestDevicePermission('Notifications').catch(() => false)
 
   if (granted) grantedCache.set(key, true)
   return granted
@@ -69,11 +63,7 @@ export async function requestRemoteAccess(domains: string[]): Promise<boolean> {
   const key = cacheKey('remote', domains.slice().sort().join(','))
   if (grantedCache.get(key)) return true
 
-  const result = await sdkRequestPermission({ tag: 'Remote', value: domains })
-  const granted = result.match(
-    (val) => val,
-    () => false,
-  )
+  const granted = await sdkRequestPermission({ tag: 'Remote', value: domains }).catch(() => false)
 
   if (granted) grantedCache.set(key, true)
   return granted
@@ -85,7 +75,10 @@ export async function requestRemoteAccess(domains: string[]): Promise<boolean> {
 export async function checkChainSupported(genesis: `0x${string}`): Promise<boolean> {
   if (!isInHost()) return true
 
-  const result = await hostApi.featureSupported({
+  const truApi = await getTruApi()
+  if (!truApi) return false
+
+  const result = await truApi.featureSupported({
     tag: 'v1',
     value: { tag: 'Chain', value: genesis },
   })

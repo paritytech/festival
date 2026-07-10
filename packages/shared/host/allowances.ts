@@ -19,7 +19,7 @@ export type AllowanceState = {
 export async function checkAllowancesOnChain(
   productAccount: string,
 ): Promise<AllowanceState> {
-  const { api } = useMainClient()
+  const { api } = await useMainClient()
   const acc = await api.query.Assets.Account.getValue(
     PGAS_ASSET_ID,
     productAccount,

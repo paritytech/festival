@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
-  createAccountsProvider,
-  hostApi,
-  injectSpektrExtension,
-} from '@novasamatech/host-api-wrapper'
-import { enumValue } from '@novasamatech/host-api'
+  getAccountsProvider,
+  requestResourceAllocation,
+  enumValue,
+  fromHex,
+  toHex,
+} from '@parity/product-sdk-host'
 import type { PolkadotSigner } from 'polkadot-api/signer'
 import { getInjectedExtensions, connectInjectedExtension } from 'polkadot-api/pjs-signer'
 import { AccountId } from '@polkadot-api/substrate-bindings'
@@ -77,11 +78,9 @@ export const useWalletStore = defineStore('wallet', () => {
    * address.
    */
   async function initHost() {
-    const accountsProvider = createAccountsProvider()
-
-    const success = await injectSpektrExtension()
-    if (!success) {
-      console.error('[Wallet] injectSpektrExtension returned false')
+    const accountsProvider = await getAccountsProvider()
+    if (!accountsProvider) {
+      console.error('[Wallet] accounts provider unavailable')
       return
     }
 
@@ -232,15 +231,21 @@ export const useWalletStore = defineStore('wallet', () => {
 
   /**
    * Sign a raw message (hex-encoded) via the signing bridge.
-   * Host mode: uses injectedWeb3 via the host-injected extension.
+   * Host mode: product-account signer's `signBytes` (the host-injected Spektr
+   * extension was retired with `injectSpektrExtension`).
    * Standalone mode: uses the connected browser extension.
    */
   async function signRaw(hexMessage: string): Promise<string> {
     if (!address.value) throw new Error('No account selected')
 
-    const extensionName = isInHost()
-      ? 'spektr'
-      : _connectedExtensionName.value
+    // Host mode: sign raw bytes through the product-account PolkadotSigner.
+    if (isInHost()) {
+      const sig = await getSigner().signBytes(fromHex(hexMessage))
+      return toHex(sig)
+    }
+
+    // Standalone mode: use the connected browser extension.
+    const extensionName = _connectedExtensionName.value
     if (!extensionName) throw new Error('No extension connected')
 
     const entry = (window as any).injectedWeb3?.[extensionName]
@@ -271,40 +276,32 @@ export const useWalletStore = defineStore('wallet', () => {
 
     isClaimingAllowances.value = true
     try {
-      const allocResult = await withTimeout(
-        hostApi.requestResourceAllocation(
-          enumValue('v1', REQUIRED_RESOURCES.map((r) => r.request)),
-        ),
+      // The facade's standalone requestResourceAllocation takes the resource
+      // array directly (no `v1` envelope) and returns AllocationOutcome[]
+      // directly, throwing on host error (vs the old neverthrow Result).
+      const allocOutcomes = await withTimeout(
+        requestResourceAllocation(REQUIRED_RESOURCES.map((r) => r.request)),
         ALLOC_TIMEOUT_MS,
         'requestResourceAllocation',
       )
-      let outcomes: readonly { key: string; tag: string }[] | null = null
-      allocResult.match(
-        (response) => {
-          if (response.tag !== 'v1') {
-            console.warn('[Wallet] Unexpected allocation response version:', response.tag)
-            return
-          }
-          outcomes = response.value.map((outcome, i) => ({
-            key: REQUIRED_RESOURCES[i]!.key,
-            tag: outcome.tag,
-          }))
-          outcomes.forEach(({ key, tag }) => {
-            console.log(`[Wallet] ${key}: ${tag}`)
-          })
-        },
-        (err) => {
-          const anyErr = err as { name?: string; message?: string; tag?: string; value?: unknown }
-          console.error('[Wallet] requestResourceAllocation error', {
-            name: anyErr?.name,
-            message: anyErr?.message,
-            tag: anyErr?.tag,
-            value: anyErr?.value,
-            raw: err,
-          })
-        },
-      )
+      const outcomes = allocOutcomes.map((outcome, i) => ({
+        key: REQUIRED_RESOURCES[i]!.key,
+        tag: outcome.tag,
+      }))
+      outcomes.forEach(({ key, tag }) => {
+        console.log(`[Wallet] ${key}: ${tag}`)
+      })
       return { outcomes }
+    } catch (err) {
+      const anyErr = err as { name?: string; message?: string; tag?: string; value?: unknown }
+      console.error('[Wallet] requestResourceAllocation error', {
+        name: anyErr?.name,
+        message: anyErr?.message,
+        tag: anyErr?.tag,
+        value: anyErr?.value,
+        raw: err,
+      })
+      return { outcomes: null }
     } finally {
       isClaimingAllowances.value = false
     }
