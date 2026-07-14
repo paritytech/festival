@@ -21,6 +21,13 @@ export default defineNuxtConfig({
 
   ssr: false,
 
+  // nuxt >=3.21.7 breaks the dev server for ssr:false apps unless the vite
+  // environment API is enabled (https://github.com/nuxt/nuxt/issues/35033).
+  // Drop this once a nuxt release fixes SPA dev without the flag.
+  experimental: {
+    viteEnvironmentApi: true,
+  },
+
   app: {
     head: {
       meta: [
