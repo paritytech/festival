@@ -93,7 +93,7 @@ watch(
   margin-bottom: 4px;
 }
 .slv__label-value {
-  color: #fff;
+  color: var(--color-text-and-icons-primary);
   font-size: 22px;
   font-weight: 700;
   line-height: 1.2;
@@ -103,7 +103,7 @@ watch(
   align-self: stretch;
   height: 48px;
   background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  color: var(--color-text-and-icons-primary);
   border: 0;
   border-radius: 16px;
   font-size: 14px;

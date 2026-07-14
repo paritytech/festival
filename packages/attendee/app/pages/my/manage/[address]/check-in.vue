@@ -151,8 +151,8 @@ function onScannerError(msg: string) {
 
     <!-- Title + time/location -->
     <div class="px-4 mb-4">
-      <h1 class="text-2xl font-semibold text-white">{{ session?.metadata.name || 'Check-in' }}</h1>
-      <p v-if="timeRange || locationLabel" class="text-sm text-text-muted mt-1">
+      <h1 class="text-2xl font-semibold text-text-and-icons-primary">{{ session?.metadata.name || 'Check-in' }}</h1>
+      <p v-if="timeRange || locationLabel" class="text-sm text-text-and-icons-tertiary mt-1">
         {{ timeRange }}
         <span v-if="timeRange && locationLabel"> · </span>
         {{ locationLabel }}
@@ -161,15 +161,15 @@ function onScannerError(msg: string) {
 
     <!-- Stats -->
     <div class="px-4 mb-4">
-      <div class="rounded-2xl bg-surface-2 py-4 flex flex-col items-center">
-        <span class="text-2xl font-semibold text-white leading-tight">{{ checkedInCount }}</span>
-        <span class="text-xs text-text-muted mt-0.5">checked in</span>
+      <div class="rounded-2xl bg-bg-surface-nested py-4 flex flex-col items-center">
+        <span class="text-2xl font-semibold text-text-and-icons-primary leading-tight">{{ checkedInCount }}</span>
+        <span class="text-xs text-text-and-icons-tertiary mt-0.5">checked in</span>
       </div>
     </div>
 
     <!-- Camera (visible when scanning/idle; placeholder-sized otherwise) -->
     <div class="px-4 mb-4">
-      <div class="relative w-full aspect-square rounded-2xl overflow-hidden border border-white/12 bg-black">
+      <div class="relative w-full aspect-square rounded-2xl overflow-hidden border border-applied-stroke bg-bg-surface-main">
         <QRScanner
           v-if="scannerActive"
           :active="true"
@@ -179,9 +179,9 @@ function onScannerError(msg: string) {
         />
         <div
           v-else
-          class="absolute inset-0 flex items-center justify-center bg-surface-2/60"
+          class="absolute inset-0 flex items-center justify-center bg-bg-surface-nested/60"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-white/40">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-text-and-icons-tertiary">
             <rect x="3" y="3" width="5" height="5" rx="1" />
             <rect x="16" y="3" width="5" height="5" rx="1" />
             <rect x="3" y="16" width="5" height="5" rx="1" />
@@ -193,35 +193,35 @@ function onScannerError(msg: string) {
 
     <!-- Step-dependent panel -->
     <div class="px-4 mb-4 min-h-[72px]">
-      <p v-if="step === 'scanning'" class="text-sm text-text-muted text-center py-4">
+      <p v-if="step === 'scanning'" class="text-sm text-text-and-icons-tertiary text-center py-4">
         Point at an attendee's account QR.
       </p>
 
       <div
         v-else-if="step === 'validating'"
-        class="rounded-2xl bg-surface-2 px-5 py-4 flex items-center gap-3"
+        class="rounded-2xl bg-bg-surface-nested px-5 py-4 flex items-center gap-3"
       >
-        <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
-        <p class="text-sm text-white">Checking on-chain…</p>
+        <div class="w-5 h-5 border-2 border-text-and-icons-primary border-t-transparent rounded-full animate-spin shrink-0" />
+        <p class="text-sm text-text-and-icons-primary">Checking on-chain…</p>
       </div>
 
       <div
         v-else-if="step === 'confirming'"
-        class="rounded-2xl bg-surface-2 px-5 py-4"
+        class="rounded-2xl bg-bg-surface-nested px-5 py-4"
       >
-        <p class="text-xs text-text-muted mb-1">Check in</p>
-        <p class="text-sm font-mono text-white break-all">
+        <p class="text-xs text-text-and-icons-tertiary mb-1">Check in</p>
+        <p class="text-sm font-mono text-text-and-icons-primary break-all">
           {{ attendeeSS58 ? shortenAddress(attendeeSS58) : '' }}
         </p>
         <div class="flex gap-2 mt-4">
           <button
-            class="flex-1 py-3 rounded-2xl text-sm font-medium border border-white/12 text-white"
+            class="flex-1 py-3 rounded-2xl text-sm font-medium border border-applied-stroke text-text-and-icons-primary"
             @click="reset(); startScanning()"
           >
             Cancel
           </button>
           <button
-            class="flex-1 py-3 rounded-2xl text-sm font-semibold bg-white text-black"
+            class="flex-1 py-3 rounded-2xl text-sm font-semibold bg-bg-action-primary text-fg-primary-inverted"
             @click="executeCheckIn"
           >
             Confirm
@@ -231,31 +231,31 @@ function onScannerError(msg: string) {
 
       <div
         v-else-if="step === 'executing'"
-        class="rounded-2xl bg-surface-2 px-5 py-4 flex items-center gap-3"
+        class="rounded-2xl bg-bg-surface-nested px-5 py-4 flex items-center gap-3"
       >
-        <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
-        <p class="text-sm text-white">Checking in…</p>
+        <div class="w-5 h-5 border-2 border-text-and-icons-primary border-t-transparent rounded-full animate-spin shrink-0" />
+        <p class="text-sm text-text-and-icons-primary">Checking in…</p>
       </div>
 
       <div
         v-else-if="step === 'success'"
-        class="rounded-2xl bg-surface-2 px-5 py-4 flex items-center gap-3"
+        class="rounded-2xl bg-bg-surface-nested px-5 py-4 flex items-center gap-3"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-green-400 shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-fg-success shrink-0">
           <polyline points="20 6 9 17 4 12" />
         </svg>
-        <p class="text-sm text-white">
+        <p class="text-sm text-text-and-icons-primary">
           Checked in {{ attendeeSS58 ? shortenAddress(attendeeSS58) : '' }}
         </p>
       </div>
 
       <div
         v-else-if="step === 'error'"
-        class="rounded-2xl bg-red-900/30 border border-red-500/20 px-5 py-4"
+        class="rounded-2xl bg-danger-muted border border-stroke-error/20 px-5 py-4"
       >
-        <p class="text-sm text-red-300">{{ checkInError || 'Something went wrong.' }}</p>
+        <p class="text-sm text-fg-error">{{ checkInError || 'Something went wrong.' }}</p>
         <button
-          class="mt-3 w-full py-3 rounded-2xl text-sm font-semibold bg-white text-black"
+          class="mt-3 w-full py-3 rounded-2xl text-sm font-semibold bg-bg-action-primary text-fg-primary-inverted"
           @click="startScanning"
         >
           Try Again
@@ -265,15 +265,15 @@ function onScannerError(msg: string) {
 
     <!-- Recent check-ins -->
     <div v-if="recentCheckins.length" class="px-4 mb-4">
-      <p class="text-xs text-text-muted mb-2">Recent</p>
-      <div class="rounded-2xl bg-surface-2 divide-y divide-white/8 overflow-hidden">
+      <p class="text-xs text-text-and-icons-tertiary mb-2">Recent</p>
+      <div class="rounded-2xl bg-bg-surface-nested divide-y divide-applied-separator overflow-hidden">
         <div
           v-for="(c, i) in recentCheckins"
           :key="i"
           class="flex justify-between px-4 py-2.5 text-sm"
         >
-          <span class="font-mono text-white">{{ c.address }}</span>
-          <span class="text-text-muted">{{ c.time }}</span>
+          <span class="font-mono text-text-and-icons-primary">{{ c.address }}</span>
+          <span class="text-text-and-icons-tertiary">{{ c.time }}</span>
         </div>
       </div>
     </div>
@@ -281,7 +281,7 @@ function onScannerError(msg: string) {
     <!-- Manual entry collapsible -->
     <div class="px-4 pb-8">
       <button
-        class="flex items-center justify-between w-full text-sm text-text-muted py-2"
+        class="flex items-center justify-between w-full text-sm text-text-and-icons-tertiary py-2"
         @click="showManual = !showManual"
       >
         <span>Enter address manually</span>
@@ -305,17 +305,17 @@ function onScannerError(msg: string) {
           v-model="manualInput"
           type="text"
           placeholder="5Grwva… or 0x…"
-          class="w-full px-4 py-3 rounded-full border border-white/12 bg-transparent text-white placeholder-white/40 text-sm font-mono focus:outline-none focus:border-white/30"
+          class="w-full px-4 py-3 rounded-full border border-applied-stroke bg-transparent text-text-and-icons-primary placeholder-text-and-icons-tertiary text-sm font-mono focus:outline-none focus:border-fill-30"
           @keyup.enter="submitManual"
         />
         <button
-          class="w-full py-3 rounded-2xl text-sm font-semibold bg-white text-black disabled:opacity-50"
+          class="w-full py-3 rounded-2xl text-sm font-semibold bg-bg-action-primary text-fg-primary-inverted disabled:opacity-50"
           :disabled="!manualInput || step === 'validating' || step === 'executing'"
           @click="submitManual"
         >
           {{ step === 'executing' ? 'Checking In…' : 'Check In' }}
         </button>
-        <p v-if="manualError" class="text-xs text-red-300">{{ manualError }}</p>
+        <p v-if="manualError" class="text-xs text-fg-error">{{ manualError }}</p>
       </div>
     </div>
   </div>

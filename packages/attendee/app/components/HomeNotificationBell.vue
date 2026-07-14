@@ -36,7 +36,7 @@ function openInbox() {
          legible on both dark and light themes. -->
     <span
       v-if="hasUnread"
-      class="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-danger ring-2 ring-background"
+      class="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-bg-status-error ring-2 ring-background"
       data-testid="notifications-bell-dot"
     />
   </button>

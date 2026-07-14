@@ -22,13 +22,13 @@ const shadowOpacity = computed(() =>
   <div ref="container" class="relative overflow-x-hidden">
     <!-- Scrim: darkens background behind the sliding page -->
     <div
-      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-40 bg-black pointer-events-none"
+      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-40 bg-bg-surface-main pointer-events-none"
       :style="{ opacity: scrimOpacity }"
     />
 
     <!-- Sliding content wrapper -->
     <div
-      class="relative z-50 min-h-screen bg-background"
+      class="relative z-50 min-h-screen bg-bg-surface-main"
       :style="{
         transform: `translateX(${offsetX}px)`,
         boxShadow: offsetX > 0

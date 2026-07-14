@@ -56,14 +56,14 @@ const isOwner = computed(() => {
 });
 
 const accentColor = computed(() => {
-  if (past.value) return "#44403c"; // stone-700
+  if (past.value) return "var(--color-stone-700)";
   return CATEGORY_STYLE[getItemCategory(props.item)].color;
 });
 
 const cardClass = computed(() => {
-  if (past.value) return "bg-transparent border-white/10";
-  if (isOwner.value) return "bg-white border-white/0";
-  return "bg-surface-2 border-black hover:bg-surface-3";
+  if (past.value) return "bg-transparent border-applied-stroke";
+  if (isOwner.value) return "bg-bg-surface-container-inverted border-transparent";
+  return "bg-bg-surface-nested border-fg-primary-inverted hover:bg-bg-surface-nested";
 });
 
 const title = computed(() =>
@@ -138,21 +138,21 @@ const editRoute = computed(() => {
 // Text color helpers. Owner cards have dark text on white bg
 const titleClass = computed(() => {
   if (past.value) return "text-text-and-icons-primary";
-  if (isOwner.value) return "text-black";
-  return "text-text-primary";
+  if (isOwner.value) return "text-fg-primary-inverted";
+  return "text-text-and-icons-primary";
 });
 
 const mutedClass = computed(() => {
   if (past.value) return "text-text-and-icons-secondary";
-  if (isOwner.value) return "text-black/50";
-  return "text-text-muted";
+  if (isOwner.value) return "text-fg-primary-inverted/50";
+  return "text-text-and-icons-tertiary";
 });
 
 const timeClass = computed(() => {
   if (past.value) return 'text-text-and-icons-secondary'
-  if (isOwner.value) return 'text-black'
+  if (isOwner.value) return 'text-fg-primary-inverted'
   if (ongoing.value) return 'text-text-and-icons-primary'
-  return 'text-text-muted'
+  return 'text-text-and-icons-tertiary'
 })
 
 function formatTime(d: Date): string {
@@ -196,7 +196,7 @@ function onStarTap(e: MouseEvent) {
             <div class="flex items-start gap-1.5">
               <span
                 v-if="ongoing"
-                class="w-1.5 h-1.5 rounded-full shrink-0 bg-danger mt-1.5"
+                class="w-1.5 h-1.5 rounded-full shrink-0 bg-bg-status-error mt-1.5"
               />
               <p
                 class="text-sm font-medium line-clamp-3 leading-snug"
@@ -218,7 +218,7 @@ function onStarTap(e: MouseEvent) {
             <NuxtLink
               v-if="isOwner"
               :to="editRoute"
-              class="shrink-0 p-1 -mr-1 mt-0.5 text-black"
+              class="shrink-0 p-1 -mr-1 mt-0.5 text-fg-primary-inverted"
               @click.stop
             >
               <PencilIcon :size="18" />
@@ -230,7 +230,7 @@ function onStarTap(e: MouseEvent) {
               class="shrink-0 p-1 -mr-1 mt-0.5 transition-colors program-card-star"
               :class="[
                 isBookmarked
-                  ? 'text-text-primary program-card-star--filled'
+                  ? 'text-text-and-icons-primary program-card-star--filled'
                   : 'text-stone-600',
               ]"
               @click.prevent.stop="onStarTap"

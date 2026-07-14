@@ -96,7 +96,7 @@ watch(
         :data-testid="`session-date-option-${day.dateKey}`"
         :disabled="isDisabled(day.dateKey)"
         :aria-disabled="isDisabled(day.dateKey)"
-        class="w-full flex items-center justify-between p-4 rounded-xl text-sm font-medium transition-colors bg-surface-2 text-text-and-icons-primary disabled:opacity-40 disabled:cursor-not-allowed"
+        class="w-full flex items-center justify-between p-4 rounded-xl text-sm font-medium transition-colors bg-bg-surface-nested text-text-and-icons-primary disabled:opacity-40 disabled:cursor-not-allowed"
         @click="selectDay(day.dateKey)"
       >
         <span>{{ day.label }}</span>
@@ -106,7 +106,7 @@ watch(
 
     <p
       v-if="days.length === 0"
-      class="mt-3 text-xs text-white/40"
+      class="mt-3 text-xs text-text-and-icons-tertiary"
       data-testid="session-date-empty"
     >
       No upcoming festival days available.

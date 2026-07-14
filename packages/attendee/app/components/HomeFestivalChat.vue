@@ -4,7 +4,7 @@
 <template>
   <NuxtLink
     to="/chat"
-    class="flex items-center gap-3 rounded-2xl bg-surface-2 p-3 cursor-pointer"
+    class="flex items-center gap-3 rounded-2xl bg-bg-surface-container p-3 cursor-pointer"
     data-testid="home-festival-chat"
   >
     <div class="w-10 h-10 shrink-0 flex items-center justify-center">
@@ -19,7 +19,7 @@
       </p>
     </div>
     <div
-      class="w-9 h-9 shrink-0 rounded-full bg-surface-3 flex items-center justify-center text-text-and-icons-primary"
+      class="w-9 h-9 shrink-0 rounded-full bg-bg-surface-nested flex items-center justify-center text-text-and-icons-primary"
     >
       <ArrowRightIcon />
     </div>

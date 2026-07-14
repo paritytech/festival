@@ -135,14 +135,14 @@ onUnmounted(() => {
     >
       <div class="flex w-max marquee-track">
         <p
-          class="text-white uppercase whitespace-nowrap font-mono font-normal pr-6 shrink-0 text-passport-band-checked-in"
+          class="text-text-and-icons-primary uppercase whitespace-nowrap font-mono font-normal pr-6 shrink-0 text-passport-band-checked-in"
         >
           {{ BAND_SIDE }}{{ BAND_SIDE }}{{ BAND_CENTER }} · {{ BAND_SIDE
           }}{{ BAND_SIDE }}
         </p>
         <p
           aria-hidden="true"
-          class="text-white uppercase whitespace-nowrap font-mono font-normal pr-6 shrink-0 text-passport-band-checked-in"
+          class="text-text-and-icons-primary uppercase whitespace-nowrap font-mono font-normal pr-6 shrink-0 text-passport-band-checked-in"
         >
           {{ BAND_SIDE }}{{ BAND_SIDE }}{{ BAND_CENTER }} · {{ BAND_SIDE
           }}{{ BAND_SIDE }}
@@ -156,13 +156,13 @@ onUnmounted(() => {
     >
       <div class="flex w-max marquee-track">
         <p
-          class="text-white uppercase whitespace-nowrap font-mono font-normal pr-6 shrink-0 text-passport-band-not-checked-in"
+          class="text-text-and-icons-primary uppercase whitespace-nowrap font-mono font-normal pr-6 shrink-0 text-passport-band-not-checked-in"
         >
           {{ NOT_CHECKED_IN_BAND.repeat(8) }}
         </p>
         <p
           aria-hidden="true"
-          class="text-white uppercase whitespace-nowrap font-mono font-normal pr-6 shrink-0 text-passport-band-not-checked-in"
+          class="text-text-and-icons-primary uppercase whitespace-nowrap font-mono font-normal pr-6 shrink-0 text-passport-band-not-checked-in"
         >
           {{ NOT_CHECKED_IN_BAND.repeat(8) }}
         </p>

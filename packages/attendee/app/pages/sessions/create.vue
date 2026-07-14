@@ -379,7 +379,7 @@ async function doCreate() {
     <div
       v-if="isCreatingSession"
       data-testid="session-creating-overlay"
-      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] bg-background flex flex-col z-[60] pt-[var(--safe-top)]"
+      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] bg-bg-surface-main flex flex-col z-[60] pt-[var(--safe-top)]"
     >
       <div class="flex-1 flex flex-col items-center justify-center px-6">
         <div class="w-full max-w-[244px]">
@@ -394,9 +394,9 @@ async function doCreate() {
 
         <div class="flex items-center gap-3 mt-8">
           <div
-            class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"
+            class="w-5 h-5 border-2 border-text-and-icons-primary border-t-transparent rounded-full animate-spin shrink-0"
           />
-          <p class="text-base font-semibold text-white">Creating session…</p>
+          <p class="text-base font-semibold text-text-and-icons-primary">Creating session…</p>
         </div>
       </div>
     </div>
@@ -407,7 +407,7 @@ async function doCreate() {
     <div
       v-if="createdAddress"
       data-testid="session-success-overlay"
-      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] bg-background flex flex-col z-[60] pt-[var(--safe-top)]"
+      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] bg-bg-surface-main flex flex-col z-[60] pt-[var(--safe-top)]"
     >
       <div class="flex-1 flex flex-col items-center justify-center px-6">
         <div class="w-full max-w-[244px]">
@@ -422,7 +422,7 @@ async function doCreate() {
 
         <h1
           data-testid="session-success-heading"
-          class="text-2xl font-bold text-white text-center leading-tight mt-8"
+          class="text-2xl font-bold text-text-and-icons-primary text-center leading-tight mt-8"
         >
           Session created<br />successfully
         </h1>
@@ -432,14 +432,14 @@ async function doCreate() {
         <NuxtLink
           :to="{ path: `/sessions/${createdAddress}`, query: { from: 'create' } }"
           data-testid="session-success-view"
-          class="block w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold text-center"
+          class="block w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold text-center"
         >
           View your Session
         </NuxtLink>
         <NuxtLink
           to="/program"
           data-testid="session-success-back"
-          class="block w-full py-4 bg-surface-2 text-white rounded-2xl text-sm font-medium text-center"
+          class="block w-full py-4 bg-bg-surface-nested text-text-and-icons-primary rounded-2xl text-sm font-medium text-center"
         >
           Back to Program
         </NuxtLink>
@@ -481,7 +481,7 @@ async function doCreate() {
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
-          class="text-white"
+          class="text-text-and-icons-primary"
         >
           <line x1="18" y1="6" x2="6" y2="18" />
           <line x1="6" y1="6" x2="18" y2="18" />
@@ -491,7 +491,7 @@ async function doCreate() {
       </button>
 
       <!-- Centered title -->
-      <h1 class="flex-1 text-center text-base font-semibold text-white">
+      <h1 class="flex-1 text-center text-base font-semibold text-text-and-icons-primary">
         {{ stepTitle }}
       </h1>
 
@@ -510,9 +510,9 @@ async function doCreate() {
         <div
           v-if="submitValidationError"
           data-testid="session-revalidation-banner"
-          class="mx-4 mb-4 rounded-2xl bg-red-900/30 border border-red-500/20 px-4 py-3"
+          class="mx-4 mb-4 rounded-2xl bg-danger-muted border border-stroke-error/20 px-4 py-3"
         >
-          <p class="text-sm text-red-300">
+          <p class="text-sm text-fg-error">
             Selected time is no longer available. Please pick a new date and
             time.
           </p>
@@ -571,17 +571,17 @@ async function doCreate() {
 
     <!-- Step 3 (badge) supplies its own actions (intro "Create Badge" button and
          the full-screen editor's own header), so the wizard footer is hidden
-         there — otherwise its empty bg-background bar overlaps the editor's
+         there — otherwise its empty bg-bg-surface-main bar overlaps the editor's
          bottom toolbar. -->
     <div
       v-if="currentStep !== 3"
-      class="sticky bottom-0 z-10 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-background"
+      class="sticky bottom-0 z-10 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-bg-surface-main"
     >
       <!-- Step 1: Next -->
       <button
         v-if="currentStep === 1"
         data-testid="create-step1-next"
-        class="w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
+        class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
         :disabled="!canProceedStep1"
         @click="goNext"
       >
@@ -591,14 +591,14 @@ async function doCreate() {
       <!-- Step 2: Choose Location (intro state) or Next (preview state) -->
       <button
         v-if="currentStep === 2 && !pickedLocation"
-        class="w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold transition-colors"
+        class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors"
         @click="pickerOpen = true"
       >
         Choose Location
       </button>
       <button
         v-else-if="currentStep === 2"
-        class="w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold transition-colors"
+        class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors"
         @click="goNext"
       >
         Next
@@ -609,14 +609,14 @@ async function doCreate() {
         <!-- Error -->
         <div
           v-if="error"
-          class="rounded-2xl bg-red-900/30 border border-red-500/20 px-5 py-4 mb-3"
+          class="rounded-2xl bg-danger-muted border border-stroke-error/20 px-5 py-4 mb-3"
         >
-          <p class="text-sm text-red-300">{{ error }}</p>
+          <p class="text-sm text-fg-error">{{ error }}</p>
         </div>
 
         <!-- Submit button -->
         <button
-          class="w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
+          class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
           :disabled="!badgeHex || (txStatus !== 'idle' && txStatus !== 'error')"
           @click="submit"
         >

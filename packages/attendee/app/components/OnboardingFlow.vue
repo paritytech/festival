@@ -64,7 +64,7 @@ function goNext() {
     <div class="px-4 pt-3 pb-[calc(var(--safe-bottom)+16px)] shrink-0">
       <button
         type="button"
-        class="block w-full py-4 bg-black text-white rounded-2xl text-sm font-semibold text-center"
+        class="block w-full py-4 bg-black text-text-and-icons-primary rounded-2xl text-sm font-semibold text-center"
         @click="goNext"
       >
         {{ isLastStep ? finalCta : 'Next' }}

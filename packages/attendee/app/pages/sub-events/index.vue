@@ -44,36 +44,36 @@ function formatTime(ts: number) {
       </NuxtLink>
     </div>
 
-    <div v-if="!visibleSubEvents.length" class="bg-surface border border-border rounded-md p-8 text-center">
+    <div v-if="!visibleSubEvents.length" class="bg-bg-surface-container border border-stroke-primary rounded-md p-8 text-center">
       <p class="text-2xl mb-3">🎪</p>
-      <p class="text-text-muted text-sm">No sessions yet.</p>
+      <p class="text-text-and-icons-tertiary text-sm">No sessions yet.</p>
     </div>
 
     <div v-else class="space-y-4">
       <!-- User's sub-events (pinned) -->
       <div v-if="mySubEvents.length">
-        <p class="text-xs font-medium text-text-muted uppercase tracking-wide mb-2">Yours</p>
+        <p class="text-xs font-medium text-text-and-icons-tertiary uppercase tracking-wide mb-2">Yours</p>
         <div class="space-y-3">
           <div
             v-for="se in mySubEvents"
             :key="se.address"
-            class="bg-surface border border-primary/20 rounded-md p-4"
+            class="bg-bg-surface-container border border-primary/20 rounded-md p-4"
           >
             <NuxtLink :to="`/sub-events/${se.address}`" class="flex items-start gap-3">
               <div
                 v-if="se.metadata.badgePixels"
-                class="w-12 h-12 rounded overflow-hidden border border-border-light shrink-0"
+                class="w-12 h-12 rounded overflow-hidden border border-stroke-primary shrink-0"
               >
                 <BadgeCanvas :pixels="se.metadata.badgePixels" :size="48" />
               </div>
               <div class="flex-1 min-w-0">
                 <h3 class="font-medium text-sm">{{ se.metadata.name }}</h3>
-                <p class="text-xs text-text-muted mt-0.5">
+                <p class="text-xs text-text-and-icons-tertiary mt-0.5">
                   {{ formatTime(se.startTime) }}–{{ formatTime(se.endTime) }}
                 </p>
-                <p class="text-xs text-text-secondary mt-1 line-clamp-1">{{ se.metadata.description }}</p>
+                <p class="text-xs text-text-and-icons-secondary mt-1 line-clamp-1">{{ se.metadata.description }}</p>
                 <div class="flex items-center gap-3 mt-2">
-                  <span class="text-xs text-text-muted">{{ se.registeredCount }}/{{ se.capacity || '∞' }}</span>
+                  <span class="text-xs text-text-and-icons-tertiary">{{ se.registeredCount }}/{{ se.capacity || '∞' }}</span>
                   <span
                     v-if="se.isRegistered"
                     class="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-medium"
@@ -85,7 +85,7 @@ function formatTime(ts: number) {
             </NuxtLink>
             <NuxtLink
               :to="`/my/manage/${se.address}`"
-              class="block mt-3 px-3 py-2 bg-surface-elevated border border-border rounded-md text-xs text-center hover:bg-background transition-colors"
+              class="block mt-3 px-3 py-2 bg-bg-surface-container-inverted border border-stroke-primary rounded-md text-xs text-center hover:bg-bg-surface-main transition-colors"
             >
               Manage
             </NuxtLink>
@@ -95,29 +95,29 @@ function formatTime(ts: number) {
 
       <!-- Other sub-events -->
       <div v-if="otherSubEvents.length">
-        <p v-if="mySubEvents.length" class="text-xs font-medium text-text-muted uppercase tracking-wide mb-2">All</p>
+        <p v-if="mySubEvents.length" class="text-xs font-medium text-text-and-icons-tertiary uppercase tracking-wide mb-2">All</p>
         <div class="space-y-3">
           <NuxtLink
             v-for="se in otherSubEvents"
             :key="se.address"
             :to="`/sub-events/${se.address}`"
-            class="bg-surface border border-border rounded-md p-4 block hover:bg-surface-elevated transition-colors"
+            class="bg-bg-surface-container border border-stroke-primary rounded-md p-4 block hover:bg-bg-surface-container-inverted transition-colors"
           >
             <div class="flex items-start gap-3">
               <div
                 v-if="se.metadata.badgePixels"
-                class="w-12 h-12 rounded overflow-hidden border border-border-light shrink-0"
+                class="w-12 h-12 rounded overflow-hidden border border-stroke-primary shrink-0"
               >
                 <BadgeCanvas :pixels="se.metadata.badgePixels" :size="48" />
               </div>
               <div class="flex-1 min-w-0">
                 <h3 class="font-medium text-sm">{{ se.metadata.name }}</h3>
-                <p class="text-xs text-text-muted mt-0.5">
+                <p class="text-xs text-text-and-icons-tertiary mt-0.5">
                   {{ formatTime(se.startTime) }}–{{ formatTime(se.endTime) }}
                 </p>
-                <p class="text-xs text-text-secondary mt-1 line-clamp-1">{{ se.metadata.description }}</p>
+                <p class="text-xs text-text-and-icons-secondary mt-1 line-clamp-1">{{ se.metadata.description }}</p>
                 <div class="flex items-center gap-3 mt-2">
-                  <span class="text-xs text-text-muted">{{ se.registeredCount }}/{{ se.capacity || '∞' }}</span>
+                  <span class="text-xs text-text-and-icons-tertiary">{{ se.registeredCount }}/{{ se.capacity || '∞' }}</span>
                   <span
                     v-if="se.isRegistered"
                     class="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-medium"

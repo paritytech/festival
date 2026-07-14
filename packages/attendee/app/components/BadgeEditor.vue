@@ -182,7 +182,7 @@ const gridBgColor = computed(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] bg-background flex flex-col z-[60] pt-[var(--safe-top)]">
+  <div class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] bg-bg-surface-main flex flex-col z-[60] pt-[var(--safe-top)]">
     <!-- Discard modal -->
     <ConfirmModal
       :visible="showDiscardModal"
@@ -198,11 +198,11 @@ const gridBgColor = computed(() => {
       <button class="w-10 h-10 flex items-center justify-center -ml-2" @click="handleClose">
         <svg width="24" height="24" viewBox="0 0 28 28" fill="none"><path d="M21.35 6.66a1.17 1.17 0 0 0-1.65 0L14 12.35 8.3 6.65a1.17 1.17 0 0 0-1.65 1.65L12.36 14l-5.7 5.7a1.17 1.17 0 0 0 1.64 1.65L14 15.64l5.7 5.7a1.17 1.17 0 0 0 1.65-1.64L15.65 14l5.7-5.7c.44-.45.44-1.18 0-1.64Z" fill="white"/></svg>
       </button>
-      <h1 class="flex-1 text-center text-base font-semibold text-white">Create Badge</h1>
+      <h1 class="flex-1 text-center text-base font-semibold text-text-and-icons-primary">Create Badge</h1>
       <button
         v-if="hasUserEdits"
         data-testid="badge-editor-done"
-        class="px-4 py-1.5 bg-white text-black rounded-full text-sm font-medium"
+        class="px-4 py-1.5 bg-bg-action-primary text-fg-primary-inverted rounded-full text-sm font-medium"
         @click="handleDone"
       >
         Done
@@ -213,7 +213,7 @@ const gridBgColor = computed(() => {
     <!-- Tool row: Undo + Randomize -->
     <div class="px-4 flex items-center justify-between mb-3">
       <button
-        class="w-12 h-12 rounded-full bg-surface-2 flex items-center justify-center transition-opacity"
+        class="w-12 h-12 rounded-full bg-bg-surface-nested flex items-center justify-center transition-opacity"
         :class="{ 'opacity-30': !canUndo }"
         :disabled="!canUndo"
         @click="undo"
@@ -222,7 +222,7 @@ const gridBgColor = computed(() => {
       </button>
       <button
         data-testid="badge-editor-random"
-        class="px-4 h-12 rounded-full bg-surface-2 text-white text-sm font-medium"
+        class="px-4 h-12 rounded-full bg-bg-surface-nested text-text-and-icons-primary text-sm font-medium"
         @click="randomize"
       >
         Random
@@ -263,7 +263,7 @@ const gridBgColor = computed(() => {
           v-for="(color, idx) in PALETTE"
           :key="idx"
           class="w-10 h-10 rounded-full border-2 transition-transform"
-          :class="selectedColor === idx ? 'scale-110 border-white shadow-lg' : 'border-transparent'"
+          :class="selectedColor === idx ? 'scale-110 border-text-and-icons-primary shadow-lg' : 'border-transparent'"
           :style="{ backgroundColor: color }"
           @click="selectedColor = idx; if (activeTool === 'eraser') activeTool = 'pencil'"
         />
@@ -271,7 +271,7 @@ const gridBgColor = computed(() => {
     </div>
 
     <!-- Tool label -->
-    <p class="text-center text-xs font-semibold text-white tracking-widest mb-3">
+    <p class="text-center text-xs font-semibold text-text-and-icons-primary tracking-widest mb-3">
       {{ toolLabel }}
     </p>
 
@@ -280,7 +280,7 @@ const gridBgColor = computed(() => {
       <!-- Pencil -->
       <button
         class="w-14 h-14 rounded-full flex items-center justify-center transition-colors"
-        :class="activeTool === 'pencil' ? 'bg-white' : 'bg-surface-2'"
+        :class="activeTool === 'pencil' ? 'bg-bg-surface-container-inverted' : 'bg-bg-surface-nested'"
         @click="activeTool = 'pencil'"
       >
         <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M4 23.28v4.05c0 .37.29.67.66.67h4.05c.17 0 .35-.07.47-.2L23.75 13.25l-5-5L4.2 22.8a.65.65 0 0 0-.2.48Zm23.61-13.89a1.33 1.33 0 0 0 0-1.88l-3.12-3.12a1.33 1.33 0 0 0-1.88 0l-2.44 2.44 5 5 2.44-2.44Z" :fill="activeTool === 'pencil' ? 'black' : 'white'"/></svg>
@@ -288,7 +288,7 @@ const gridBgColor = computed(() => {
       <!-- Fill -->
       <button
         class="w-14 h-14 rounded-full flex items-center justify-center transition-colors"
-        :class="activeTool === 'fill' ? 'bg-white' : 'bg-surface-2'"
+        :class="activeTool === 'fill' ? 'bg-bg-surface-container-inverted' : 'bg-bg-surface-nested'"
         @click="activeTool = 'fill'"
       >
         <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M23.33 5.33V4c0-.73-.6-1.33-1.33-1.33H6c-.73 0-1.33.6-1.33 1.33v5.33c0 .74.6 1.34 1.33 1.34h16c.73 0 1.33-.6 1.33-1.34V8h1.34v5.33H12.67c-.74 0-1.34.6-1.34 1.34V28c0 .73.6 1.33 1.34 1.33h2.66c.74 0 1.34-.6 1.34-1.33V16h9.33c.73 0 1.33-.6 1.33-1.33V6.67c0-.74-.6-1.34-1.33-1.34h-2.67Z" :fill="activeTool === 'fill' ? 'black' : 'white'"/></svg>
@@ -296,7 +296,7 @@ const gridBgColor = computed(() => {
       <!-- Eraser -->
       <button
         class="w-14 h-14 rounded-full flex items-center justify-center transition-colors"
-        :class="activeTool === 'eraser' ? 'bg-white' : 'bg-surface-2'"
+        :class="activeTool === 'eraser' ? 'bg-bg-surface-container-inverted' : 'bg-bg-surface-nested'"
         @click="activeTool = 'eraser'"
       >
         <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M17.89 4.69 4.69 17.88a2.67 2.67 0 0 0 0 3.77l5.65 5.66a2.67 2.67 0 0 0 3.77 0L27.31 14.11a2.67 2.67 0 0 0 0-3.77l-5.66-5.66a2.67 2.67 0 0 0-3.77 0Zm7.54 7.54L12.23 25.43l-5.66-5.66L19.77 6.57l5.66 5.66Z" :fill="activeTool === 'eraser' ? 'black' : 'white'"/><path d="M10.98 11.59 3.82 18.75c-.56.56-.17 1.87.87 2.91l5.66 5.66c1.04 1.04 2.35 1.43 2.91.87l7.15-7.16c.56-.56.17-1.87-.87-2.91l-5.66-5.66c-1.03-1.04-2.34-1.43-2.9-.87Z" :fill="activeTool === 'eraser' ? 'black' : 'white'"/></svg>

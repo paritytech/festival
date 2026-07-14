@@ -37,7 +37,7 @@ onBeforeUnmount(() => stop())
 <template>
   <div class="qr-scanner-root">
     <div :id="elementId" class="scanner-surface overflow-hidden" />
-    <p v-if="error" class="text-xs text-red-600 mt-2">{{ error }}</p>
+    <p v-if="error" class="text-xs text-fg-error mt-2">{{ error }}</p>
   </div>
 </template>
 

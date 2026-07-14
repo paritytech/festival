@@ -261,7 +261,7 @@ function handleDone() {
   left: var(--col-l, 0px);
   right: var(--col-r, 0px);
   z-index: 60;
-  background: #0f0f0f;
+  background: var(--color-bg-surface-main);
   display: flex;
   flex-direction: column;
   padding-top: var(--safe-top);
@@ -282,7 +282,7 @@ function handleDone() {
   justify-content: center;
   background: transparent;
   border: 0;
-  color: #fff;
+  color: var(--color-text-and-icons-primary);
   cursor: pointer;
   border-radius: 12px;
 }
@@ -291,7 +291,7 @@ function handleDone() {
   text-align: center;
   font-size: 15px;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-text-and-icons-primary);
 }
 .slp__done,
 .slp__done-spacer {
@@ -303,8 +303,8 @@ function handleDone() {
 }
 .slp__done {
   padding: 0 18px;
-  background: #fff;
-  color: #0f0f0f;
+  background: var(--color-bg-surface-container-inverted);
+  color: var(--color-fg-primary-inverted);
   border: 0;
   border-radius: 9999px;
   font-size: 14px;
@@ -335,7 +335,7 @@ function handleDone() {
   justify-content: center;
   text-align: center;
   padding: 0 32px;
-  color: #fff;
+  color: var(--color-text-and-icons-primary);
   font-size: 16px;
   font-weight: 600;
   pointer-events: none;
@@ -349,7 +349,7 @@ function handleDone() {
   bottom: 24px;
   transform: translateX(-50%);
   background: rgba(15, 15, 15, 0.92);
-  color: #fff;
+  color: var(--color-text-and-icons-primary);
   font-size: 14px;
   font-weight: 500;
   padding: 10px 16px;
@@ -369,7 +369,7 @@ function handleDone() {
   align-items: center;
   gap: 14px;
   padding: 12px 14px;
-  background: #fff;
+  background: var(--color-bg-surface-container-inverted);
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   z-index: 1100;
@@ -395,7 +395,7 @@ function handleDone() {
   text-overflow: ellipsis;
 }
 .slp__card-bold {
-  color: #0f0f0f;
+  color: var(--color-fg-primary-inverted);
   font-size: 17px;
   font-weight: 600;
   white-space: nowrap;

@@ -60,9 +60,9 @@ defineEmits<{
   border-radius: 2px;
   margin: 2px 0;
 }
-.session-strip--program .session-strip__accent { background: #fafaf9; }
-.session-strip--community .session-strip__accent { background: #9462fa; }
-.session-strip--activations .session-strip__accent { background: #FFB300; }
+.session-strip--program .session-strip__accent { background: var(--color-stone-50); }
+.session-strip--community .session-strip__accent { background: var(--color-community); }
+.session-strip--activations .session-strip__accent { background: var(--color-activations); }
 
 .session-strip__body {
   display: flex;

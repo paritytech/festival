@@ -34,12 +34,12 @@ async function openInMaps() {
 <template>
   <button
     type="button"
-    class="w-full flex items-stretch gap-3 rounded-2xl bg-surface-2 p-3 text-left cursor-pointer"
+    class="w-full flex items-stretch gap-3 rounded-2xl bg-bg-surface-container p-3 text-left cursor-pointer"
     data-testid="home-location"
     @click="openInMaps"
   >
     <div class="flex-1 min-w-0 py-1">
-      <p class="text-base font-semibold text-white">Venue Location</p>
+      <p class="text-base font-semibold text-text-and-icons-primary">Venue Location</p>
       <p class="text-sm text-text-and-icons-secondary mt-1 leading-snug">
         {{ parsed.name }}<template v-if="parsed.address">,</template>
       </p>

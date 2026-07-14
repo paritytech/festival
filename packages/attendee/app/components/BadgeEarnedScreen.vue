@@ -99,7 +99,7 @@ onUnmounted(() => {
               :pixels="props.badgePixels"
               :size="200"
             />
-            <div v-else class="w-full h-full bg-surface" />
+            <div v-else class="w-full h-full bg-bg-surface-container" />
           </div>
         </div>
       </div>

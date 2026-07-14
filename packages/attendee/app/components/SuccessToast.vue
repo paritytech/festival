@@ -31,7 +31,7 @@ onUnmounted(() => {
   <Transition name="success-toast">
     <div
       v-if="visible"
-      class="flex items-center gap-3 rounded-2xl bg-surface-2 px-5 py-4"
+      class="flex items-center gap-3 rounded-2xl bg-bg-surface-nested px-5 py-4"
     >
       <!-- Star icon -->
       <svg
@@ -43,7 +43,7 @@ onUnmounted(() => {
         fill="currentColor"
         stroke="currentColor"
         stroke-width="1.5"
-        class="shrink-0 text-white"
+        class="shrink-0 text-text-and-icons-primary"
       >
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
       </svg>
@@ -59,11 +59,11 @@ onUnmounted(() => {
         stroke-width="2.5"
         stroke-linecap="round"
         stroke-linejoin="round"
-        class="shrink-0 text-white"
+        class="shrink-0 text-text-and-icons-primary"
       >
         <polyline points="20 6 9 17 4 12" />
       </svg>
-      <span class="text-sm font-medium text-white">{{ message || 'Added to My List Successfully' }}</span>
+      <span class="text-sm font-medium text-text-and-icons-primary">{{ message || 'Added to My List Successfully' }}</span>
     </div>
   </Transition>
 </template>

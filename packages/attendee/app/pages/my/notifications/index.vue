@@ -101,11 +101,11 @@ onUnmounted(teardown)
     </div>
 
     <div v-if="isLoading && !channel" class="flex-1 flex items-center justify-center py-12">
-      <div class="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      <div class="w-8 h-8 border-2 border-text-and-icons-primary border-t-transparent rounded-full animate-spin" />
     </div>
 
     <div v-else-if="!channel" class="px-4 py-12 text-center">
-      <p class="text-text-muted text-sm">No channel for this festival.</p>
+      <p class="text-text-and-icons-tertiary text-sm">No channel for this festival.</p>
     </div>
 
     <!-- No announcements yet: reassuring empty state. -->
@@ -115,7 +115,7 @@ onUnmounted(teardown)
       data-testid="announcements-empty-state"
     >
       <img src="/bell-empty.svg" alt="" width="108" height="108" />
-      <p class="text-text-secondary text-sm mt-6 max-w-[300px] leading-snug">
+      <p class="text-text-and-icons-secondary text-sm mt-6 max-w-[300px] leading-snug">
         You're all set. Announcements from organizers will appear here.
       </p>
     </div>
@@ -134,7 +134,7 @@ onUnmounted(teardown)
       <div v-if="hasOlder" class="mx-4 mt-3 pb-6">
         <button
           type="button"
-          class="w-full rounded-2xl bg-surface-2 text-text-secondary text-sm font-medium py-3 cursor-pointer hover:bg-surface-3 transition-colors"
+          class="w-full rounded-2xl bg-bg-surface-nested text-text-and-icons-secondary text-sm font-medium py-3 cursor-pointer hover:bg-bg-surface-nested transition-colors"
           data-testid="announcements-load-older"
           @click="loadOlder"
         >

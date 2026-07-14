@@ -38,15 +38,15 @@ const variantClasses = computed(() => {
     return 'bg-bg-surface-main text-text-and-icons-primary ring-1 ring-inset ring-stroke-primary'
   }
   if (props.variant === 'filled') {
-    return 'bg-white/24 text-text-and-icons-primary'
+    return 'bg-fill-24 text-text-and-icons-primary'
   }
   if (props.variant === 'active') {
-    return 'bg-white/6 text-text-and-icons-secondary ring-1 ring-inset ring-white'
+    return 'bg-fill-6 text-text-and-icons-secondary ring-1 ring-inset ring-text-and-icons-primary'
   }
   if (props.tone === 'glass') {
-    return 'bg-white/12 text-text-and-icons-primary'
+    return 'bg-fill-12 text-text-and-icons-primary'
   }
-  return 'bg-surface-2 text-text-and-icons-primary'
+  return 'bg-bg-surface-nested text-text-and-icons-primary'
 })
 </script>
 

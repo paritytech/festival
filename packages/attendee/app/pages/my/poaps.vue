@@ -9,15 +9,15 @@ const { poaps, festivalPoaps, subEventPoaps, isLoading } = usePoaps()
     <!-- Header -->
     <div class="px-4 pt-4 pb-3 flex items-center">
       <BackButton class="text-text-and-icons-primary" />
-      <h1 class="flex-1 text-center text-base font-semibold text-white">Badge Collection</h1>
+      <h1 class="flex-1 text-center text-base font-semibold text-text-and-icons-primary">Badge Collection</h1>
       <div class="w-10" />
     </div>
 
-    <div v-if="isLoading" class="text-center py-12 text-text-muted">Loading…</div>
+    <div v-if="isLoading" class="text-center py-12 text-text-and-icons-tertiary">Loading…</div>
 
     <div v-else-if="!poaps.length" class="px-4 py-12 text-center">
-      <p class="text-text-muted text-sm">No badges yet.</p>
-      <p class="text-text-muted text-xs mt-1">Check in to sessions to earn badges.</p>
+      <p class="text-text-and-icons-tertiary text-sm">No badges yet.</p>
+      <p class="text-text-and-icons-tertiary text-xs mt-1">Check in to sessions to earn badges.</p>
     </div>
 
     <div v-else class="px-4">
@@ -29,7 +29,7 @@ const { poaps, festivalPoaps, subEventPoaps, isLoading } = usePoaps()
           :to="`/my/badge/${poap.tokenId}?contract=${poap.poapContract}`"
           class="flex flex-col items-center"
         >
-          <div class="w-[40vw] max-w-[180px] aspect-square rounded-2xl overflow-hidden bg-white">
+          <div class="w-[40vw] max-w-[180px] aspect-square rounded-2xl overflow-hidden bg-bg-surface-container-inverted">
             <img
               v-if="poap.poapImageUrl"
               :src="poap.poapImageUrl"
@@ -43,7 +43,7 @@ const { poaps, festivalPoaps, subEventPoaps, isLoading } = usePoaps()
               class="w-full h-full"
             />
           </div>
-          <p class="text-xs text-white mt-2 text-center">{{ poap.sourceName }}</p>
+          <p class="text-xs text-text-and-icons-primary mt-2 text-center">{{ poap.sourceName }}</p>
         </NuxtLink>
       </div>
 
@@ -55,7 +55,7 @@ const { poaps, festivalPoaps, subEventPoaps, isLoading } = usePoaps()
           :to="`/my/badge/${poap.tokenId}?contract=${poap.poapContract}`"
           class="flex flex-col items-center"
         >
-          <div class="w-full aspect-square rounded-2xl overflow-hidden bg-white">
+          <div class="w-full aspect-square rounded-2xl overflow-hidden bg-bg-surface-container-inverted">
             <BadgeCanvas
               v-if="poap.badgePixels"
               :pixels="poap.badgePixels"
@@ -69,7 +69,7 @@ const { poaps, festivalPoaps, subEventPoaps, isLoading } = usePoaps()
               class="w-full h-full object-cover"
             />
           </div>
-          <p class="text-xs text-white mt-2 text-center truncate w-full">{{ poap.sourceName }}</p>
+          <p class="text-xs text-text-and-icons-primary mt-2 text-center truncate w-full">{{ poap.sourceName }}</p>
         </NuxtLink>
       </div>
     </div>

@@ -35,6 +35,11 @@ import type { PolkadotSigner } from 'polkadot-api/signer'
 const GRANT_TRANSACTIONS = 100
 const GRANT_BYTES = 10n * 1024n * 1024n
 
+// An authorization is expired when `now >= expiration` (types.rs:129). The
+// seed makes up to three sequential finalized uploads against one grant, so
+// require the grant to outlive the whole run: ~50 blocks ≈ 5 min at 6s blocks.
+const EXPIRY_MARGIN_BLOCKS = 50
+
 /**
  * HEAD-probe the gateway. 200 → blob is reachable, skip upload.
  */
@@ -60,30 +65,57 @@ interface AuthSnapshot {
   raw: unknown
   remainingBytes: bigint
   remainingTransactions: number
+  expiration: number
+  currentBlock: number
+  expired: boolean
 }
 
 async function readAuthorization(api: any, address: string): Promise<AuthSnapshot> {
-  const raw = await api.query.TransactionStorage.Authorizations.getValue({
-    type: 'Account',
-    value: address,
-  })
+  const [raw, currentBlock] = await Promise.all([
+    api.query.TransactionStorage.Authorizations.getValue({
+      type: 'Account',
+      value: address,
+    }),
+    api.query.System.Number.getValue().then(Number),
+  ])
   if (!raw || !raw.extent) {
-    return { raw, remainingBytes: 0n, remainingTransactions: 0 }
+    return {
+      raw,
+      remainingBytes: 0n,
+      remainingTransactions: 0,
+      expiration: 0,
+      currentBlock,
+      expired: true,
+    }
   }
   const ext = raw.extent
+  const expiration = Number(raw.expiration ?? 0)
+  // The runtime rejects `store` from an expired auth with Invalid.Payment
+  // (check_authorization, lib.rs:2073), so a grant that expires mid-run is as
+  // good as none — report zero remaining so callers re-authorize.
+  const expired = currentBlock + EXPIRY_MARGIN_BLOCKS >= expiration
   const txAllowance = Number(ext.transactions_allowance ?? 0)
   const txConsumed = Number(ext.transactions ?? 0)
   const bytesAllowance = BigInt(ext.bytes_allowance ?? 0n)
   const bytesConsumed = BigInt(ext.bytes ?? 0n)
   return {
     raw,
-    remainingBytes: bytesAllowance - bytesConsumed,
-    remainingTransactions: txAllowance - txConsumed,
+    remainingBytes: expired ? 0n : bytesAllowance - bytesConsumed,
+    remainingTransactions: expired ? 0 : txAllowance - txConsumed,
+    expiration,
+    currentBlock,
+    expired,
   }
 }
 
 function summariseAuth(snap: AuthSnapshot): string {
   if (!snap.raw) return 'no authorization entry'
+  if (snap.expired) {
+    return (
+      `expired/expiring authorization (expiration block ${snap.expiration}, ` +
+      `current block ${snap.currentBlock}) — treating as no allowance`
+    )
+  }
   return `${snap.remainingTransactions} txs / ${snap.remainingBytes} bytes remaining`
 }
 

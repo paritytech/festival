@@ -18,6 +18,31 @@ Build production-ready design systems with Tailwind CSS v4, including CSS-first 
 - Migrating from Tailwind v3 to v4
 - Setting up dark mode with native CSS features
 
+## Project convention — Festival **attendee** color tokens
+
+> Applies to `packages/attendee` only. The attendee app runs on the **"Classic"**
+> design-system tokens (the canonical `:root` `@theme` block in
+> `packages/attendee/app/assets/css/main.css`, generated from
+> `polkadot-app-design-system-ios`). The old stone neutral system has been fully
+> removed — `main.css` is now just **Classic foundation + festival brand layer**.
+>
+> - **Canonical (use these):** `text-and-icons-*` / `fg-*` (text), `bg-surface-*`
+>   (surfaces), `stroke-*` (borders), `bg-action-*` (interactive), `bg-status-*`
+>   / `fg-error|warning|success` (status), and `fill-*` / `applied-*` (white-opacity
+>   fills, hairline borders, separators, hover washes — prefer these over raw
+>   `*-white/N`). Festival **accent** colors (`community`, `activations`, `magenta`,
+>   `olive`, …) and `*-muted` status are the **festival brand layer** — also canonical.
+> - **Removed — do NOT reintroduce:** the stone neutrals (`text-primary`/`secondary`/
+>   `muted`, `surface`/`surface-2..4`/`background`, `border`/`border-light`). They were
+>   migrated to Classic and deleted; there is no stone fallback.
+> - **Class form:** tokens are `--color-X`, so Tailwind utilities double the prefix —
+>   e.g. `bg-bg-surface-main`, `text-text-and-icons-primary`, `border-stroke-primary`.
+>   On light/white surfaces use the inverted text token `text-fg-primary-inverted`
+>   (dark), never opacity-white.
+> - **Onboarding** (`/onboarding`) is the only route that themes away from Classic
+>   (BerlinNight / event themes via `[data-theme]`); there `text-and-icons-*` alias
+>   to the themed solid `fg-*`.
+
 ## Key v4 Changes
 
 | v3 Pattern                            | v4 Pattern                                                            |

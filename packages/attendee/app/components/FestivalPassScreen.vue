@@ -49,7 +49,7 @@ onMounted(() => {
 <template>
   <Teleport to="body">
     <div
-      class="festival-pass fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-[2100] overflow-hidden bg-background text-white"
+      class="festival-pass fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-[2100] overflow-hidden bg-bg-surface-main text-text-and-icons-primary"
       data-testid="festival-pass-screen"
       role="dialog"
       aria-labelledby="festival-pass-title"

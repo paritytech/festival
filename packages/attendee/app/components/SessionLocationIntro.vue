@@ -26,7 +26,7 @@
   display: block;
 }
 .sli__title {
-  color: #fff;
+  color: var(--color-text-and-icons-primary);
   font-size: 24px;
   font-weight: 700;
   line-height: 1.2;

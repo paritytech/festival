@@ -88,7 +88,7 @@ function onBack() {
     >
       <div
         v-if="badgePixels || imageUrl"
-        class="w-20 h-20 rounded-xl overflow-hidden bg-surface"
+        class="w-20 h-20 rounded-xl overflow-hidden bg-bg-surface-container"
       >
         <BadgeCanvas
           v-if="badgePixels"
@@ -104,9 +104,9 @@ function onBack() {
       </div>
       <span
         v-if="ongoing"
-        class="ml-auto flex items-center gap-1.5 text-sm font-medium text-danger"
+        class="ml-auto flex items-center gap-1.5 text-sm font-medium text-fg-error"
       >
-        <span class="w-1.5 h-1.5 rounded-full bg-danger" />
+        <span class="w-1.5 h-1.5 rounded-full bg-bg-status-error" />
         Ongoing
       </span>
       <span
@@ -120,10 +120,10 @@ function onBack() {
     <!-- Banner -->
     <div
       v-if="bannerLabel"
-      class="flex items-center justify-between gap-3 px-4 py-3 bg-surface mt-6"
+      class="flex items-center justify-between gap-3 px-4 py-3 bg-bg-surface-container mt-6"
     >
       <div class="min-w-0 flex-1">
-        <p class="text-xs text-text-muted">{{ bannerLabel }}</p>
+        <p class="text-xs text-text-and-icons-tertiary">{{ bannerLabel }}</p>
         <p class="text-sm font-medium text-text-and-icons-primary mt-0.5 break-words">{{ bannerValue }}</p>
       </div>
       <div
@@ -151,7 +151,7 @@ function onBack() {
 
       <!-- When -->
       <div class="mt-6">
-        <p class="text-text-muted text-xs leading-[18px]">{{ dayLabel ? 'Date & Time' : 'Time' }}</p>
+        <p class="text-text-and-icons-tertiary text-xs leading-[18px]">{{ dayLabel ? 'Date & Time' : 'Time' }}</p>
         <p
           v-if="dayLabel"
           class="text-2xl font-semibold mt-0.5"
@@ -169,7 +169,7 @@ function onBack() {
 
       <!-- Selected Location -->
       <div v-if="locationLabel" class="mt-5">
-        <p class="text-text-muted text-xs leading-[18px]">Selected Location</p>
+        <p class="text-text-and-icons-tertiary text-xs leading-[18px]">Selected Location</p>
         <p
           class="text-2xl font-semibold mt-0.5"
           :class="ended ? 'text-text-and-icons-secondary' : 'text-text-and-icons-primary'"
@@ -195,7 +195,7 @@ function onBack() {
       <slot name="secondaryAction" />
     </div>
 
-    <div class="sticky bottom-0 px-4 pt-3 pb-[calc(var(--safe-bottom)+16px)] bg-background">
+    <div class="sticky bottom-0 px-4 pt-3 pb-[calc(var(--safe-bottom)+16px)] bg-bg-surface-main">
       <slot name="aboveAction" />
       <slot name="action" />
     </div>

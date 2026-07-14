@@ -30,7 +30,7 @@ watch(() => wallet.address, generateQR);
 <template>
   <Teleport to="body">
     <div
-      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-[2000] flex flex-col bg-black"
+      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] z-[2000] flex flex-col bg-bg-surface-main"
       data-testid="session-qr-overlay"
       role="dialog"
       aria-modal="true"
@@ -43,7 +43,7 @@ watch(() => wallet.address, generateQR);
       />
 
       <div class="flex-1 flex flex-col items-center justify-center px-6">
-        <div class="rounded-3xl bg-white p-6">
+        <div class="rounded-3xl bg-bg-surface-container-inverted p-6">
           <img
             v-if="qrDataUrl"
             :src="qrDataUrl"
@@ -52,14 +52,14 @@ watch(() => wallet.address, generateQR);
             data-testid="session-qr-image"
           />
         </div>
-        <p class="mt-8 text-xl font-semibold text-white text-center">
+        <p class="mt-8 text-xl font-semibold text-text-and-icons-primary text-center">
           Show this QR to the host
         </p>
       </div>
 
       <div class="px-4 pb-[calc(env(safe-area-inset-bottom)+20px)] pt-2">
         <button
-          class="block w-full py-4 rounded-2xl bg-white text-black text-base font-semibold"
+          class="block w-full py-4 rounded-2xl bg-bg-action-primary text-fg-primary-inverted text-base font-semibold"
           data-testid="session-qr-close"
           @click="$emit('close')"
         >

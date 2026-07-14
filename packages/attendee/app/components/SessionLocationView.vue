@@ -232,7 +232,7 @@ async function handleShare() {
   left: var(--col-l);
   right: var(--col-r);
   z-index: 2000;
-  background: #000;
+  background: var(--color-bg-surface-main);
   color: var(--color-text-and-icons-primary);
   display: flex;
   flex-direction: column;
@@ -245,7 +245,7 @@ async function handleShare() {
   position: relative;
   flex: 1;
   min-height: 0;
-  background: #000;
+  background: var(--color-bg-surface-main);
   overflow: hidden;
 }
 

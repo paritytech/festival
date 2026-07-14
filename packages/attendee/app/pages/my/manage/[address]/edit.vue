@@ -383,24 +383,24 @@ async function submit() {
   <Transition name="fade">
     <div
       v-if="showDeleteModal"
-      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] bg-black/80 z-[2000] flex items-end"
+      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] bg-bg-surface-overlay z-[2000] flex items-end"
       @click.self="showDeleteModal = false"
     >
       <div
-        class="w-full bg-surface rounded-t-3xl p-6 pb-[calc(var(--safe-bottom)+24px)]"
+        class="w-full bg-bg-surface-container rounded-t-3xl p-6 pb-[calc(var(--safe-bottom)+24px)]"
       >
-        <h2 class="text-xl font-semibold text-white">Delete this session?</h2>
-        <p class="text-sm text-text-muted mt-2">
+        <h2 class="text-xl font-semibold text-text-and-icons-primary">Delete this session?</h2>
+        <p class="text-sm text-text-and-icons-tertiary mt-2">
           This action cannot be undone.
         </p>
         <button
-          class="w-full py-4 bg-danger text-white rounded-2xl text-sm font-semibold mt-6"
+          class="w-full py-4 bg-bg-status-error text-text-and-icons-primary rounded-2xl text-sm font-semibold mt-6"
           @click="confirmDelete"
         >
           Delete Session
         </button>
         <button
-          class="w-full py-4 text-white text-sm font-medium mt-3"
+          class="w-full py-4 text-text-and-icons-primary text-sm font-medium mt-3"
           @click="showDeleteModal = false"
         >
           Cancel
@@ -413,24 +413,24 @@ async function submit() {
   <Transition name="fade">
     <div
       v-if="showDiscardModal"
-      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] bg-black/80 z-[2000] flex items-end"
+      class="fixed inset-0 md:left-[var(--col-l)] md:right-[var(--col-r)] bg-bg-surface-overlay z-[2000] flex items-end"
       @click.self="showDiscardModal = false"
     >
       <div
-        class="w-full bg-surface rounded-t-3xl p-6 pb-[calc(var(--safe-bottom)+24px)]"
+        class="w-full bg-bg-surface-container rounded-t-3xl p-6 pb-[calc(var(--safe-bottom)+24px)]"
       >
-        <h2 class="text-xl font-semibold text-white">Discard changes?</h2>
-        <p class="text-sm text-text-muted mt-2">
+        <h2 class="text-xl font-semibold text-text-and-icons-primary">Discard changes?</h2>
+        <p class="text-sm text-text-and-icons-tertiary mt-2">
           If you leave without updating, your changes won't be saved.
         </p>
         <button
-          class="w-full py-4 bg-danger text-white rounded-2xl text-sm font-semibold mt-6"
+          class="w-full py-4 bg-bg-status-error text-text-and-icons-primary rounded-2xl text-sm font-semibold mt-6"
           @click="confirmDiscard"
         >
           Discard
         </button>
         <button
-          class="w-full py-4 text-white text-sm font-medium mt-3"
+          class="w-full py-4 text-text-and-icons-primary text-sm font-medium mt-3"
           @click="showDiscardModal = false"
         >
           Cancel
@@ -442,7 +442,7 @@ async function submit() {
   <!-- ── Loading ── -->
   <div v-if="isLoading" class="flex items-center justify-center py-20">
     <div
-      class="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"
+      class="w-6 h-6 border-2 border-text-and-icons-primary border-t-transparent rounded-full animate-spin"
     />
   </div>
 
@@ -454,7 +454,7 @@ async function submit() {
     <SessionTopBar title="Edit session’s details" @back="handleBack" />
 
     <!-- Form -->
-    <div class="flex-1 px-4 pt-6 space-y-6 border-t border-white/12">
+    <div class="flex-1 px-4 pt-6 space-y-6 border-t border-applied-stroke">
       <!-- Session Badge -->
       <div v-if="badgePixels" class="w-24 aspect-square rounded-2xl overflow-hidden">
         <BadgeCanvas :pixels="badgePixels" :size="96" />
@@ -477,7 +477,7 @@ async function submit() {
             type="text"
             :maxlength="SPEAKERS_MAX_LENGTH"
             placeholder="Alice, Bob"
-            class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
+            class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-text-and-icons-tertiary"
           />
         </template>
       </InputField>
@@ -500,7 +500,7 @@ async function submit() {
             required
             aria-required="true"
             :maxlength="NAME_MAX_LENGTH"
-            class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-white/30"
+            class="w-full bg-transparent text-text-and-icons-primary text-base leading-5 font-normal focus:outline-none placeholder-text-and-icons-tertiary"
           />
         </template>
       </InputField>
@@ -509,9 +509,9 @@ async function submit() {
       <div
         v-if="submitValidationError"
         data-testid="session-revalidation-banner"
-        class="rounded-2xl bg-red-900/30 border border-red-500/20 px-4 py-3"
+        class="rounded-2xl bg-danger-muted border border-stroke-error/20 px-4 py-3"
       >
-        <p class="text-sm text-red-300">
+        <p class="text-sm text-fg-error">
           Selected time is no longer available. Please pick a new date and time.
         </p>
       </div>
@@ -535,18 +535,18 @@ async function submit() {
 
       <!-- Location -->
       <div v-if="!pickerOpen">
-        <p v-if="pickedLocation" class="text-xs text-white/40">
+        <p v-if="pickedLocation" class="text-xs text-text-and-icons-tertiary">
           Selected Location
         </p>
         <p
           v-if="pickedLocation"
-          class="text-lg font-semibold text-white leading-snug mt-0.5"
+          class="text-lg font-semibold text-text-and-icons-primary leading-snug mt-0.5"
         >
           {{ pickedLocationLabel }}
         </p>
 
         <div
-          class="mt-3 rounded-2xl bg-surface-2 overflow-hidden relative aspect-[4/3]"
+          class="mt-3 rounded-2xl bg-bg-surface-nested overflow-hidden relative aspect-[4/3]"
         >
           <VenueMap
             v-if="pickedLocation"
@@ -564,14 +564,14 @@ async function submit() {
           />
           <div
             v-else
-            class="absolute inset-0 flex items-center justify-center text-sm text-white/40"
+            class="absolute inset-0 flex items-center justify-center text-sm text-text-and-icons-tertiary"
           >
             No location set
           </div>
 
           <button
             type="button"
-            class="absolute left-4 right-4 bottom-4 z-10 py-4 bg-white text-black rounded-2xl text-sm font-semibold shadow-lg"
+            class="absolute left-4 right-4 bottom-4 z-10 py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold shadow-lg"
             @click="pickerOpen = true"
           >
             Change Location
@@ -582,14 +582,14 @@ async function submit() {
       <!-- Error -->
       <div
         v-if="error"
-        class="rounded-2xl bg-red-900/30 border border-red-500/20 px-5 py-4"
+        class="rounded-2xl bg-danger-muted border border-stroke-error/20 px-5 py-4"
       >
-        <p class="text-sm text-red-300">{{ error }}</p>
+        <p class="text-sm text-fg-error">{{ error }}</p>
       </div>
 
       <!-- Delete -->
       <button
-        class="w-full py-4 rounded-2xl text-sm font-normal text-danger"
+        class="w-full py-4 rounded-2xl text-sm font-normal text-fg-error"
         style="background-color: rgba(255, 49, 35, 0.08)"
         @click="showDeleteModal = true"
       >
@@ -602,10 +602,10 @@ async function submit() {
     <!-- Sticky submit (only when dirty) -->
     <div
       v-if="isDirty"
-      class="sticky bottom-0 z-20 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-background"
+      class="sticky bottom-0 z-20 px-4 pb-[calc(var(--safe-bottom)+24px)] pt-3 bg-bg-surface-main"
     >
       <button
-        class="w-full py-4 bg-white text-black rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
+        class="w-full py-4 bg-bg-action-primary text-fg-primary-inverted rounded-2xl text-sm font-semibold transition-colors disabled:opacity-40"
         :disabled="
           !form.name ||
           !form.dateKey ||

@@ -291,13 +291,13 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
     <!-- Header: Program / My List toggle, sticky at top -->
     <div
       ref="headerEl"
-      class="sticky top-0 z-20 bg-background -mx-4 px-4 pt-4 pb-3"
+      class="sticky top-0 z-20 bg-bg-surface-main -mx-4 px-4 pt-4 pb-3"
       data-testid="program-header"
     >
       <div class="flex items-baseline gap-4">
         <button
           class="text-2xl font-semibold transition-colors"
-          :class="activeTab === 'program' ? 'text-white' : 'text-white/40'"
+          :class="activeTab === 'program' ? 'text-text-and-icons-primary' : 'text-text-and-icons-tertiary'"
           data-testid="program-tab-program"
           @click="switchTab('program')"
         >
@@ -306,7 +306,7 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
         <button
           v-if="isCheckedIn"
           class="text-2xl font-semibold transition-colors flex items-center gap-2"
-          :class="activeTab === 'mylist' ? 'text-white' : 'text-white/40'"
+          :class="activeTab === 'mylist' ? 'text-text-and-icons-primary' : 'text-text-and-icons-tertiary'"
           data-testid="program-tab-mylist"
           @click="switchTab('mylist')"
         >
@@ -315,8 +315,8 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
             class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full text-xs font-semibold transition-[transform,background-color,color] duration-150"
             :class="[
               counterPulse || activeTab === 'mylist'
-                ? 'bg-white text-black'
-                : 'bg-surface-3 text-text-muted',
+                ? 'bg-bg-action-primary text-fg-primary-inverted'
+                : 'bg-bg-surface-nested text-text-and-icons-tertiary',
               counterPulse ? 'mylist-counter-pulse' : '',
             ]"
             data-testid="mylist-counter"
@@ -335,37 +335,37 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
           :data-date-key="day.dateKey"
           class="sticky z-10 -mx-4 px-4 py-3 flex items-center justify-between transition-colors"
           :class="[
-            stuckDays.has(day.dateKey) ? 'bg-surface' : '',
+            stuckDays.has(day.dateKey) ? 'bg-bg-surface-container' : '',
             day.dayNumber !== 1 ? 'mt-6' : '',
           ]"
           :style="{ top: dayHeaderStickyTop }"
         >
-          <span class="text-lg leading-[22px] font-semibold text-white"
+          <span class="text-lg leading-[22px] font-semibold text-text-and-icons-primary"
             >Day {{ day.dayNumber }}</span
           >
-          <span class="text-lg leading-[22px] font-semibold text-text-secondary">{{ day.label }}</span>
+          <span class="text-lg leading-[22px] font-semibold text-text-and-icons-secondary">{{ day.label }}</span>
         </div>
 
         <div
           v-if="activeTab === 'program'"
           :ref="(el) => { if (el) legendEls[dayIdx] = el as HTMLElement }"
-          class="sticky z-[9] -mx-4 px-4 py-2.5 flex items-center justify-between bg-background"
+          class="sticky z-[9] -mx-4 px-4 py-2.5 flex items-center justify-between bg-bg-surface-main"
           :style="{ top: legendStickyTop }"
           data-testid="sessions-type-legend"
         >
-          <span class="text-xs text-text-muted">Sessions Type</span>
+          <span class="text-xs text-text-and-icons-tertiary">Sessions Type</span>
           <div class="flex items-center gap-3 text-xs">
             <span class="flex items-center gap-1.5">
               <span class="w-[3px] h-3.5 rounded-full bg-official" />
-              <span class="text-white">Official</span>
+              <span class="text-text-and-icons-primary">Official</span>
             </span>
             <span class="flex items-center gap-1.5">
               <span class="w-[3px] h-3.5 rounded-full bg-community" />
-              <span class="text-white">Community</span>
+              <span class="text-text-and-icons-primary">Community</span>
             </span>
             <span class="flex items-center gap-1.5">
               <span class="w-[3px] h-3.5 rounded-full bg-activations" />
-              <span class="text-white">Activations</span>
+              <span class="text-text-and-icons-primary">Activations</span>
             </span>
           </div>
         </div>
@@ -386,7 +386,7 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
               <div class="w-12 shrink-0 pt-1.5">
                 <span
                   v-if="isNowAnchor(day, slot, idx)"
-                  class="block text-xs font-semibold text-danger"
+                  class="block text-xs font-semibold text-fg-error"
                   data-testid="hour-slot-now"
                 >Now</span>
                 <template v-else-if="idx === 0">
@@ -443,20 +443,20 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
         class="w-[60%] max-w-[260px] h-auto mb-6"
         aria-hidden="true"
       />
-      <p class="text-text-muted text-sm text-center max-w-[260px]">
+      <p class="text-text-and-icons-tertiary text-sm text-center max-w-[260px]">
         No sessions yet. Tap the star on any session to save it here
       </p>
     </div>
 
     <div v-else class="flex items-center justify-center py-20">
-      <p class="text-text-muted text-sm">No sessions scheduled.</p>
+      <p class="text-text-and-icons-tertiary text-sm">No sessions scheduled.</p>
     </div>
 
     <!-- Scroll-to-top button -->
     <Transition name="fade">
       <button
         v-if="showScrollTop"
-        class="fixed bottom-[calc(var(--safe-bottom)+170px)] right-4 md:bottom-[calc(var(--safe-bottom)+90px)] md:right-[calc(var(--col-r)+1rem)] z-40 w-10 h-10 bg-surface-3 rounded-full flex items-center justify-center border border-white/12"
+        class="fixed bottom-[calc(var(--safe-bottom)+170px)] right-4 md:bottom-[calc(var(--safe-bottom)+90px)] md:right-[calc(var(--col-r)+1rem)] z-40 w-10 h-10 bg-bg-surface-nested rounded-full flex items-center justify-center border border-applied-stroke"
         @click="scrollToTop"
       >
         <svg
@@ -479,7 +479,7 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
     <NuxtLink
       v-if="subEventsEnabled && isCheckedIn && activeTab === 'program' && canHostMoreSessions"
       :to="hostSessionTo"
-      class="fixed right-4 md:right-[calc(var(--col-r)+1rem)] z-40 bg-white rounded-full h-14 flex items-center px-5 text-black shadow-lg overflow-hidden transition-all duration-300 ease-in-out md:max-w-[calc(var(--col-w)-2rem)] bottom-[calc(var(--safe-bottom)+75px)] md:bottom-[calc(var(--safe-bottom)+1rem)]"
+      class="fixed right-4 md:right-[calc(var(--col-r)+1rem)] z-40 bg-bg-surface-container-inverted rounded-full h-14 flex items-center px-5 text-fg-primary-inverted shadow-lg overflow-hidden transition-all duration-300 ease-in-out md:max-w-[calc(var(--col-w)-2rem)] bottom-[calc(var(--safe-bottom)+75px)] md:bottom-[calc(var(--safe-bottom)+1rem)]"
       :style="{
         width: isScrolled ? '56px' : 'calc(100% - 32px)',
         padding: isScrolled ? '0' : undefined,
@@ -492,7 +492,7 @@ const subEventsEnabled = computed(() => metadata.value?.subEventsEnabled !== fal
       >
         Host your own session
       </span>
-      <PlusIcon :size="22" :stroke-width="2" class="shrink-0 text-black" />
+      <PlusIcon :size="22" :stroke-width="2" class="shrink-0 text-fg-primary-inverted" />
     </NuxtLink>
   </div>
 </template>
