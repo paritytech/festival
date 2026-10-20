@@ -21,7 +21,7 @@
     "polylabel": "^2.0.1",
     "qrcode": "^1.5.4",
     "tailwind-merge": "^3.0.2",
-    "vue": "^3.5.13"
+    "vue": "^3.5.44"
   },
   "//nuxt-pin": "nuxt is pinned to exactly 3.21.2 because 3.21.3+ introduced a vite-node IPC regression that breaks the dev server (NUXT_VITE_NODE_OPTIONS.socketPath not defined). Re-evaluate when a fixed patch ships.",
   "devDependencies": {
