@@ -12,7 +12,7 @@
   "overrides": {
     "@polkadot-api/json-rpc-provider": "0.2.0",
     "@nuxt/vite-builder": "3.21.2",
-    "vite": "7.3.1"
+    "vite": "7.3.7"
   },
   "scripts": {
     "postinstall": "npm run papi:config && npm run -w packages/shared papi",
